@@ -16,22 +16,19 @@ if not st.session_state.get('logged_in'):
 # --- Chargement des données et filtres ---
 conn = get_connection()
 df_agences = run_query(conn, SQLQueries().AllAgences)
-start_date, end_date, selected_agencies = create_sidebar_filters(df_agences)
+create_sidebar_filters(df_agences)
 
-df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(start_date, end_date))
+df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
 df_queue = df_all.copy()
-df_rh = run_query(conn, SQLQueries().RendezVousQueries, params=(start_date, end_date))
+df_rh = run_query(conn, SQLQueries().RendezVousQueries, params=(st.session_state.start_date, st.session_state.end_date))
 
-# --- Filtrage des données ---
-df_all = df_all[df_all['NomAgence'].isin(selected_agencies)]
-df_queue = df_queue[df_queue['NomAgence'].isin(selected_agencies)]
-# On ne filtre pas df_rh par agence pour l'instant, car la requête ne contient pas NomAgence.
-# Si c'était le cas, il faudrait ajouter un filtre ici.
+# --- Filtrage basé sur st.session_state ---
+df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)]
+df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)]
 
-if df_all.empty:
+if df_all_filtered.empty:
     st.warning("Aucune donnée disponible pour la période et les agences sélectionnées.")
     st.stop()
-
 st.title("🔍 Supervision des Agences")
 
 # --- Navigation par onglets pour la page de supervision ---
@@ -46,7 +43,7 @@ with tab1:
     st.header("État des Files d'Attente en Temps Réel")
 
     _, agg_global = AgenceTable(df_all, df_queue)
-    agg_global = agg_global[agg_global["Nom d'Agence"].isin(selected_agencies)]
+    agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
 
     agences_a_afficher = agg_global["Nom d'Agence"].unique()
     num_agences = len(agences_a_afficher)

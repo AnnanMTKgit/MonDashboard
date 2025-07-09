@@ -15,25 +15,30 @@ if not st.session_state.get('logged_in'):
 # --- Chargement des données et filtres ---
 conn = get_connection()
 df_agences = run_query(conn, SQLQueries().AllAgences)
-start_date, end_date, selected_agencies = create_sidebar_filters(df_agences)
+create_sidebar_filters(df_agences)
 
-df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(start_date, end_date))
+df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
 df_queue = df_all.copy()
 
-if df_all.empty or not selected_agencies:
+if df_all.empty or not st.session_state.selected_agencies:
     st.warning("Aucune donnée disponible pour la période et les agences sélectionnées.")
     st.stop()
 
 # --- Filtrage des données ---
-df_all = df_all[df_all['NomAgence'].isin(selected_agencies)]
-df_queue = df_queue[df_queue['NomAgence'].isin(selected_agencies)]
+# --- Filtrage des données basé sur st.session_state ---
+df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)] # Et ici
+df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)] # Et ici
+
+if df_all_filtered.empty:
+    st.warning("Aucune donnée disponible pour la période et les agences sélectionnées.")
+    st.stop()
 
 st.title("📊 Tableau de Bord Global")
 st.markdown("Statistiques agrégées pour la période et les agences sélectionnées.")
 
 # --- Affichage du tableau ---
-_, AGG = AgenceTable(df_all, df_queue)
-AGG = AGG[AGG["Nom d'Agence"].isin(selected_agencies)]
+_, AGG = AgenceTable(df_all_filtered, df_queue_filtered )
+
 
 if not AGG.empty:
     st.markdown(f"### Statistiques Globales par Agence")
@@ -43,7 +48,7 @@ if not AGG.empty:
     st.download_button(
         label="📥 Télécharger en Excel",
         data=buffer,
-        file_name=f'Global_{start_date}_to_{end_date}.xlsx',
+        file_name=f'Global_{st.session_state.start_date}_to_{st.session_state.end_date}.xlsx',
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 

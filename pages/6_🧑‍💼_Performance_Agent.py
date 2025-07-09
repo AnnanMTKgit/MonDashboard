@@ -15,10 +15,10 @@ if not st.session_state.get('logged_in'):
 # --- Chargement des données et filtres globaux ---
 conn = get_connection()
 df_agences = run_query(conn, SQLQueries().AllAgences)
-start_date, end_date, selected_agencies = create_sidebar_filters(df_agences)
+create_sidebar_filters(df_agences)
 
-df_all_raw = run_query(conn, SQLQueries().AllQueueQueries, params=(start_date, end_date))
-df_all = df_all_raw[df_all_raw['NomAgence'].isin(selected_agencies)]
+df_all_raw = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
+df_all = df_all_raw[df_all_raw['NomAgence'].isin(st.session_state.selected_agencies)]
 df_all = df_all[df_all['UserName'].notna()].reset_index(drop=True)
 
 if df_all.empty:

@@ -1,7 +1,7 @@
 # 1_🏠_Accueil_et_Connexion.py
 import streamlit as st
 from shared_code import get_connection, run_query, SQLQueries, load_and_display_css
-
+from datetime import datetime, timedelta
 st.set_page_config(
     page_title="Accueil - Marlodj Dashboard",
     page_icon="🏠",
@@ -20,7 +20,9 @@ def show_login_page():
     st.title("Connexion au Dashboard Marlodj")
     
     conn = get_connection()
+   
     df_users = run_query(conn, SQLQueries().ProfilQueries)
+    st.write(len(df_users))
     users_dict = dict(zip(df_users['UserName'], df_users['MotDePasse']))
     profiles_dict = dict(zip(df_users['UserName'], df_users['Profil']))
 
@@ -29,11 +31,27 @@ def show_login_page():
         password = st.text_input("Mot de passe", type="password")
         submitted = st.form_submit_button("Se connecter")
 
+        # Dans 1_🏠_Accueil_et_Connexion.py
+
+# ... dans la fonction show_login_page()
         if submitted:
             if users_dict.get(username) == password:
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.session_state.user_profile = profiles_dict.get(username)
+
+                # --- NOUVEAU : Initialisation de l'état des filtres ---
+                # On le fait ici pour que ça se produise une seule fois après le login.
+                if 'start_date' not in st.session_state:
+                    st.session_state.start_date = datetime.now().date()
+                if 'end_date' not in st.session_state:
+                    st.session_state.end_date = datetime.now().date()
+                if 'selected_agencies' not in st.session_state:
+                    # Charger toutes les agences pour le default
+                    all_agencies_df = run_query(conn, SQLQueries().AllAgences)
+                    st.session_state.selected_agencies = list(all_agencies_df['NomAgence'].unique())
+                # --------------------------------------------------------
+
                 st.rerun()
             else:
                 st.error("Nom d'utilisateur ou mot de passe incorrect.")

@@ -124,7 +124,7 @@ def create_excel_buffer(df, sheet_name="Sheet1"):
 
 # Dans shared_code.py
 
-@st.cache_resource
+
 def get_connection():
     """Crée et met en cache la connexion à la base de données."""
     try:
@@ -138,14 +138,15 @@ def get_connection():
         # La chaîne de connexion doit avoir DRIVER={Nom du Pilote}
         # et non DRIVER='{Nom du Pilote};...'
         connection_string = (
-            f"DRIVER={{{driver_name}}};"
+            f"DRIVER={driver_name};"
             f"SERVER={server};"
             f"DATABASE={database};"
+            f'PORT=1433;'
             f"UID={username};"
             f"PWD={password};"
         )
         
-        return pyodbc.connect(connection_string, timeout=30)
+        return pyodbc.connect(connection_string)
     
     except Exception as e:
         st.error(f"Erreur de connexion à la base de données: {e}")
@@ -157,19 +158,20 @@ def get_connection():
         """)
         st.stop()
 
-@st.cache_data(ttl=600) # Cache les données pour 10 minutes
+
 def run_query(_connection, sql, params=None):
-    """Exécute une requête SQL et retourne un DataFrame."""
+    """
+    Exécute une requête SQL en utilisant une connexion existante 
+    et retourne un DataFrame Pandas.
+    NE FERME PAS LA CONNEXION.
+    """
     try:
-       
-        df = pd.read_sql_query(sql, _connection, index_col=None)
-    except pyodbc.Error as pe:
-        st.error(f"Error connecting to the database: {pe}")
-        df = None
-    finally:
-        _connection.close()
-    
-    return  df
+        # Exécuter la requête et retourner le résultat
+        df = pd.read_sql_query(sql, _connection, params=params)
+        return df
+    except Exception as e:
+        st.error(f"Erreur lors de l'exécution de la requête : {e}")
+        return pd.DataFrame() # Retourner un DataFrame vide en cas d'erreur
 
 # --- Fonctions de Traitement de Données (depuis functions.py) ---
 
@@ -250,30 +252,40 @@ def load_and_display_css():
     with open("styles.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+# Dans shared_code.py
+
 def create_sidebar_filters(df_agences):
-    """Crée la sidebar avec les filtres communs et retourne les valeurs sélectionnées."""
+    """Crée la sidebar. Les valeurs sont maintenant gérées par st.session_state."""
     st.sidebar.image("assets/logo.png", width=150)
     st.sidebar.title("Tableau de Bord Marlodj")
     
-    start_date = st.sidebar.date_input("Date Début", datetime.now().date())
-    end_date = st.sidebar.date_input("Date Fin", datetime.now().date())
+    # Ces widgets vont lire et écrire dans st.session_state grâce à l'argument 'key'
+    st.date_input(
+        "Date Début", 
+        key="start_date"  # La valeur sera st.session_state.start_date
+    )
+    st.date_input(
+        "Date Fin", 
+        key="end_date"    # La valeur sera st.session_state.end_date
+    )
 
-    if start_date > end_date:
+    if st.session_state.start_date > st.session_state.end_date:
         st.sidebar.error("La date de début ne peut pas être après la date de fin.")
         st.stop()
         
     available_agencies = df_agences['NomAgence'].unique()
-    selected_agencies = st.sidebar.multiselect(
+    st.multiselect(
         'Agences',
         options=available_agencies,
-        default=list(available_agencies)
+        key='selected_agencies' # La valeur sera st.session_state.selected_agencies
     )
 
     st.sidebar.markdown("---")
     st.sidebar.info(f"Utilisateur : {st.session_state.username}")
     if st.sidebar.button("Déconnexion"):
-        st.session_state.logged_in = False
-        st.session_state.username = None
+        # Vider tout le session_state pour une déconnexion propre
+        for key in st.session_state.keys():
+            del st.session_state[key]
         st.rerun()
 
     st.sidebar.markdown("""
@@ -282,7 +294,7 @@ def create_sidebar_filters(df_agences):
         </div>
     """, unsafe_allow_html=True)
 
-    return start_date, end_date, selected_agencies
+    # La fonction n'a plus besoin de retourner les valeurs, car elles sont dans st.session_state
 
 # --- Fonctions de Visualisation Partagées ---
 
