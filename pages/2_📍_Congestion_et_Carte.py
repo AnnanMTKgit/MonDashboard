@@ -1,10 +1,7 @@
 # pages/2_📍_Congestion_et_Carte.py
 import streamlit as st
-from shared_code import (
-    get_connection, run_query, SQLQueries, create_sidebar_filters, 
-    AgenceTable, create_folium_map, echarts_satisfaction_gauge, current_attente,
-    load_and_display_css
-)
+from shared_code import *
+
 
 st.set_page_config(page_title="Congestion et Carte", layout="wide", page_icon="📍")
 load_and_display_css()
@@ -13,26 +10,23 @@ if not st.session_state.get('logged_in'):
     st.error("Veuillez vous connecter pour accéder à cette page.")
     st.stop()
 
-# --- Chargement des données et filtres ---
+# --- Dessine la sidebar et charge les données ---
+create_sidebar_filters()
 conn = get_connection()
-df_agences = run_query(conn, SQLQueries().AllAgences)
-create_sidebar_filters(df_agences)
-
 df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
-df_queue = df_all.copy() # Simplification, df_queue est souvent une version filtrée/spécifique
+df_queue = df_all.copy()
 
-# --- Filtrage des données basé sur st.session_state ---
-df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)] # Et ici
-df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)] # Et ici
+# --- Filtrage basé sur st.session_state ---
+df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)]
+df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)]
 
 if df_all_filtered.empty:
     st.warning("Aucune donnée disponible pour la période et les agences sélectionnées.")
     st.stop()
-
 st.title("📍 Congestion et Localisation des Agences")
 
 # --- KPIs ---
-_, agg_global = AgenceTable(df_all, df_queue)
+_, agg_global = AgenceTable(df_all_filtered, df_queue_filtered)
 agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
 
 TMO = agg_global["Temps Moyen d'Operation (MIN)"].mean()

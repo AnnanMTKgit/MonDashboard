@@ -2,17 +2,33 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import pyodbc
-from datetime import datetime
-import folium
-from streamlit_folium import st_folium
-from streamlit_echarts import st_echarts,JsCode
-import altair as alt
+import plotly.express as px
+import warnings
+from streamlit_folium import st_folium 
+warnings.filterwarnings('ignore')
+from streamlit_option_menu import option_menu
+import time
 import plotly.graph_objects as go
+from streamlit.components.v1 import html
+import pydeck as pdk
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import plotly.io as pio
+import copy
+import pyodbc
+import altair as alt
+import seaborn as sns
+import plotly.figure_factory as ff
+import plotly.subplots as sp
 import io 
+import folium
+from datetime import datetime, timedelta
 from openpyxl.utils import get_column_letter ##
 from openpyxl.worksheet.table import Table, TableStyleInfo ##
-import plotly.express as px
+import base64
+from streamlit_echarts import st_echarts,JsCode
+import math 
 
 # Variable de couleurs
 
@@ -254,17 +270,13 @@ def load_and_display_css():
 
 # Dans shared_code.py
 
-def create_sidebar_filters(df_agences):
-    """Crée la sidebar. Les valeurs sont maintenant gérées par st.session_state."""
-    st.sidebar.image("assets/logo.png", width=150)
-    st.sidebar.title("Tableau de Bord Marlodj")
-    
+def date_range_selection():
     # Ces widgets vont lire et écrire dans st.session_state grâce à l'argument 'key'
-    st.date_input(
+    st.sidebar.date_input(
         "Date Début", 
         key="start_date"  # La valeur sera st.session_state.start_date
     )
-    st.date_input(
+    st.sidebar.date_input(
         "Date Fin", 
         key="end_date"    # La valeur sera st.session_state.end_date
     )
@@ -272,30 +284,60 @@ def create_sidebar_filters(df_agences):
     if st.session_state.start_date > st.session_state.end_date:
         st.sidebar.error("La date de début ne peut pas être après la date de fin.")
         st.stop()
-        
-    available_agencies = df_agences['NomAgence'].unique()
-    st.multiselect(
-        'Agences',
-        options=available_agencies,
-        key='selected_agencies' # La valeur sera st.session_state.selected_agencies
+
+
+def filtering(df, UserName, NomService):
+              
+    return df.query('UserName in @UserName & NomService in @NomService')
+
+
+
+def filter1(df_all):
+    
+    NomService = st.sidebar.multiselect(
+        'Services',
+        options=df_all['NomService'].unique(),
+        default=df_all['NomService'].unique()
     )
+    
+    # Filter df_all based on the selected NomService
+    df = df_all[df_all['NomService'].isin(NomService)]
+
+    # UserName selection
+    UserName = st.sidebar.multiselect(
+        'Agents',
+        options=df['UserName'].unique(),
+        default=df['UserName'].unique()
+    )
+    
+    df_selection = filtering(df, UserName, NomService)
+    return df_selection
+
+def create_sidebar_filters():
+    # st.sidebar.image("assets/logo.png", width=150)
+    # st.sidebar.title("Tableau de Bord Marlodj")
+    
+    st.sidebar.date_input("Date Début", key="start_date")
+    st.sidebar.date_input("Date Fin", key="end_date")
+
+    if st.session_state.start_date > st.session_state.end_date:
+        st.sidebar.error("La date de début ne peut pas être après la date de fin.")
+        st.stop()
+        
+    conn = get_connection()
+    df_agences = run_query(conn, SQLQueries().AllAgences)
+    available_agencies = df_agences['NomAgence'].unique()
+    
+    st.sidebar.multiselect('Agences', options=available_agencies,default=available_agencies ,key='selected_agencies')
 
     st.sidebar.markdown("---")
     st.sidebar.info(f"Utilisateur : {st.session_state.username}")
     if st.sidebar.button("Déconnexion"):
-        # Vider tout le session_state pour une déconnexion propre
-        for key in st.session_state.keys():
+        for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
 
-    st.sidebar.markdown("""
-        <div style="position: fixed; bottom: 0; left: 0; width: 17rem; padding: 10px; text-align: center; font-size: 0.9rem;">
-            Copyright Obertys 2025
-        </div>
-    """, unsafe_allow_html=True)
-
-    # La fonction n'a plus besoin de retourner les valeurs, car elles sont dans st.session_state
-
+    st.sidebar.markdown("<div style='position: fixed; bottom: 0; left: 0; width: 17rem; padding: 10px; text-align: center;'>Copyright Obertys 2025</div>", unsafe_allow_html=True)
 # --- Fonctions de Visualisation Partagées ---
 
 @st.cache_data
@@ -1244,3 +1286,236 @@ def Graphs_bar(df_selected):
     'displayModeBar': False  # Hide the mode bar (but still offer the download button via Streamlit)
 }
     return figs
+
+
+def circle(input_text,input_response,list_2color):
+    source = pd.DataFrame({
+      "Topic": ['', input_text],
+      "% value": [100-input_response, input_response]
+  })
+    source_bg = pd.DataFrame({
+        "Topic": ['', input_text],
+        "% value": [100, 0]
+    })
+        
+    plot = alt.Chart(source).mark_arc(innerRadius=45, cornerRadius=25).encode(
+        theta="% value",
+        color= alt.Color("Topic:N",
+                        scale=alt.Scale(
+                            #domain=['A', 'B'],
+                            domain=[input_text, ''],
+                            # range=['#29b5e8', '#155F7A']),  # 31333F
+                            range=list_2color),
+                        legend=None)
+    ).properties(width=130, height=130)
+        
+        
+    text = plot.mark_text(align='center', color="#29b5e8", font="Lato", fontSize=32, fontWeight=700, fontStyle="italic").encode(text=alt.value(f'{input_response}'))
+    plot_bg = alt.Chart(source_bg).mark_arc(innerRadius=45, cornerRadius=20).encode(
+        theta="% value",
+        color= alt.Color("Topic:N",
+                        scale=alt.Scale(
+                            # domain=['A', 'B'],
+                            domain=[input_text, ''],
+                            range=list_2color),  # 31333F
+                        legend=None),
+    ).properties(width=130, height=130)
+
+    return plot_bg + plot + text 
+
+
+
+def ServiceTable(df,status="Traitée"):
+    df1=df.copy()
+    df1=df1[df1["Nom"]==status]
+    agg = df1.groupby(['UserName']).agg(
+    TMO=('TempOperation', lambda x: np.round(np.mean(x)/60).astype(int)),NombreTickets=('Nom','size'),
+TotalMobile=('IsMobile',lambda x: (x==1).sum())).reset_index()
+    
+    
+    return agg
+
+def plot_metrics(df,status,var):
+    agg = ServiceTable(df,status)
+    if agg.empty:
+        
+        Delta = ''
+        st.metric(label=status, value=None, delta=None)
+    else:
+
+        Value = agg[var]
+        Delta = ''
+        st.metric(label=status, value=Value, delta=Delta)
+
+
+
+
+
+def service_congestion(df_queue,color=['#00CC96', '#12783D'],title=False):
+  
+   
+  agence=df_queue["NomAgence"].iloc[0]
+  if not title:
+    title=df_queue["NomService"].iloc[0]
+  
+  HeureFermeture=df_queue['HeureFermeture'].iloc[0]
+  queue_length=current_attente(df_queue,agence,HeureFermeture)
+  #max_length=df_queue['Capacites'].iloc[0]
+  
+#   percentage = (queue_length / max_length) * 100
+
+#   chart_color  = ['#FF0000', '#781F16'] if queue_length >= max_length else (['#FFFFFF', '#D5D5D5']  if percentage ==0 else  
+#         ['#00CC96', '#12783D'] if percentage < 50 else ["#FFA500", '#BF6B3D'] if percentage < 80 else ["#EF553B", '#B03A30']   
+#     )
+  #title='Vide' if chart_color==['#FFFFFF', '#D5D5D5']  else "Modérement occupée" if chart_color==['#00CC96', '#12783D'] else "Fortement occupée" if chart_color==["#FFA500", '#BF6B3D'] else "Très fortement occupée " if chart_color==["#EF553B", '#B03A30'] else 'Congestionnée'
+  
+  input_text="Congestion"
+  input_response=queue_length
+  fig=circle(input_text,input_response,list_2color=color)
+
+  st.markdown(
+    f"""
+    <div style="text-align: center;">
+        <p style="font-size: 20px; font-weight: bold;text-decoration: underline;">{title}</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+ 
+  
+  
+  return fig
+
+
+def option_agent(df_all_service,df_queue_service):
+        df=df_all_service.copy()
+        # nom=df["LastName"].iloc[0]
+        # prenom=df['FirstName'].iloc[0]
+        # nom_service=df["NomService"].iloc[0]
+        
+        # st.sidebar.markdown(f'SERVICE : :orange[ {nom_service}]')
+        # #st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
+        # st.sidebar.markdown(f'UTILISATEUR : :blue[  {prenom} {nom}]')
+        # #st.sidebar.markdown(f"## Utilisateur :  {prenom} {nom}")
+        st.sidebar.markdown("<br><br>", unsafe_allow_html=True) 
+        # CSS styling
+        st.markdown("""
+<style>
+
+
+
+[data-testid="stVerticalBlock"] {
+    padding-left: 0rem;
+    padding-right: 0rem;
+}
+
+[data-testid="stMetric"] {
+    background-color: #393939;
+    text-align: center;
+    padding: 15px 0;
+}
+
+[data-testid="stMetricLabel"] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+[data-testid="stMetricDeltaIcon-Up"] {
+    position: relative;
+    left: 38%;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+}
+
+[data-testid="stMetricDeltaIcon-Down"] {
+    position: relative;
+    left: 38%;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+        col = st.columns((1.25, 5.25, 1), gap='medium')
+        with col[0]:
+            
+            st.markdown(
+    f"""
+    <div style="text-align: center;">
+        <p style="font-size: 20px; font-weight: bold;text-decoration: underline;">Totaux Opération</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+            
+
+            plot_metrics(df,'Traitée',"NombreTickets")
+            plot_metrics(df,"Passée","NombreTickets")
+            plot_metrics(df,"Rejetée","NombreTickets")
+
+            
+           
+
+        with col[1]:
+            c= st.columns((1.5, 1.5), gap='medium')
+            with c[0]:
+                fig=stacked_chart(df_all_service,'TempOperation','UserName',"Catégorisation du Temps d'opération")
+                st.altair_chart(fig, use_container_width=True)  
+            with c[1]:
+                fig1=stacked_agent(df_all_service,type='UserName',titre="Nombre de type d'opération",concern='Type_Operation')
+                st.altair_chart(fig1, use_container_width=True)
+            
+        with col[2]:
+            st.markdown(
+    f"""
+    <div style="text-align: center;">
+        <p style="font-size: 20px; font-weight: bold;text-decoration: underline;">File d'Attente</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+            
+           
+            fig=service_congestion(df_queue_service,color=['#12783D','#00CC96'])
+            st.altair_chart(fig,use_container_width=True)
+            
+            
+        col = st.columns((1.25, 5.25, 1), gap='medium')
+        
+        with col[0]:
+            st.markdown(
+    f"""
+    <div style="text-align: center;">
+        <p style="font-size: 20px; font-weight: bold;text-decoration: underline;">Temps Moy Opération (MINUTES)</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+            
+            
+            agg=ServiceTable(df,"Rejetée")
+            
+            plot_metrics(df,'Traitée',"TMO")
+            plot_metrics(df,"Passée","TMO")
+            plot_metrics(df,"Rejetée","TMO")
+        with col[1]:
+            
+            fig,_,_,_=area_graph(df_all_service,concern='UserName',time='TempOperation',date_to_bin='Date_Fin',seuil=5,title="Evolution du temps moyen de traitement",couleur='#17becf')
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+
+        with col[2]:
+
+            fig1=service_congestion(df_queue_filtered,color=['#B03A30',"#EF553B"],title='Agence')
+            st.altair_chart(fig1,use_container_width=True)
+
+        st.stop()

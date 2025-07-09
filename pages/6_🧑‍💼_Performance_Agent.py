@@ -1,10 +1,6 @@
 # pages/6_🧑‍💼_Performance_Agent.py
 import streamlit as st
-from shared_code import (
-    get_connection, run_query, SQLQueries, create_sidebar_filters, load_and_display_css,
-    stacked_chart, stacked_agent, plot_line_chart, Graphs_pie, Graphs_bar
-)
-
+from shared_code import *
 st.set_page_config(page_title="Performance Agent", layout="wide", page_icon="🧑‍💼")
 load_and_display_css()
 
@@ -12,43 +8,24 @@ if not st.session_state.get('logged_in'):
     st.error("Veuillez vous connecter pour accéder à cette page.")
     st.stop()
 
-# --- Chargement des données et filtres globaux ---
+create_sidebar_filters()
 conn = get_connection()
-df_agences = run_query(conn, SQLQueries().AllAgences)
-create_sidebar_filters(df_agences)
+df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
 
-df_all_raw = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
-df_all = df_all_raw[df_all_raw['NomAgence'].isin(st.session_state.selected_agencies)]
-df_all = df_all[df_all['UserName'].notna()].reset_index(drop=True)
+df_filtered_global = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)]
+df_filtered_global = df_filtered_global[df_filtered_global['UserName'].notna()]
 
-if df_all.empty:
-    st.warning("Aucun agent n'a de données pour la période et les agences sélectionnées.")
-    st.stop()
 
+if df_filtered_global.empty: st.stop()
 st.title("🧑‍💼 Performance des Agents")
 
 # --- Filtres spécifiques à la page ---
 st.subheader("Filtres d'Analyse")
-col_filter1, col_filter2 = st.columns(2)
 
-with col_filter1:
-    selected_services = st.multiselect(
-        'Filtrer par Services',
-        options=df_all['NomService'].unique(),
-        default=list(df_all['NomService'].unique())
-    )
 
-df_filtered_by_service = df_all[df_all['NomService'].isin(selected_services)]
-
-with col_filter2:
-    selected_users = st.multiselect(
-        'Filtrer par Agents',
-        options=df_filtered_by_service['UserName'].unique(),
-        default=list(df_filtered_by_service['UserName'].unique())
-    )
 
 # --- DataFrame final pour les visualisations ---
-df_selection = df_filtered_by_service[df_filtered_by_service['UserName'].isin(selected_users)]
+df_selection = filter1(df_filtered_global)
 
 if df_selection.empty:
     st.warning("Aucune donnée pour cette sélection de services et d'agents.")

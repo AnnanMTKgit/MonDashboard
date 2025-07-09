@@ -1,9 +1,6 @@
 # pages/7_🔍_Supervision.py
 import streamlit as st
-from shared_code import (
-    get_connection, run_query, SQLQueries, create_sidebar_filters, load_and_display_css,
-    AgenceTable, area_graph, echarts_satisfaction_gauge, current_attente
-)
+from shared_code import *
 import pandas as pd
 
 st.set_page_config(page_title="Supervision", layout="wide", page_icon="🔍")
@@ -13,22 +10,17 @@ if not st.session_state.get('logged_in'):
     st.error("Veuillez vous connecter pour accéder à cette page.")
     st.stop()
 
-# --- Chargement des données et filtres ---
+create_sidebar_filters()
 conn = get_connection()
-df_agences = run_query(conn, SQLQueries().AllAgences)
-create_sidebar_filters(df_agences)
-
 df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
 df_queue = df_all.copy()
 df_rh = run_query(conn, SQLQueries().RendezVousQueries, params=(st.session_state.start_date, st.session_state.end_date))
 
-# --- Filtrage basé sur st.session_state ---
 df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)]
 df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)]
 
-if df_all_filtered.empty:
-    st.warning("Aucune donnée disponible pour la période et les agences sélectionnées.")
-    st.stop()
+if df_all_filtered.empty: st.stop()
+
 st.title("🔍 Supervision des Agences")
 
 # --- Navigation par onglets pour la page de supervision ---
@@ -42,7 +34,7 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     st.header("État des Files d'Attente en Temps Réel")
 
-    _, agg_global = AgenceTable(df_all, df_queue)
+    _, agg_global = AgenceTable(df_all_filtered, df_queue_filtered)
     agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
 
     agences_a_afficher = agg_global["Nom d'Agence"].unique()
@@ -75,25 +67,28 @@ with tab1:
                 st.markdown("**Clients par Service :**")
                 
                 # Récupérer les services pour cette agence spécifique
-                df_agence_queue = df_queue[df_queue['NomAgence'] == nom_agence]
+                df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
                 services_agence = df_agence_queue['NomService'].unique()
                 
                 # On ne peut pas mettre des colonnes dans des colonnes facilement en Streamlit
                 # On va donc les afficher verticalement.
+                
                 for service in services_agence:
+                    
                     df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
                     attente_service = current_attente(df_service_queue, nom_agence)
+                    
                     st.metric(label=f"{service}", value=attente_service)
 
 with tab2:
     st.header("Analyse des Opérations sur Rendez-vous")
     
-    if df_rh.empty:
+    if st.session_state.df_RH.empty:
         st.info("Aucune donnée de rendez-vous disponible pour la période sélectionnée.")
     else:
         # Traitement des données de rendez-vous
-        df_rh['Date'] = pd.to_datetime(df_rh['HeureReservation']).dt.date
-        agg_rh = df_rh.groupby(['Date']).agg(
+        st.session_state.df_RH['Date'] = pd.to_datetime(st.session_state.df_RH['HeureReservation']).dt.date
+        agg_rh = st.session_state.df_RH.groupby(['Date']).agg(
             Temps_Moyen_Attente=('TempAttenteMoyen', lambda x: round(x.mean() / 60) if not x.empty else 0),
             Rendez_Vous_Traites=('Nom', lambda x: (x == 'Traitée').sum()),
             Rendez_Vous_Rejetes=('Nom', lambda x: (x == 'Rejetée').sum()),
@@ -109,7 +104,7 @@ with tab3:
     st.header("Évolution des Temps Moyen sur la Période Sélectionnée")
     
     fig_attente, _, _, _ = area_graph(
-        df_all, 
+        df_all_filtered, 
         concern='NomAgence', 
         time='TempsAttenteReel', 
         date_to_bin='Date_Appel', 
@@ -119,7 +114,7 @@ with tab3:
     st.plotly_chart(fig_attente, use_container_width=True)
     
     fig_operation, _, _, _ = area_graph(
-        df_all, 
+        df_all_filtered, 
         concern='NomAgence', 
         time='TempOperation', 
         date_to_bin='Date_Fin', 
