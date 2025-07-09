@@ -20,7 +20,7 @@ if df_filtered_global.empty: st.stop()
 st.title("🧑‍💼 Performance des Agents")
 
 # --- Filtres spécifiques à la page ---
-st.subheader("Filtres d'Analyse")
+st.sidebar.subheader("Filtres d'Analyse")
 
 
 

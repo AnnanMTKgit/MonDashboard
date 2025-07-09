@@ -66,8 +66,26 @@ with c1:
             queue_length = agence_data['AttenteActuel'].values[0]
             max_length = agence_data['Capacites'].values[0]
             echarts_satisfaction_gauge(queue_length, max_length=max_length, title="Clients en Attente")
-            # Ajoutez les métriques par service ici si nécessaire
+            nomService=list(df_queue_filtered['NomService'].unique())
+            HeureFermeture=df_queue['HeureFermeture'].iloc[0]
+            queue_length_service={f'{i}':f"{current_attente(df_queue[df_queue['NomService']==i],selected_agence_gauge,HeureFermeture)}" for i in nomService}
+            
 
+            # Ajoutez les métriques par service ici si nécessaire
+            c=c1.columns(len(queue_length_service))
+            for i,nom in enumerate(nomService):
+                Value = queue_length_service[nom]
+                Delta = ''
+                c[i].metric(label=nom, value=Value, delta=Delta)
 with c2:
     st.subheader("CARTE DES AGENCES")
-    create_folium_map(agg_map)
+    folium_map=create_folium_map(agg_map)
+    folium_map.save('map.html')
+    # #@st.cache_data()
+    def get_golden_map():
+        HtmlFile = open("map.html", 'r', encoding='utf-8')
+        bcn_map_html = HtmlFile.read()
+        return bcn_map_html
+    bcn_map_html = get_golden_map()
+    with st.container():
+        html(bcn_map_html, height=508)

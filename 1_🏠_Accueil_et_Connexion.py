@@ -1,7 +1,8 @@
 # 1_🏠_Accueil_et_Connexion.py
 import streamlit as st
-from shared_code import get_connection, run_query, SQLQueries, load_and_display_css,date_range_selection,option_agent
+from shared_code import *
 from datetime import datetime, timedelta
+
 st.set_page_config(
     page_title="Accueil - Marlodj Dashboard",
     page_icon="🏠",
@@ -97,7 +98,7 @@ else:
         st.set_page_config(page_title=f"Dashboard Agent - {st.session_state.username}")
         show_agent_dashboard()
     else:
-        from shared_code import create_sidebar_filters
+        
         create_sidebar_filters()
         st.title(f"🏠 Bienvenue sur le Dashboard Marlodj, {st.session_state.username}!")
         st.info("Utilisez le menu sur la gauche pour naviguer entre les différentes sections d'analyse.")

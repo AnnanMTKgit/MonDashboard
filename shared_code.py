@@ -294,6 +294,9 @@ def filtering(df, UserName, NomService):
 
 def filter1(df_all):
     
+    # Appliquer un style CSS pour restreindre la hauteur
+    
+
     NomService = st.sidebar.multiselect(
         'Services',
         options=df_all['NomService'].unique(),
@@ -340,7 +343,7 @@ def create_sidebar_filters():
     st.sidebar.markdown("<div style='position: fixed; bottom: 0; left: 0; width: 17rem; padding: 10px; text-align: center;'>Copyright Obertys 2025</div>", unsafe_allow_html=True)
 # --- Fonctions de Visualisation Partagées ---
 
-@st.cache_data
+
 def create_folium_map(agg):
     legend_html = ''  # Variable pour stocker la légende HTML
     
