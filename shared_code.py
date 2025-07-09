@@ -329,7 +329,7 @@ def create_sidebar_filters():
     available_agencies = df_agences['NomAgence'].unique()
     
     st.sidebar.multiselect('Agences', options=available_agencies,default=available_agencies ,key='selected_agencies')
-
+    
     st.sidebar.markdown("---")
     st.sidebar.info(f"Utilisateur : {st.session_state.username}")
     if st.sidebar.button("Déconnexion"):

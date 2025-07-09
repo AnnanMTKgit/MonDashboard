@@ -9,7 +9,7 @@
 
 /* ========== SIDEBAR ========== */
 section[data-testid="stSidebar"] {
-    background-color: #E3F2FD;
+    background-color: #acdafa;
     color: #212121;
     border-right: 2px solid #BBDEFB;
 }
@@ -52,3 +52,5 @@ th {
 tr:nth-child(even) {
     background-color: #f2f2f2;
 }
+
+
