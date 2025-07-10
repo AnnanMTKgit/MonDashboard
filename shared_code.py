@@ -1430,11 +1430,11 @@ def service_congestion(df_queue,color=['#00CC96', '#12783D'],title=False):
 
 
 def get_status(clients,capacite):
-        if clients/capacite==0: return "⚪ 'Vide'" #, [34, 139, 34]
+        if clients/capacite==0: return "⚪ Vide" #, [34, 139, 34]
         elif clients/capacite<0.5: return "🟢 Modérement occupée" #, [34, 139, 34]
         elif clients/capacite < 0.8: return "🟠 Fortement occupée" #, [255, 165, 0]
         elif clients/capacite < 1 : return "🔴 Très fortement occupée" #, [220, 20, 60]
-        else:   return "🔵 'Congestionnée'"
+        else:   return "🔵 Congestionnée"
     
     
 
