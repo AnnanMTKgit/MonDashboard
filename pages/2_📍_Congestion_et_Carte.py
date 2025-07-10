@@ -13,7 +13,7 @@ if not st.session_state.get('logged_in'):
 # --- Dessine la sidebar et charge les données ---
 create_sidebar_filters()
 conn = get_connection()
-st.write("imbebo")
+
 df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
 df_queue = df_all.copy()
 

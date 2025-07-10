@@ -16,11 +16,9 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.username = None
     st.session_state.user_profile = None
-    st.session_state.df=None
     st.session_state.df_RH=None
-    st.session_state.df_agences=None
-    st.session_state.df_users=None
-
+    st.session_state.all_agencies=None
+    
 
 def initialize_filters():
     conn = get_connection()

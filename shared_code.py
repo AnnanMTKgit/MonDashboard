@@ -317,14 +317,8 @@ def filter1(df_all):
     return df_selection
 
 def create_sidebar_filters():
-    # st.sidebar.image("assets/logo.png", width=150)
-    # st.sidebar.title("Tableau de Bord Marlodj")
     
-    # st.sidebar.date_input("Date Début", key="start_date")
-    # st.sidebar.date_input("Date Fin", key="end_date")
     
-    st.write(st.session_state.start_date)
-
 
 
     # Rendu des date_input avec valeur actuelle
@@ -346,11 +340,21 @@ def create_sidebar_filters():
         conn = get_connection()
         df_agences = run_query(conn, SQLQueries().AllAgences)
         available_agencies = df_agences['NomAgence'].unique()
+        st.session_state.all_agencies = available_agencies
         st.session_state.selected_agencies = available_agencies  # valeur par défaut
     
-    selected_agencies =st.sidebar.multiselect('Agences', options=st.session_state.selected_agencies,default=st.session_state.selected_agencies ,key="selected_agencies_input")
-    # Mettre à jour manuellement le session_state
-    st.session_state.selected_agencies = selected_agencies
+    selected_agencies =st.sidebar.multiselect('Agences', options=st.session_state.all_agencies,default=st.session_state.selected_agencies ,key="selected_agencies_input")
+
+    # Empêcher la désélection totale
+    if len(selected_agencies) == 0:
+        st.sidebar.warning("Vous devez sélectionner au moins une agence.")
+        
+        st.rerun() # st.rerun() est la version moderne de st.experimental_rerun()
+    else:
+        # Mise à jour de la sélection
+        st.session_state.selected_agencies = selected_agencies
+
+    
     
     st.sidebar.markdown("---")
     st.sidebar.info(f"Utilisateur : {st.session_state.username}")
