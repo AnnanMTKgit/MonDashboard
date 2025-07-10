@@ -27,7 +27,7 @@ def initialize_filters():
     all_agencies_df = run_query(conn, SQLQueries().AllAgences)
     st.session_state.start_date = datetime.now().date()
     st.session_state.end_date = datetime.now().date()
-    st.session_state.selected_agencies = list(all_agencies_df['NomAgence'].unique())
+
 
 
 
@@ -99,6 +99,6 @@ else:
         show_agent_dashboard()
     else:
         
-        create_sidebar_filters()
+        #create_sidebar_filters()
         st.title(f"🏠 Bienvenue sur le Dashboard Marlodj, {st.session_state.username}!")
         st.info("Utilisez le menu sur la gauche pour naviguer entre les différentes sections d'analyse.")

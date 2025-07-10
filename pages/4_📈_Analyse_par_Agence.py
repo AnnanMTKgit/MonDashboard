@@ -17,7 +17,9 @@ df_queue = df_all.copy()
 df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)]
 df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)]
 
-if df_all_filtered.empty: st.stop()
+if df_all_filtered.empty: 
+    st.error("Aucune donnée disponible pour la sélection.")
+    st.stop()
 
 
 st.title("📈 Analyse Détaillée par Agence")

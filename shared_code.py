@@ -320,18 +320,33 @@ def create_sidebar_filters():
     # st.sidebar.image("assets/logo.png", width=150)
     # st.sidebar.title("Tableau de Bord Marlodj")
     
-    st.sidebar.date_input("Date Début", key="start_date")
-    st.sidebar.date_input("Date Fin", key="end_date")
+    # st.sidebar.date_input("Date Début", key="start_date")
+    # st.sidebar.date_input("Date Fin", key="end_date")
+    
+    # Rendu des date_input avec valeur actuelle
+    start_date = st.sidebar.date_input("Date Début", value=st.session_state.start_date, key="start_date_input")
+    end_date = st.sidebar.date_input("Date Fin", value=st.session_state.end_date, key="end_date_input")
+
+    # Mise à jour manuelle du session_state
+    st.session_state.start_date = start_date
+    st.session_state.end_date = end_date
+
+
 
     if st.session_state.start_date > st.session_state.end_date:
         st.sidebar.error("La date de début ne peut pas être après la date de fin.")
         st.stop()
-        
-    conn = get_connection()
-    df_agences = run_query(conn, SQLQueries().AllAgences)
-    available_agencies = df_agences['NomAgence'].unique()
+
+    # Initialiser dans st.session_state si la clé n'existe pas
+    if "selected_agencies" not in st.session_state:
+        conn = get_connection()
+        df_agences = run_query(conn, SQLQueries().AllAgences)
+        available_agencies = df_agences['NomAgence'].unique()
+        st.session_state.selected_agencies = available_agencies  # valeur par défaut
     
-    st.sidebar.multiselect('Agences', options=available_agencies,default=available_agencies ,key='selected_agencies')
+    selected_agencies =st.sidebar.multiselect('Agences', options=st.session_state.selected_agencies,default=st.session_state.selected_agencies ,key="selected_agencies_input")
+    # Mettre à jour manuellement le session_state
+    st.session_state.selected_agencies = selected_agencies
     
     st.sidebar.markdown("---")
     st.sidebar.info(f"Utilisateur : {st.session_state.username}")
@@ -1389,6 +1404,33 @@ def service_congestion(df_queue,color=['#00CC96', '#12783D'],title=False):
   
   
   return fig
+
+
+# Dans shared_code.py
+
+# ==============================================================================
+# --- COMPOSANT "CARTE DE STATUT D'AGENCE" ---
+# ==============================================================================
+
+
+def get_status(clients,capacite):
+        if clients/capacite==0: return "⚪ 'Vide'", [34, 139, 34]
+        elif clients/capacite<0.5: return "🟢 Modérement occupée", [34, 139, 34]
+        elif clients/capacite < 0.8: return "🟠 Fortement occupée", [255, 165, 0]
+        elif clients/capacite < 1 : return "🔴 Très fortement occupée", [220, 20, 60]
+        else:   return "🔵 'Congestionnée'"
+    
+    
+
+
+
+
+# ==============================================================================
+# --- FIN DU COMPOSANT ---
+# ==============================================================================
+
+
+
 
 
 def option_agent(df_all_service,df_queue_service):

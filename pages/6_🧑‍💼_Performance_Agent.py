@@ -16,7 +16,9 @@ df_filtered_global = df_all[df_all['NomAgence'].isin(st.session_state.selected_a
 df_filtered_global = df_filtered_global[df_filtered_global['UserName'].notna()]
 
 
-if df_filtered_global.empty: st.stop()
+if df_filtered_global.empty: 
+    st.error("Aucune donnée disponible pour la sélection.")
+    st.stop()
 st.title("🧑‍💼 Performance des Agents")
 
 # --- Filtres spécifiques à la page ---
