@@ -323,6 +323,10 @@ def create_sidebar_filters():
     # st.sidebar.date_input("Date Début", key="start_date")
     # st.sidebar.date_input("Date Fin", key="end_date")
     
+    st.write(st.session_state.start_date)
+
+
+
     # Rendu des date_input avec valeur actuelle
     start_date = st.sidebar.date_input("Date Début", value=st.session_state.start_date, key="start_date_input")
     end_date = st.sidebar.date_input("Date Fin", value=st.session_state.end_date, key="end_date_input")
