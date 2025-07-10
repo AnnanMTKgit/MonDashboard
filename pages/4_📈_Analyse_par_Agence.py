@@ -1,8 +1,8 @@
 # pages/4_📈_Analyse_par_Agence.py
 import streamlit as st
 from shared_code import *
+st.markdown("<h1 style='text-align: center;'>Analyse Détaillée par Agence</h1>", unsafe_allow_html=True)
 
-st.set_page_config(page_title="Analyse par Agence", layout="wide", page_icon="📈")
 load_and_display_css()
 
 if not st.session_state.get('logged_in'):
@@ -22,12 +22,12 @@ if df_all_filtered.empty:
     st.stop()
 
 
-st.title("📈 Analyse Détaillée par Agence")
+
 
 tab1, tab2, tab3 = st.tabs(["Performance par Catégorie", "Agences les Plus Lentes", "Agences les Plus Fréquentées"])
 
 with tab1:
-    st.header("Catégorisation des Temps d'Attente et d'Opération")
+    
     chart1 = stacked_chart(df_all_filtered, 'TempsAttenteReel', 'NomAgence', "Catégorisation du Temps d'Attente")
     st.altair_chart(chart1, use_container_width=True)
     
@@ -38,7 +38,7 @@ with tab1:
     st.altair_chart(chart3, use_container_width=True)
 
 with tab2:
-    st.header("Analyse des Agences les Plus Lentes")
+    
     fig_attente, _, _, _ = area_graph(df_all_filtered, concern='NomAgence', time='TempsAttenteReel', date_to_bin='Date_Appel', seuil=15, title="Top 5 Agences les Plus Lentes en Temps d'Attente")
     st.plotly_chart(fig_attente, use_container_width=True)
     
@@ -46,7 +46,7 @@ with tab2:
     st.plotly_chart(fig_op, use_container_width=True)
 
 with tab3:
-    st.header("Analyse des Agences les Plus Fréquentées")
+    
     fig1 = top_agence_freq(df_all_filtered, df_queue_filtered, title=['Total Tickets', 'Total Traités'])
     fig2 = top_agence_freq(df_all_filtered, df_queue_filtered, title=['Total Tickets', 'Total Rejetées'], color=['#00CC96', "#EF553B"])
     

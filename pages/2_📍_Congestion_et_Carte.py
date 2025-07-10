@@ -2,8 +2,8 @@
 import streamlit as st
 from shared_code import *
 
+st.markdown("<h1 style='text-align: center;'>Congestion et Localisation des Agences</h1>", unsafe_allow_html=True)
 
-st.set_page_config(page_title="Congestion et Carte", layout="wide", page_icon="📍")
 load_and_display_css()
 
 if not st.session_state.get('logged_in'):
@@ -24,7 +24,6 @@ df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selecte
 if df_all_filtered.empty:
     st.warning("Aucune donnée disponible pour la période et les agences sélectionnées.")
     st.stop()
-st.title("📍 Congestion et Localisation des Agences")
 
 # --- KPIs ---
 _, agg_global = AgenceTable(df_all_filtered, df_queue_filtered)

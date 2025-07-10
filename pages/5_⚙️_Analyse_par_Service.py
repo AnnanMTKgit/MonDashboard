@@ -1,8 +1,8 @@
 # pages/5_⚙️_Analyse_par_Service.py
 import streamlit as st
 from shared_code import *
+st.markdown("<h1 style='text-align: center;'>Analyse par Service et Type d'Opération</h1>", unsafe_allow_html=True)
 
-st.set_page_config(page_title="Analyse par Service", layout="wide", page_icon="⚙️")
 load_and_display_css()
 
 if not st.session_state.get('logged_in'):
@@ -19,12 +19,12 @@ df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selecte
 if df_all_filtered.empty: 
     st.error("Aucune donnée disponible pour la sélection.")
     st.stop()
-st.title("⚙️ Analyse par Service et Type d'Opération")
+
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.header("Performance par Service")
+    
     fig_temps_op = GraphsGlob(df_all_filtered)
     st.plotly_chart(fig_temps_op, use_container_width=True)
     
@@ -32,7 +32,7 @@ with col1:
     st.altair_chart(chart_service, use_container_width=True)
 
 with col2:
-    st.header("Analyse des Types d'Opérations")
+    
     fig_top10 = Top10_Type(df_queue_filtered)
     st.plotly_chart(fig_top10, use_container_width=True)
 

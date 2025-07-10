@@ -5,14 +5,43 @@
     background-color: #FAFAFA;
     color: black;
     font-family: "Segoe UI", sans-serif;
+    /* margin-top: -80px; #Adjust this value as needed */
 }
+
+
+/* ========== SUPPRIMER L'ESPACE BLANC EN HAUT DE PAGE (PAGE PRINCIPALE) ========== */
+/* Masque l'en-tête par défaut de Streamlit si elle existe et crée un espace */
+header[data-testid="stHeader"] {
+    display: none;
+}
+/* Supprime la marge intérieure supérieure de la section principale de l'application */
+section.main {
+    padding-top: 0rem;
+}
+
+
+/* ========== MASQUER LE BOUTON D'OUVERTURE/FERMETURE DU SIDEBAR ========== */
+/* [data-testid="stSidebarCollapseButton"] {
+    display: none;
+} */
 
 /* ========== SIDEBAR ========== */
 section[data-testid="stSidebar"] {
     background-color: #acdafa;
     color: #212121;
     border-right: 2px solid #BBDEFB;
+    height: 100vh !important;
 }
+
+/* NOUVELLE RÈGLE : Supprimer l'espace blanc en bas du contenu du sidebar */
+section[data-testid="stSidebarContent"] {
+    padding-bottom: 0rem !important; /* Très important pour surcharger tout padding par défaut */
+    min-height: unset !important;     /* S'assurer qu'aucune hauteur minimale ne force l'espace */
+}
+
+
+
+
 
 /* ========== TITRES (h1, h2, h3...) ========== */
 h1, h2, h3, h4, h5 {

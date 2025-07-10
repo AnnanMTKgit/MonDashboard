@@ -363,16 +363,15 @@ def create_sidebar_filters():
         # Mise à jour de la sélection
         st.session_state.selected_agencies = selected_agencies
 
+    c,c1=st.sidebar.columns([1,2])
+    with c:
     
-    
-    st.sidebar.markdown("---")
+        if st.sidebar.button(f"Déconnexion"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
     st.sidebar.info(f"Utilisateur : {st.session_state.username}")
-    if st.sidebar.button("Déconnexion"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
 
-    st.sidebar.markdown("<div style='position: fixed; bottom: 0; left: 0; width: 17rem; padding: 10px; text-align: center;'>Copyright Obertys 2025</div>", unsafe_allow_html=True)
+    #st.sidebar.markdown("<div style='position: fixed; bottom: 0; left: 0; width: 17rem; padding: 10px; text-align: center;'>Copyright Obertys 2025</div>", unsafe_allow_html=True)
 # --- Fonctions de Visualisation Partagées ---
 
 

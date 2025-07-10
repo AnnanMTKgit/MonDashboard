@@ -2,7 +2,8 @@
 import streamlit as st
 from shared_code import *
 
-st.set_page_config(page_title="Tableau Global", layout="wide", page_icon="📊")
+st.markdown("<h1 style='text-align: center;'>Tableau de Bord Global</h1>", unsafe_allow_html=True)
+
 load_and_display_css()
 
 if not st.session_state.get('logged_in'):
@@ -22,8 +23,7 @@ if df_all_filtered.empty:
     st.stop()
 
 
-st.title("📊 Tableau de Bord Global")
-st.markdown("Statistiques agrégées pour la période et les agences sélectionnées.")
+
 
 # --- Affichage du tableau ---
 _, AGG = AgenceTable(df_all_filtered, df_queue_filtered )

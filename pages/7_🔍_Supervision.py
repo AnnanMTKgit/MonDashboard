@@ -3,7 +3,7 @@ import streamlit as st
 from shared_code import *
 import pandas as pd
 
-st.set_page_config(page_title="Supervision", layout="wide", page_icon="🔍")
+st.markdown("<h1 style='text-align: center;'>Supervision des Agences</h1>", unsafe_allow_html=True)
 load_and_display_css()
 
 if not st.session_state.get('logged_in'):
@@ -23,7 +23,8 @@ if df_all_filtered.empty:
     st.error("Aucune donnée disponible pour la sélection.")
     st.stop()
 
-st.title("🔍 Supervision des Agences")
+
+
 
 # --- Navigation par onglets pour la page de supervision ---
 tab1, tab2, tab3 = st.tabs([
@@ -34,8 +35,8 @@ tab1, tab2, tab3 = st.tabs([
 
 
 with tab1:
-    st.header("État des Files d'Attente en Temps Réel")
-
+ 
+    st.markdown("<h1 style='text-align: center;'>État des Files d'Attente en Temps Réel</h1>", unsafe_allow_html=True)
     _, agg_global = AgenceTable(df_all_filtered, df_queue_filtered)
     agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
 
@@ -135,7 +136,7 @@ with tab1:
         
 
 with tab2:
-    st.header("Analyse des Opérations sur Rendez-vous")
+    st.header("Pas de données encore disponible")
     
     # if st.session_state.df_RH.empty:
     #     st.info("Aucune donnée de rendez-vous disponible pour la période sélectionnée.")
@@ -155,7 +156,7 @@ with tab2:
     #     st.dataframe(agg_rh, use_container_width=True)
 
 with tab3:
-    st.header("Évolution des Temps Moyen sur la Période Sélectionnée")
+    
     
     fig_attente, _, _, _ = area_graph(
         df_all_filtered, 
