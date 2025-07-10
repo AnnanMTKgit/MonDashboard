@@ -25,7 +25,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_d1253ca62528dde343bbb7b4b20aa234 {
+                #map_2201350eff5bd3bd2547b275020e0ec8 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -39,88 +39,382 @@
 <body>
     
     
-            <div class="folium-map" id="map_d1253ca62528dde343bbb7b4b20aa234" ></div>
+            <div class="folium-map" id="map_2201350eff5bd3bd2547b275020e0ec8" ></div>
         
 </body>
 <script>
     
     
-            var map_d1253ca62528dde343bbb7b4b20aa234 = L.map(
-                "map_d1253ca62528dde343bbb7b4b20aa234",
+            var map_2201350eff5bd3bd2547b275020e0ec8 = L.map(
+                "map_2201350eff5bd3bd2547b275020e0ec8",
                 {
-                    center: [14.701379650022373, -17.46994919884622],
+                    center: [14.679684002013532, -16.446200571105177],
                     crs: L.CRS.EPSG3857,
                     zoom: 7,
                     zoomControl: true,
                     preferCanvas: true,
                 }
             );
-            L.control.scale().addTo(map_d1253ca62528dde343bbb7b4b20aa234);
+            L.control.scale().addTo(map_2201350eff5bd3bd2547b275020e0ec8);
 
             
 
         
     
-            var tile_layer_c01f46782f0c6895eb746e48803a39c8 = L.tileLayer(
+            var tile_layer_3420a5b9058f45fcf20ed9b7278219b3 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detectRetina": false, "maxNativeZoom": 19, "maxZoom": 19, "minZoom": 0, "noWrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
             );
         
     
-            tile_layer_c01f46782f0c6895eb746e48803a39c8.addTo(map_d1253ca62528dde343bbb7b4b20aa234);
+            tile_layer_3420a5b9058f45fcf20ed9b7278219b3.addTo(map_2201350eff5bd3bd2547b275020e0ec8);
         
     
-            var polygon_d7559091f28c63ea0b8fabc8bc940a91 = L.polygon(
-                [[14.701379650022373, -17.46994919884622], [14.701379650022373, -17.46994919884622], [14.701379650022373, -17.46994919884622], [14.701379650022373, -17.46994919884622], [14.701379650022373, -17.46994919884622]],
+            var polygon_d0462c1a37e6629f719f80620e5e8c8a = L.polygon(
+                [[14.667786790456514, -17.46994919884622], [14.719675861103017, -17.46994919884622], [14.719675861103017, -17.432588317382233], [14.667786790456514, -17.432588317382233], [14.667786790456514, -17.46994919884622]],
                 {"bubblingMouseEvents": true, "color": "black", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "gray", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
-            ).addTo(map_d1253ca62528dde343bbb7b4b20aa234);
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
         
     
-        var popup_c7a819864b44bbbd9b9cb147073957ca = L.popup({"maxWidth": "100%"});
+        var popup_6c9a70cd4f410adbeb3fd72e31145a48 = L.popup({"maxWidth": "100%"});
 
         
             
-                var html_f59529d9c99bde7846a7d08fcc34efd0 = $(`<div id="html_f59529d9c99bde7846a7d08fcc34efd0" style="width: 100.0%; height: 100.0%;">Zone: DAKAR</div>`)[0];
-                popup_c7a819864b44bbbd9b9cb147073957ca.setContent(html_f59529d9c99bde7846a7d08fcc34efd0);
+                var html_f8fe5a15258fdad404cb4243cf4d67f3 = $(`<div id="html_f8fe5a15258fdad404cb4243cf4d67f3" style="width: 100.0%; height: 100.0%;">Zone: DAKAR</div>`)[0];
+                popup_6c9a70cd4f410adbeb3fd72e31145a48.setContent(html_f8fe5a15258fdad404cb4243cf4d67f3);
             
         
 
-        polygon_d7559091f28c63ea0b8fabc8bc940a91.bindPopup(popup_c7a819864b44bbbd9b9cb147073957ca)
+        polygon_d0462c1a37e6629f719f80620e5e8c8a.bindPopup(popup_6c9a70cd4f410adbeb3fd72e31145a48)
         ;
 
         
     
     
-            var marker_489668b6c619ef3c79a5fa47073756a6 = L.marker(
+            var marker_7140c6a7b08bb8198ca9e07d6808f42e = L.marker(
                 [14.701379650022373, -17.46994919884622],
                 {}
-            ).addTo(map_d1253ca62528dde343bbb7b4b20aa234);
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
         
     
-            var icon_cbaa2ffe68d97b575f735e0ac530c8e7 = L.AwesomeMarkers.icon(
+            var icon_5d08fbf5754fed1924d4893041a38c20 = L.AwesomeMarkers.icon(
                 {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "blue", "prefix": "glyphicon"}
             );
-            marker_489668b6c619ef3c79a5fa47073756a6.setIcon(icon_cbaa2ffe68d97b575f735e0ac530c8e7);
+            marker_7140c6a7b08bb8198ca9e07d6808f42e.setIcon(icon_5d08fbf5754fed1924d4893041a38c20);
         
     
-        var popup_3e692015610e515939a2351761773033 = L.popup({"maxWidth": 300});
+        var popup_63d6357a68372b141ef6a060d5a1ee2a = L.popup({"maxWidth": 300});
 
         
             
-                var html_8a15f5376a4ed433589121ceceda1ec9 = $(`<div id="html_8a15f5376a4ed433589121ceceda1ec9" style="width: 100.0%; height: 100.0%;"><b>Région:</b> DAKAR<br><b>Nom Agence:</b> Agence Principale<br><b>Client en Attente:</b> 0 <br><b>Temps Moyen d'Attente:</b> 32 min</div>`)[0];
-                popup_3e692015610e515939a2351761773033.setContent(html_8a15f5376a4ed433589121ceceda1ec9);
+                var html_54af24c088bce0ea4dd25a4797d3ed94 = $(`<div id="html_54af24c088bce0ea4dd25a4797d3ed94" style="width: 100.0%; height: 100.0%;"><b>Région:</b> DAKAR<br><b>Nom Agence:</b> Agence Principale<br><b>Client en Attente:</b> 13 <br><b>Temps Moyen d'Attente:</b> 28 min</div>`)[0];
+                popup_63d6357a68372b141ef6a060d5a1ee2a.setContent(html_54af24c088bce0ea4dd25a4797d3ed94);
             
         
 
-        marker_489668b6c619ef3c79a5fa47073756a6.bindPopup(popup_3e692015610e515939a2351761773033)
+        marker_7140c6a7b08bb8198ca9e07d6808f42e.bindPopup(popup_63d6357a68372b141ef6a060d5a1ee2a)
         ;
 
         
     
     
-            marker_489668b6c619ef3c79a5fa47073756a6.bindTooltip(
+            marker_7140c6a7b08bb8198ca9e07d6808f42e.bindTooltip(
                 `<div>
-                     <b>Région:</b> DAKAR<br><b>Nom Agence:</b> Agence Principale<br><b>Client en Attente:</b> 0 <br><b>Temps Moyen d'Attente:</b> 32 min
+                     <b>Région:</b> DAKAR<br><b>Nom Agence:</b> Agence Principale<br><b>Client en Attente:</b> 13 <br><b>Temps Moyen d'Attente:</b> 28 min
+                 </div>`,
+                {"sticky": true}
+            );
+        
+    
+            var marker_285cc824fd048e9d1904808d08dcfc91 = L.marker(
+                [14.667786790456514, -17.432588317382233],
+                {}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+            var icon_2fb516905fb8466fd592fb3e66a0f52e = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "orange", "prefix": "glyphicon"}
+            );
+            marker_285cc824fd048e9d1904808d08dcfc91.setIcon(icon_2fb516905fb8466fd592fb3e66a0f52e);
+        
+    
+        var popup_55d6465c48b06a26ac6d3226b2183366 = L.popup({"maxWidth": 300});
+
+        
+            
+                var html_a3a81524a581a26c5da4c590f72c6ddf = $(`<div id="html_a3a81524a581a26c5da4c590f72c6ddf" style="width: 100.0%; height: 100.0%;"><b>Région:</b> DAKAR<br><b>Nom Agence:</b> Ecobank Roume<br><b>Client en Attente:</b> 13 <br><b>Temps Moyen d'Attente:</b> 25 min</div>`)[0];
+                popup_55d6465c48b06a26ac6d3226b2183366.setContent(html_a3a81524a581a26c5da4c590f72c6ddf);
+            
+        
+
+        marker_285cc824fd048e9d1904808d08dcfc91.bindPopup(popup_55d6465c48b06a26ac6d3226b2183366)
+        ;
+
+        
+    
+    
+            marker_285cc824fd048e9d1904808d08dcfc91.bindTooltip(
+                `<div>
+                     <b>Région:</b> DAKAR<br><b>Nom Agence:</b> Ecobank Roume<br><b>Client en Attente:</b> 13 <br><b>Temps Moyen d'Attente:</b> 25 min
+                 </div>`,
+                {"sticky": true}
+            );
+        
+    
+            var marker_23e0b192360c29bc4d59ecb0b97417c6 = L.marker(
+                [14.719675861103017, -17.469522523631],
+                {}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+            var icon_bb283f092156cfa8113a2123250bb6f3 = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "cadetblue", "prefix": "glyphicon"}
+            );
+            marker_23e0b192360c29bc4d59ecb0b97417c6.setIcon(icon_bb283f092156cfa8113a2123250bb6f3);
+        
+    
+        var popup_778cd3e8536df9d41d30df405ecf6178 = L.popup({"maxWidth": 300});
+
+        
+            
+                var html_8a3024f6609bd7f54d38b68051dc1c41 = $(`<div id="html_8a3024f6609bd7f54d38b68051dc1c41" style="width: 100.0%; height: 100.0%;"><b>Région:</b> DAKAR<br><b>Nom Agence:</b> Ecobank VDN<br><b>Client en Attente:</b> 17 <br><b>Temps Moyen d'Attente:</b> 19 min</div>`)[0];
+                popup_778cd3e8536df9d41d30df405ecf6178.setContent(html_8a3024f6609bd7f54d38b68051dc1c41);
+            
+        
+
+        marker_23e0b192360c29bc4d59ecb0b97417c6.bindPopup(popup_778cd3e8536df9d41d30df405ecf6178)
+        ;
+
+        
+    
+    
+            marker_23e0b192360c29bc4d59ecb0b97417c6.bindTooltip(
+                `<div>
+                     <b>Région:</b> DAKAR<br><b>Nom Agence:</b> Ecobank VDN<br><b>Client en Attente:</b> 17 <br><b>Temps Moyen d'Attente:</b> 19 min
+                 </div>`,
+                {"sticky": true}
+            );
+        
+    
+            var polygon_316059a351d8915dd929c0fd4a4999f8 = L.polygon(
+                [[14.853396489003806, -15.880547132719565], [14.853396489003806, -15.880547132719565], [14.853396489003806, -15.880547132719565], [14.853396489003806, -15.880547132719565], [14.853396489003806, -15.880547132719565]],
+                {"bubblingMouseEvents": true, "color": "black", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "gray", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+        var popup_08e7991c1ace980a69ab9b33dab7c8c9 = L.popup({"maxWidth": "100%"});
+
+        
+            
+                var html_2e1ab6db79edcf1a8d29d125cb1d898c = $(`<div id="html_2e1ab6db79edcf1a8d29d125cb1d898c" style="width: 100.0%; height: 100.0%;">Zone: Diourbel</div>`)[0];
+                popup_08e7991c1ace980a69ab9b33dab7c8c9.setContent(html_2e1ab6db79edcf1a8d29d125cb1d898c);
+            
+        
+
+        polygon_316059a351d8915dd929c0fd4a4999f8.bindPopup(popup_08e7991c1ace980a69ab9b33dab7c8c9)
+        ;
+
+        
+    
+    
+            var marker_dab287f2ed80fa067c086589dc2e0bd6 = L.marker(
+                [14.853396489003806, -15.880547132719565],
+                {}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+            var icon_45e37cb4c49a292c22a183a9ea7900af = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
+            );
+            marker_dab287f2ed80fa067c086589dc2e0bd6.setIcon(icon_45e37cb4c49a292c22a183a9ea7900af);
+        
+    
+        var popup_d25cc0d186fca9e4f01267717a451af7 = L.popup({"maxWidth": 300});
+
+        
+            
+                var html_2a510dad2d60056e2a9ba5a61bbe4818 = $(`<div id="html_2a510dad2d60056e2a9ba5a61bbe4818" style="width: 100.0%; height: 100.0%;"><b>Région:</b> Diourbel<br><b>Nom Agence:</b> Ecobank Touba<br><b>Client en Attente:</b> 4 <br><b>Temps Moyen d'Attente:</b> 6 min</div>`)[0];
+                popup_d25cc0d186fca9e4f01267717a451af7.setContent(html_2a510dad2d60056e2a9ba5a61bbe4818);
+            
+        
+
+        marker_dab287f2ed80fa067c086589dc2e0bd6.bindPopup(popup_d25cc0d186fca9e4f01267717a451af7)
+        ;
+
+        
+    
+    
+            marker_dab287f2ed80fa067c086589dc2e0bd6.bindTooltip(
+                `<div>
+                     <b>Région:</b> Diourbel<br><b>Nom Agence:</b> Ecobank Touba<br><b>Client en Attente:</b> 4 <br><b>Temps Moyen d'Attente:</b> 6 min
+                 </div>`,
+                {"sticky": true}
+            );
+        
+    
+            var polygon_f15f2dc77fc0a2e051cca8504491e532 = L.polygon(
+                [[15.624270968103707, -16.224030317370083], [15.624270968103707, -16.224030317370083], [15.624270968103707, -16.224030317370083], [15.624270968103707, -16.224030317370083], [15.624270968103707, -16.224030317370083]],
+                {"bubblingMouseEvents": true, "color": "black", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "gray", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+        var popup_eefe8cabe3b375afba9e4a2d410d9d37 = L.popup({"maxWidth": "100%"});
+
+        
+            
+                var html_9a2221c57621f049e7e8c269d487bafa = $(`<div id="html_9a2221c57621f049e7e8c269d487bafa" style="width: 100.0%; height: 100.0%;">Zone: Louga</div>`)[0];
+                popup_eefe8cabe3b375afba9e4a2d410d9d37.setContent(html_9a2221c57621f049e7e8c269d487bafa);
+            
+        
+
+        polygon_f15f2dc77fc0a2e051cca8504491e532.bindPopup(popup_eefe8cabe3b375afba9e4a2d410d9d37)
+        ;
+
+        
+    
+    
+            var marker_c2d9eab1a442f079418e8263ce281986 = L.marker(
+                [15.624270968103707, -16.224030317370083],
+                {}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+            var icon_b79247da4c44dd90fa3da140acc734a7 = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "green", "prefix": "glyphicon"}
+            );
+            marker_c2d9eab1a442f079418e8263ce281986.setIcon(icon_b79247da4c44dd90fa3da140acc734a7);
+        
+    
+        var popup_6910dd5ce0fb17023f385107d5314d34 = L.popup({"maxWidth": 300});
+
+        
+            
+                var html_64c8427bf0ab8becb6c5687c7b46cd26 = $(`<div id="html_64c8427bf0ab8becb6c5687c7b46cd26" style="width: 100.0%; height: 100.0%;"><b>Région:</b> Louga<br><b>Nom Agence:</b> Ecobank Louga<br><b>Client en Attente:</b> 1 <br><b>Temps Moyen d'Attente:</b> 8 min</div>`)[0];
+                popup_6910dd5ce0fb17023f385107d5314d34.setContent(html_64c8427bf0ab8becb6c5687c7b46cd26);
+            
+        
+
+        marker_c2d9eab1a442f079418e8263ce281986.bindPopup(popup_6910dd5ce0fb17023f385107d5314d34)
+        ;
+
+        
+    
+    
+            marker_c2d9eab1a442f079418e8263ce281986.bindTooltip(
+                `<div>
+                     <b>Région:</b> Louga<br><b>Nom Agence:</b> Ecobank Louga<br><b>Client en Attente:</b> 1 <br><b>Temps Moyen d'Attente:</b> 8 min
+                 </div>`,
+                {"sticky": true}
+            );
+        
+    
+            var polygon_3e28494b497630378e52308dd8e9973b = L.polygon(
+                [[13.77426811278999, -13.677891117392603], [13.77426811278999, -13.677891117392603], [13.77426811278999, -13.677891117392603], [13.77426811278999, -13.677891117392603], [13.77426811278999, -13.677891117392603]],
+                {"bubblingMouseEvents": true, "color": "black", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "gray", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+        var popup_80bc76305455290aba6be0147fe2712a = L.popup({"maxWidth": "100%"});
+
+        
+            
+                var html_ffc49b031df956752c34b3b8840238c9 = $(`<div id="html_ffc49b031df956752c34b3b8840238c9" style="width: 100.0%; height: 100.0%;">Zone: Tambacounda</div>`)[0];
+                popup_80bc76305455290aba6be0147fe2712a.setContent(html_ffc49b031df956752c34b3b8840238c9);
+            
+        
+
+        polygon_3e28494b497630378e52308dd8e9973b.bindPopup(popup_80bc76305455290aba6be0147fe2712a)
+        ;
+
+        
+    
+    
+            var marker_957f9299835502202e522ef6f4f9dc99 = L.marker(
+                [13.77426811278999, -13.677891117392603],
+                {}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+            var icon_1295614c52f301b0e076743fea3d47a6 = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "darkred", "prefix": "glyphicon"}
+            );
+            marker_957f9299835502202e522ef6f4f9dc99.setIcon(icon_1295614c52f301b0e076743fea3d47a6);
+        
+    
+        var popup_50072ae7971ef07ef08ee801655e69b0 = L.popup({"maxWidth": 300});
+
+        
+            
+                var html_e4c3aa3c56f21e3f46a9f70532272845 = $(`<div id="html_e4c3aa3c56f21e3f46a9f70532272845" style="width: 100.0%; height: 100.0%;"><b>Région:</b> Tambacounda<br><b>Nom Agence:</b> Ecobank Tambacounda<br><b>Client en Attente:</b> 1 <br><b>Temps Moyen d'Attente:</b> 11 min</div>`)[0];
+                popup_50072ae7971ef07ef08ee801655e69b0.setContent(html_e4c3aa3c56f21e3f46a9f70532272845);
+            
+        
+
+        marker_957f9299835502202e522ef6f4f9dc99.bindPopup(popup_50072ae7971ef07ef08ee801655e69b0)
+        ;
+
+        
+    
+    
+            marker_957f9299835502202e522ef6f4f9dc99.bindTooltip(
+                `<div>
+                     <b>Région:</b> Tambacounda<br><b>Nom Agence:</b> Ecobank Tambacounda<br><b>Client en Attente:</b> 1 <br><b>Temps Moyen d'Attente:</b> 11 min
+                 </div>`,
+                {"sticky": true}
+            );
+        
+    
+            var polygon_5b3cada608a248f7b385a7caff5c3f35 = L.polygon(
+                [[14.417010142615325, -16.968875390394526], [14.417010142615325, -16.968875390394526], [14.417010142615325, -16.968875390394526], [14.417010142615325, -16.968875390394526], [14.417010142615325, -16.968875390394526]],
+                {"bubblingMouseEvents": true, "color": "black", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "gray", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+        var popup_eb07f2bae1f314fb852a00424befbfc4 = L.popup({"maxWidth": "100%"});
+
+        
+            
+                var html_569ddd303ebbaf3881d3d5aa39508183 = $(`<div id="html_569ddd303ebbaf3881d3d5aa39508183" style="width: 100.0%; height: 100.0%;">Zone: Thiès</div>`)[0];
+                popup_eb07f2bae1f314fb852a00424befbfc4.setContent(html_569ddd303ebbaf3881d3d5aa39508183);
+            
+        
+
+        polygon_5b3cada608a248f7b385a7caff5c3f35.bindPopup(popup_eb07f2bae1f314fb852a00424befbfc4)
+        ;
+
+        
+    
+    
+            var marker_5cd3042e9450ac93cbf7823a16a801d9 = L.marker(
+                [14.417010142615325, -16.968875390394526],
+                {}
+            ).addTo(map_2201350eff5bd3bd2547b275020e0ec8);
+        
+    
+            var icon_b178f0130c715f78fe31d3679ee56e0a = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "purple", "prefix": "glyphicon"}
+            );
+            marker_5cd3042e9450ac93cbf7823a16a801d9.setIcon(icon_b178f0130c715f78fe31d3679ee56e0a);
+        
+    
+        var popup_1f3a6084b9fa66d4fa7f84bb155651ae = L.popup({"maxWidth": 300});
+
+        
+            
+                var html_4cb6f713184a7832ee827f83e0e476cc = $(`<div id="html_4cb6f713184a7832ee827f83e0e476cc" style="width: 100.0%; height: 100.0%;"><b>Région:</b> Thiès<br><b>Nom Agence:</b> Ecobank Mbour<br><b>Client en Attente:</b> 30 <br><b>Temps Moyen d'Attente:</b> 81 min</div>`)[0];
+                popup_1f3a6084b9fa66d4fa7f84bb155651ae.setContent(html_4cb6f713184a7832ee827f83e0e476cc);
+            
+        
+
+        marker_5cd3042e9450ac93cbf7823a16a801d9.bindPopup(popup_1f3a6084b9fa66d4fa7f84bb155651ae)
+        ;
+
+        
+    
+    
+            marker_5cd3042e9450ac93cbf7823a16a801d9.bindTooltip(
+                `<div>
+                     <b>Région:</b> Thiès<br><b>Nom Agence:</b> Ecobank Mbour<br><b>Client en Attente:</b> 30 <br><b>Temps Moyen d'Attente:</b> 81 min
                  </div>`,
                 {"sticky": true}
             );

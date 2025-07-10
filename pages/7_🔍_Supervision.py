@@ -43,7 +43,7 @@ with tab1:
     num_agences = len(agences_a_afficher)
     
     # Définir le nombre de colonnes, 4 est une bonne valeur pour la lisibilité
-    num_cols = 4
+    num_cols = 3
     
     # Créer les colonnes dynamiquement
     columns = st.columns(num_cols)
@@ -79,8 +79,13 @@ with tab1:
         }
             data.append(row)
             data=pd.DataFrame(data)  
-            data['Statut'], data['color_rgb'] = zip(*data['Clients en Attente'].apply(lambda clients: get_status(clients, capacite=max_cap)))
             
+            
+
+            data['Statut'] = data['Clients en Attente'].apply(lambda clients: get_status(clients, capacite=max_cap))
+
+            
+
             data = data.sort_values(by="Clients en Attente", ascending=False)
             c=columns[col_index].columns(len(data))
             for index, row in data.iterrows():
@@ -103,6 +108,7 @@ with tab1:
                     padding: 12px 16px; 
                     margin-bottom: 10px;
                     color: white;
+                    min-height: 150px;  /* Ajuste cette valeur selon ton besoin */
                 ">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <strong style="font-size: 16px;">{row['NomAgence']}</strong>
@@ -124,6 +130,7 @@ with tab1:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+
 
         
 

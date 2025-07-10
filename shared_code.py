@@ -343,6 +343,15 @@ def create_sidebar_filters():
         st.session_state.all_agencies = available_agencies
         st.session_state.selected_agencies = available_agencies  # valeur par défaut
     
+
+    st.sidebar.markdown("""
+    <style>
+    .stMultiSelect > div {
+        max-height: 120px;
+        overflow-y: auto;
+    }
+    </style>
+""", unsafe_allow_html=True)
     selected_agencies =st.sidebar.multiselect('Agences', options=st.session_state.all_agencies,default=st.session_state.selected_agencies ,key="selected_agencies_input")
 
     # Empêcher la désélection totale
@@ -1422,10 +1431,10 @@ def service_congestion(df_queue,color=['#00CC96', '#12783D'],title=False):
 
 
 def get_status(clients,capacite):
-        if clients/capacite==0: return "⚪ 'Vide'", [34, 139, 34]
-        elif clients/capacite<0.5: return "🟢 Modérement occupée", [34, 139, 34]
-        elif clients/capacite < 0.8: return "🟠 Fortement occupée", [255, 165, 0]
-        elif clients/capacite < 1 : return "🔴 Très fortement occupée", [220, 20, 60]
+        if clients/capacite==0: return "⚪ 'Vide'" #, [34, 139, 34]
+        elif clients/capacite<0.5: return "🟢 Modérement occupée" #, [34, 139, 34]
+        elif clients/capacite < 0.8: return "🟠 Fortement occupée" #, [255, 165, 0]
+        elif clients/capacite < 1 : return "🔴 Très fortement occupée" #, [220, 20, 60]
         else:   return "🔵 'Congestionnée'"
     
     

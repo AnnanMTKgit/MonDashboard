@@ -80,16 +80,7 @@ if not st.session_state.logged_in:
 else:
 
     
-                    
-    # date_range_selection()
-    # conn = get_connection()
-    
-    # st.session_state.df=run_query(conn, SQLQueries().AllQueueQueries,params=(st.session_state.start_date, st.session_state.end_date))
-    # st.session_state.df_RH=run_query(conn, SQLQueries().RendezVousQueries,params=(st.session_state.start_date, st.session_state.end_date))
-    # st.session_state.df_agences=run_query(conn, SQLQueries().AllAgences)
-
-
-
+                
     if st.session_state.user_profile in ['Caissier', 'Clientele']:
         # Masquer la navigation multi-page pour les agents
         create_sidebar_filters()
@@ -98,5 +89,5 @@ else:
     else:
         
         #create_sidebar_filters()
-        st.title(f"🏠 Bienvenue sur le Dashboard Marlodj, {st.session_state.username}!")
+        st.title(f"Bienvenue sur le Dashboard Marlodj, {st.session_state.username}!")
         st.info("Utilisez le menu sur la gauche pour naviguer entre les différentes sections d'analyse.")
