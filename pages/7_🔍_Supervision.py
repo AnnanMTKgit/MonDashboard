@@ -103,12 +103,12 @@ with tab1:
                 
                 c[index].markdown(f"""
                 <div style="
-                    background-color: #111; 
+                    background-color: {GraphicPlotColor}; 
                     border: 1px solid #444; 
                     border-radius: 10px; 
                     padding: 12px 16px; 
                     margin-bottom: 10px;
-                    color: white;
+                    color: black;
                     min-height: 150px;  /* Ajuste cette valeur selon ton besoin */
                 ">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -117,7 +117,7 @@ with tab1:
                             <span style="
                                 width: 12px; 
                                 height: 12px; 
-                                background-color: black; 
+                                background-color: white; 
                                 border-radius: 50%; 
                                 display: inline-block; 
                                 margin-right: 6px;

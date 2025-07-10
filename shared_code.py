@@ -344,32 +344,42 @@ def create_sidebar_filters():
         st.session_state.selected_agencies = available_agencies  # valeur par défaut
     
 
-    st.sidebar.markdown("""
-    <style>
-    .stMultiSelect > div {
-        max-height: 120px;
-        overflow-y: auto;
-    }
-    </style>
-""", unsafe_allow_html=True)
-    selected_agencies =st.sidebar.multiselect('Agences', options=st.session_state.all_agencies,default=st.session_state.selected_agencies ,key="selected_agencies_input")
+#     st.sidebar.markdown("""
+#     <style>
+#     .stMultiSelect > div {
+#         max-height: 120px;
+#         overflow-y: auto;
+#     }
+#     </style>
+# """, unsafe_allow_html=True)
+    
+    
+    with st.sidebar:
+        with st.popover("Agences"):
 
+            show_multiselect = True
+            if show_multiselect:
+                
+                selected_agencies =st.multiselect('Agences', options=st.session_state.all_agencies,default=st.session_state.selected_agencies ,key="selected_agencies_input")
+        st.write(f"✅ {len(selected_agencies)} agences sélectionnées")
+    
+    
+    
     # Empêcher la désélection totale
     if len(selected_agencies) == 0:
         st.sidebar.warning("Vous devez sélectionner au moins une agence.")
-        
-        st.rerun() # st.rerun() est la version moderne de st.experimental_rerun()
+        st.session_state.selected_agencies = selected_agencies
+        st.stop() # st.rerun() est la version moderne de st.experimental_rerun()
     else:
         # Mise à jour de la sélection
         st.session_state.selected_agencies = selected_agencies
-
-    c,c1=st.sidebar.columns([1,2])
-    with c:
     
-        if st.sidebar.button(f"Déconnexion"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-    st.sidebar.info(f"Utilisateur : {st.session_state.username}")
+    st.sidebar.info(f"{st.session_state.username}")
+    
+    if st.sidebar.button(f"Déconnexion"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+    
 
     #st.sidebar.markdown("<div style='position: fixed; bottom: 0; left: 0; width: 17rem; padding: 10px; text-align: center;'>Copyright Obertys 2025</div>", unsafe_allow_html=True)
 # --- Fonctions de Visualisation Partagées ---
