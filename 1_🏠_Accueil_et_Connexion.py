@@ -92,6 +92,6 @@ else:
         show_agent_dashboard()
     else:
         
-        #create_sidebar_filters()
+        #st.sidebar.info(f"{st.session_state.username}")
         st.title(f"Bienvenue sur le Dashboard Marlodj, {st.session_state.username}!")
         st.info("Utilisez le menu sur la gauche pour naviguer entre les différentes sections d'analyse.")

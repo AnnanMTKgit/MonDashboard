@@ -23,10 +23,6 @@ if df_filtered_global.empty:
     st.stop()
 
 
-# --- Filtres spécifiques à la page ---
-st.sidebar.subheader("Filtres d'Analyse")
-
-
 
 # --- DataFrame final pour les visualisations ---
 df_selection = filter1(df_filtered_global)

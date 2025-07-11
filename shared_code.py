@@ -296,22 +296,41 @@ def filter1(df_all):
     
     # Appliquer un style CSS pour restreindre la hauteur
     
+    with st.sidebar:
+        with st.popover("Nom des Services",use_container_width=True):
 
-    NomService = st.sidebar.multiselect(
+            show_multiselect = True
+            if show_multiselect:
+                
+                NomService = st.multiselect(
         'Services',
         options=df_all['NomService'].unique(),
         default=df_all['NomService'].unique()
     )
     
+        st.write(f"✅ {len(NomService)} disponible(s)")
+    
     # Filter df_all based on the selected NomService
     df = df_all[df_all['NomService'].isin(NomService)]
 
     # UserName selection
-    UserName = st.sidebar.multiselect(
+
+    with st.sidebar:
+        with st.popover("Nom d'utilisateur",use_container_width=True):
+
+            show_multiselect = True
+            if show_multiselect:
+                
+                UserName = st.multiselect(
         'Agents',
         options=df['UserName'].unique(),
         default=df['UserName'].unique()
     )
+       
+        st.write(f"✅ {len(UserName)} Agent(s) en ligne")
+    
+
+    
     
     df_selection = filtering(df, UserName, NomService)
     return df_selection
@@ -374,7 +393,7 @@ def create_sidebar_filters():
         # Mise à jour de la sélection
         st.session_state.selected_agencies = selected_agencies
     
-    st.sidebar.info(f"{st.session_state.username}")
+    
     
     
 

@@ -2,7 +2,7 @@
 
 /* ========== FOND GLOBAL DE L'APPLICATION ========== */
 .stApp {
-    background-color: #FAFAFA;
+    background-color: #f5f2f2;
     color: black;
     font-family: "Segoe UI", sans-serif;
     /* margin-top: -80px; #Adjust this value as needed */
@@ -26,12 +26,12 @@ section.main {
 } */
 
 /* ========== SIDEBAR ========== */
-/* section[data-testid="stSidebar"] {
+section[data-testid="stSidebar"] {
     background-color: #acdafa;
     color: #212121;
     border-right: 2px solid #BBDEFB;
     height: 100vh !important;
-} */
+}
 
 /* NOUVELLE RÈGLE : Supprimer l'espace blanc en bas du contenu du sidebar */
 section[data-testid="stSidebarContent"] {
