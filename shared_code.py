@@ -40,6 +40,11 @@ GraphicTitleColor = 'black'
 OutsideBarColor = 'black'
 InsideBarColor = 'black'
 
+#### COLOR SPECIFIQUE A  ECOBANK###
+blue_color="#022737"
+green_color="#BBD600"
+blue_clair_color= "#1B698D"
+
 
 
 
@@ -371,7 +376,7 @@ def create_sidebar_filters():
 #     }
 #     </style>
 # """, unsafe_allow_html=True)
-    
+    st.sidebar.write(' ')
     
     with st.sidebar:
         with st.popover("Agences",use_container_width=True):
@@ -487,10 +492,10 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
     current_percentage = value / max_value
     
     pointer_color = '#FF0000' if value >= max_value else ('white' if current_percentage ==0 else
-        '#00CC96' if current_percentage < 0.5 else "#FFA500" if current_percentage < 0.8 else "#EF553B"
+        green_color if current_percentage < 0.5 else blue_clair_color if current_percentage < 0.8 else blue_color
     )
     
-    status={"white":'Vide','#00CC96':"Modérement occupée",'#FFA500':"Fortement occupée","#EF553B":"Très fortement occupée ",'#FF0000':'Congestionnée'}
+    status={"white":'Vide',green_color:"Modérement occupée",blue_clair_color:"Fortement occupée",blue_color:"Très fortement occupée ",'#FF0000':'Congestionnée'}
 
 
 
@@ -580,7 +585,7 @@ def stacked_chart(data,type:str,concern:str,titre,w=1000,h=400):
     top_categories=['0-5min','5-10min','>10min']
     color_scale = alt.Scale(
         domain=top_categories,  # The top categories you want to color specifically
-        range=['#00CC96',"#FFA500","#EF553B"]   # Replace with the colors you want to assign to each category
+        range=[blue_color,blue_clair_color,green_color]   # Replace with the colors you want to assign to each category
     ) 
       
     if concern=='UserName':
@@ -735,7 +740,7 @@ def TempsPassage(data):
     top_categories=['0-30min','30min-1h','>1h']
     color_scale = alt.Scale(
         domain=top_categories,  # The top categories you want to color specifically
-        range=['#00CC96',"#FFA500","#EF553B"]  # Replace with the colors you want to assign to each category
+        range=[blue_color,blue_clair_color,green_color]  # Replace with the colors you want to assign to each category
     )
         
     chart = alt.Chart(df).mark_bar().encode(
@@ -931,7 +936,7 @@ def area_graph(data,concern='UserName',time='TempOperation',date_to_bin='Date_Fi
     # Display the chart in Streamlit
     return fig,a,b,seuil
 
-def top_agence_freq(df_all,df_queue,title,color=['#00CC96',"#FFA500"]): 
+def top_agence_freq(df_all,df_queue,title,color=[green_color,blue_clair_color]): 
     _,agg=AgenceTable(df_all,df_queue)
     agg=agg[["Nom d'Agence",title[0],title[1]]]
     
@@ -975,7 +980,7 @@ def GraphsGlob(df_all):
     fig_tempOp_1 = go.Figure()
    
     fig_tempOp_1.add_trace(go.Bar(go.Bar(x=df['NomService'],y=df['TempOperation'],orientation='v',text=df['TempOperation'],width=[0.6] * len(df['NomService']) , # Réduire la largeur de la barre
-    textposition='inside',showlegend=False,marker=dict(color='#4169E1')
+    textposition='inside',showlegend=False,marker=dict(color=blue_color)
     )))
 
 
@@ -1007,7 +1012,7 @@ def stacked_service(data,type:str,concern:str,titre="Nombre de type d'opération
 
     top_categories=df.groupby([f'{concern}'])['Count'].sum().nlargest(53).reset_index()[f'{concern}'].to_list()
     
-    colors = ['#00CC96',"#FFA500","#EF553B","#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF",
+    colors = [blue_color,blue_clair_color,green_color,"#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF",
     "#FFBD33", "#33FFBD", "#8CFF33", "#FF33B8", "#33FFCC","#B833FF", "#FF336D", "#3385FF", "#FF8333", "#33A1FF","#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0",
     "#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF","#FFD433", "#33FFD4", "#BD33FF", "#FF33BD", "#33FF99","#FF33B8", "#33A1FF", "#FFBD33", "#33D4FF", "#FF33D4",
     "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF"
@@ -1055,7 +1060,7 @@ def stacked_agent(data,type:str,concern:str,titre="Nombre de type d'opération p
     
     top_categories=df.groupby([f'{concern}'])['Count'].sum().nlargest(53).reset_index()[f'{concern}'].to_list()
     
-    colors = ['#00CC96',"#FFA500","#EF553B","#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF",
+    colors = [blue_color,blue_clair_color,green_color,"#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF",
     "#FFBD33", "#33FFBD", "#8CFF33", "#FF33B8", "#33FFCC","#B833FF", "#FF336D", "#3385FF", "#FF8333", "#33A1FF","#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0",
     "#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF","#FFD433", "#33FFD4", "#BD33FF", "#FF33BD", "#33FF99","#FF33B8", "#33A1FF", "#FFBD33", "#33D4FF", "#FF33D4",
     "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF"
@@ -1108,10 +1113,10 @@ def Top10_Type(df_queue):
         
         # Ajouter les barres pour les valeurs >= 100
         fig.add_trace(go.Bar(go.Bar(x=dfmin['Type_Operation'], y=dfmin['index'],orientation='h',text=dfmin['Type_Operation'],
-        textposition='outside',showlegend=False,textfont=dict(color=OutsideBarColor),marker=dict(color='#00CC96'))
+        textposition='outside',showlegend=False,textfont=dict(color=OutsideBarColor),marker=dict(color=green_color))
         ))
         fig.add_trace(go.Bar(go.Bar(x=dfmax['Type_Operation'], y=dfmax['index'],orientation='h',text=dfmax['Type_Operation'],
-        textposition='inside',showlegend=False,textfont=dict(color=InsideBarColor),marker=dict(color='#00CC96'))
+        textposition='inside',showlegend=False,textfont=dict(color=InsideBarColor),marker=dict(color=green_color))
         ))
 
     fig.update_layout(title={
@@ -1149,7 +1154,7 @@ def plot_line_chart(df):
             mode='lines+markers+text',
             text=grouped.apply(lambda row: f" {row['count']}", axis=1),
             textposition='top center',
-            marker=dict(size=10,color='#4169E1'),
+            marker=dict(size=10,color=blue_color),
             name='Total Count'
             
 
@@ -1204,7 +1209,7 @@ def plot_line_chart(df):
             mode='text',
             text=agg.apply(lambda row: f" {row['count']}", axis=1),
             textposition='top center',
-            marker=dict(size=10,color='#4169E1'),
+            marker=dict(size=10,color=blue_color),
             showlegend=False
 
         ))
@@ -1236,10 +1241,10 @@ def create_bar_chart(df, status, title):
         dfmin=top[top['TempOperation'].apply(lambda x:(x<10) or (valmax-x>10))]
         
         fig.add_trace(go.Bar(go.Bar(x=dfmin['TempOperation'], y=dfmin['UserName'],orientation='h',text=dfmin['TempOperation'],
-        textposition='outside',showlegend=False,marker=dict(color='#00CC96'),textfont=dict(color=OutsideBarColor))
+        textposition='outside',showlegend=False,marker=dict(color=green_color),textfont=dict(color=OutsideBarColor))
         ))
         fig.add_trace(go.Bar(go.Bar(x=dfmax['TempOperation'], y=dfmax['UserName'],orientation='h',text=dfmax['TempOperation'],
-        textposition='inside',showlegend=False,marker=dict(color='#00CC96'),textfont=dict(color=InsideBarColor))
+        textposition='inside',showlegend=False,marker=dict(color=green_color),textfont=dict(color=InsideBarColor))
         ))
 
     
@@ -1290,10 +1295,10 @@ def create_pie_chart(df, title):
             labels=top['LabelWithNbs'],
             values=top['Nom'],
             pull=[0.1 if i == 1 else 0 for i in range(len(top))],  # Pull out the second slice ('B')
-            marker=dict(colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA',"#FFA500", '#19D3F3', '#FF6692', '#B6E880','#FF97FF', '#FECB52'], line=dict(color='#FFFFFF', width=2)),
+            marker=dict(colors = [blue_color,green_color,blue_clair_color, '#EF553B',  '#AB63FA', '#19D3F3', '#FF6692', '#B6E880','#FF97FF', '#FECB52'], line=dict(color='#FFFFFF', width=2)),
             textinfo='percent' ,textposition= 'inside'
         ))
-    #fig = px.pie(top, values='Nom', names='UserName',color_discrete_sequence=['#636EFA', '#EF553B', '#00CC96', '#AB63FA','#FFA15A', '#19D3F3', '#FF6692', '#B6E880','#FF97FF', '#FECB52'], title=f'Personnes {title}s Par Agent')
+    #fig = px.pie(top, values='Nom', names='UserName',color_discrete_sequence=['#636EFA', '#EF553B', green_color, '#AB63FA','#FFA15A', '#19D3F3', '#FF6692', '#B6E880','#FF97FF', '#FECB52'], title=f'Personnes {title}s Par Agent')
     
     
 
@@ -1411,7 +1416,7 @@ def plot_metrics(df,status,var):
 
 
 
-def service_congestion(df_queue,color=['#00CC96', '#12783D'],title=False):
+def service_congestion(df_queue,color=[green_color, '#12783D'],title=False):
   
    
   agence=df_queue["NomAgence"].iloc[0]
@@ -1425,9 +1430,9 @@ def service_congestion(df_queue,color=['#00CC96', '#12783D'],title=False):
 #   percentage = (queue_length / max_length) * 100
 
 #   chart_color  = ['#FF0000', '#781F16'] if queue_length >= max_length else (['#FFFFFF', '#D5D5D5']  if percentage ==0 else  
-#         ['#00CC96', '#12783D'] if percentage < 50 else ["#FFA500", '#BF6B3D'] if percentage < 80 else ["#EF553B", '#B03A30']   
+#         [green_color, '#12783D'] if percentage < 50 else [blue_clair_color, '#BF6B3D'] if percentage < 80 else [blue_color, '#B03A30']   
 #     )
-  #title='Vide' if chart_color==['#FFFFFF', '#D5D5D5']  else "Modérement occupée" if chart_color==['#00CC96', '#12783D'] else "Fortement occupée" if chart_color==["#FFA500", '#BF6B3D'] else "Très fortement occupée " if chart_color==["#EF553B", '#B03A30'] else 'Congestionnée'
+  #title='Vide' if chart_color==['#FFFFFF', '#D5D5D5']  else "Modérement occupée" if chart_color==[green_color, '#12783D'] else "Fortement occupée" if chart_color==[blue_clair_color, '#BF6B3D'] else "Très fortement occupée " if chart_color==[blue_color, '#B03A30'] else 'Congestionnée'
   
   input_text="Congestion"
   input_response=queue_length
@@ -1579,7 +1584,7 @@ def option_agent(df_all_service,df_queue_service):
 
             
            
-            fig=service_congestion(df_queue_service,color=['#12783D','#00CC96'])
+            fig=service_congestion(df_queue_service,color=['#12783D',green_color])
             st.altair_chart(fig,use_container_width=True)
             
             
@@ -1611,7 +1616,7 @@ def option_agent(df_all_service,df_queue_service):
 
         with col[2]:
 
-            fig1=service_congestion(df_queue_filtered,color=['#B03A30',"#EF553B"],title='Agence')
+            fig1=service_congestion(df_queue_filtered,color=['#B03A30',blue_color],title='Agence')
             st.altair_chart(fig1,use_container_width=True)
 
         st.stop()

@@ -1,0 +1,85 @@
+/* styles.css */
+
+/* ========== FOND GLOBAL DE L'APPLICATION ========== */
+.stApp {
+    background-color: #f5f2f2;  
+    color: black;
+    font-family: "Segoe UI", sans-serif;
+    /* margin-top: -80px; #Adjust this value as needed */
+}
+
+
+/* ========== SUPPRIMER L'ESPACE BLANC EN HAUT DE PAGE (PAGE PRINCIPALE) ========== */
+/* Masque l'en-tête par défaut de Streamlit si elle existe et crée un espace */
+/* header[data-testid="stHeader"] {
+    display: none;
+} */
+/* Supprime la marge intérieure supérieure de la section principale de l'application */
+section.main {
+    padding-top: 0rem;
+}
+
+
+/* ========== MASQUER LE BOUTON D'OUVERTURE/FERMETURE DU SIDEBAR ========== */
+/* [data-testid="stSidebarCollapseButton"] {
+    display: none;
+} */
+
+/* ========== SIDEBAR ========== */
+section[data-testid="stSidebar"] {
+    background-color: #1B698D;
+    color: #212121;
+    border-right: 2px solid #BBDEFB;
+    height: 100vh !important;
+}
+
+/* NOUVELLE RÈGLE : Supprimer l'espace blanc en bas du contenu du sidebar */
+section[data-testid="stSidebarContent"] {
+    padding-bottom: 0rem !important; /* Très important pour surcharger tout padding par défaut */
+    min-height: unset !important;     /* S'assurer qu'aucune hauteur minimale ne force l'espace */
+    color: white;
+}
+
+
+
+
+
+/* ========== TITRES (h1, h2, h3...) ========== */
+h1, h2, h3, h4, h5 {
+    color: #1976D2;
+    font-weight: bold;
+}
+
+/* ========== METRICS ========== */
+[data-testid="stMetric"] {
+    background-color: #FFFFFF;
+    padding: 15px;
+    border: 1px solid #DDD;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+[data-testid="stMetricLabel"] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ========== TABLES STYLÉES (HTML) ========== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+th {
+    background-color: #1976D2;
+    color: white;
+}
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+

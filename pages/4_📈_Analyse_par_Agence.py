@@ -48,7 +48,7 @@ with tab2:
 with tab3:
     
     fig1 = top_agence_freq(df_all_filtered, df_queue_filtered, title=['Total Tickets', 'Total Traités'])
-    fig2 = top_agence_freq(df_all_filtered, df_queue_filtered, title=['Total Tickets', 'Total Rejetées'], color=['#00CC96', "#EF553B"])
+    fig2 = top_agence_freq(df_all_filtered, df_queue_filtered, title=['Total Tickets', 'Total Rejetées'], color=[green_color, blue_color])
     
     col1, col2 = st.columns(2)
     with col1:

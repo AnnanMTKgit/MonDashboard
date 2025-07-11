@@ -52,7 +52,12 @@ agg_map = agg_global.rename(columns={
 })
 
 with c1:
-    st.subheader("CONGESTION PAR AGENCE")
+    
+    st.markdown("""
+<p style="font-size: 14px; text-align: center; color: black;">
+    CONGESTION PAR AGENCE
+</p>
+""", unsafe_allow_html=True)
     agence_options = agg_map['NomAgence'].unique()
     if len(agence_options) > 0:
         selected_agence_gauge = st.selectbox(
@@ -78,7 +83,12 @@ with c1:
                 Delta = ''
                 c[i].metric(label=nom, value=Value, delta=Delta)
 with c2:
-    st.subheader("CARTE DES AGENCES")
+    st.markdown("""
+<p style="font-size: 14px; text-align: center; color: black;">
+    CARTE DES AGENCES
+</p>
+""", unsafe_allow_html=True)
+    
     folium_map=create_folium_map(agg_map)
     folium_map.save('map.html')
     # #@st.cache_data()
@@ -88,4 +98,4 @@ with c2:
         return bcn_map_html
     bcn_map_html = get_golden_map()
     with st.container():
-        html(bcn_map_html, height=508)
+        html(bcn_map_html, height=450)
