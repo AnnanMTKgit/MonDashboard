@@ -34,7 +34,7 @@ import math
 
 
 # --- Configuration Globale du Thème des Graphiques ---
-BackgroundGraphicColor = "#FAFAFA"
+BackgroundGraphicColor = "white"
 GraphicPlotColor = "#FFFFFF"
 GraphicTitleColor = 'black'
 OutsideBarColor = 'black'
@@ -355,7 +355,7 @@ def create_sidebar_filters():
     
     
     with st.sidebar:
-        with st.popover("Agences"):
+        with st.popover("Agences",use_container_width=True):
 
             show_multiselect = True
             if show_multiselect:
@@ -376,9 +376,6 @@ def create_sidebar_filters():
     
     st.sidebar.info(f"{st.session_state.username}")
     
-    if st.sidebar.button(f"Déconnexion"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
     
 
     #st.sidebar.markdown("<div style='position: fixed; bottom: 0; left: 0; width: 17rem; padding: 10px; text-align: center;'>Copyright Obertys 2025</div>", unsafe_allow_html=True)
@@ -1439,15 +1436,24 @@ def service_congestion(df_queue,color=['#00CC96', '#12783D'],title=False):
 # ==============================================================================
 
 
-def get_status(clients,capacite):
-        if clients/capacite==0: return "⚪ Vide" #, [34, 139, 34]
-        elif clients/capacite<0.5: return "🟢 Modérement occupée" #, [34, 139, 34]
-        elif clients/capacite < 0.8: return "🟠 Fortement occupée" #, [255, 165, 0]
-        elif clients/capacite < 1 : return "🔴 Très fortement occupée" #, [220, 20, 60]
-        else:   return "🔵 Congestionnée"
+# --- 1. Refined get_status function to return emoji, CSS class, text, and plot color ---
+def get_status_info(clients, capacite):
     
+    if capacite == 0: # Handle division by zero if capacity can be zero
+        return "status-led-black"
     
-
+    ratio = clients / capacite
+    
+    if ratio == 0: 
+        return  "status-led-white" 
+    elif ratio < 0.5: 
+        return  "status-led-green"
+    elif ratio < 0.8: 
+        return "status-led-orange"
+    elif ratio < 1: 
+        return  "status-led-red"
+    else:   
+        return  "status-led-blue"
 
 
 

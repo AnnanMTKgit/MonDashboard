@@ -39,7 +39,8 @@ with tab1:
     st.markdown("<h1 style='text-align: center;'>État des Files d'Attente en Temps Réel</h1>", unsafe_allow_html=True)
     _, agg_global = AgenceTable(df_all_filtered, df_queue_filtered)
     agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
-
+    
+    agg_global = agg_global.sort_values(by='Nbs de Clients en Attente', ascending=False)
     agences_a_afficher = agg_global["Nom d'Agence"].unique()
     num_agences = len(agences_a_afficher)
     
@@ -50,87 +51,82 @@ with tab1:
     columns = st.columns(num_cols)
     
     for i, nom_agence in enumerate(agences_a_afficher):
-            data=[]
             col_index = i % num_cols
-            with columns[col_index]:
-                agence_data = agg_global[agg_global["Nom d'Agence"] == nom_agence]
-                if not agence_data.empty:
-                    max_cap = agence_data['Capacité'].values[0]
-                    queue_now = agence_data['Nbs de Clients en Attente'].values[0]
+            
+            agence_data = agg_global[agg_global["Nom d'Agence"] == nom_agence]
+            if not agence_data.empty:
+                max_cap = agence_data['Capacité'].values[0]
+                queue_now = agence_data['Nbs de Clients en Attente'].values[0]
+                
+                
+                
+                # Récupérer les services pour cette agence spécifique
+                df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
+                services_agence = df_agence_queue['NomService'].unique()
+                
+                # On ne peut pas mettre des colonnes dans des colonnes facilement en Streamlit
+                # On va donc les afficher verticalement.
+                service_dict = {}
+                for service in services_agence:
                     
-                    
-                    
-                    # Récupérer les services pour cette agence spécifique
-                    df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
-                    services_agence = df_agence_queue['NomService'].unique()
-                    
-                    # On ne peut pas mettre des colonnes dans des colonnes facilement en Streamlit
-                    # On va donc les afficher verticalement.
-                    service_dict = {}
-                    for service in services_agence:
-                        
-                        df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
-                        attente_service = current_attente(df_service_queue, nom_agence)
-                        service_dict[service]=attente_service
+                    df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
+                    attente_service = current_attente(df_service_queue, nom_agence)
+                    service_dict[service]=attente_service
                 row = {
-            "NomAgence": nom_agence,
-            "Clients en Attente": queue_now,
-            "Detail par service": service_dict
-            
-        }
-            data.append(row)
-            data=pd.DataFrame(data)  
-            
-            
-
-            data['Statut'] = data['Clients en Attente'].apply(lambda clients: get_status(clients, capacite=max_cap))
-
-            
-
-            data = data.sort_values(by="Clients en Attente", ascending=False)
-            c=columns[col_index].columns(len(data))
-            for index, row in data.iterrows():
-                services_string = " | ".join([f"{service} : {val}" for service, val in row["Detail par service"].items()])
-
-                # Ligne complète à afficher
-                # c[index].markdown(f"""
-                # <div style="padding: 8px; margin-bottom: 8px; border-bottom: 1px solid #ddd;">
-                #     <strong>{row["NomAgence"]}</strong> {row['Statut']}<br>
-                #     Clients en Attente : <strong>{row['Clients en Attente']}</strong>, {services_string}
-                # </div>
-                # """, unsafe_allow_html=True)
+                    "NomAgence": nom_agence,
+                    "Clients en Attente": queue_now,
+                    "Services": service_dict,
+                    "Status":None
+                }
                 
+                            # --- 2. Load the external CSS file ---
+                with open("led.css") as f:
+                    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+                row['Status'] = get_status_info(row["Clients en Attente"], capacite=max_cap)
+
+            
+
+            
+            
+
+                services_dynamic_html = ""
+                if row['Services']:
+                    for service_name, client_count in row['Services'].items():
+                        
+                        services_dynamic_html += f""" <div style="text-align: center;">
+                                {service_name}<br>
+                                <strong>{client_count}</strong>
+                            </div>
+                        """
+                else:
+                    services_dynamic_html = "<div>Aucun service spécifié.</div>"
                 
-                c[index].markdown(f"""
-                <div style="
-                    background-color: {GraphicPlotColor}; 
-                    border: 1px solid #444; 
-                    border-radius: 10px; 
-                    padding: 12px 16px; 
-                    margin-bottom: 10px;
-                    color: black;
-                    min-height: 150px;  /* Ajuste cette valeur selon ton besoin */
-                ">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="font-size: 16px;">{row['NomAgence']}</strong>
-                        <div style="display: flex; align-items: center;">
-                            <span style="
-                                width: 12px; 
-                                height: 12px; 
-                                background-color: white; 
-                                border-radius: 50%; 
-                                display: inline-block; 
-                                margin-right: 6px;
-                            "></span>
-                            <span style="font-size: 14px;">{row['Statut']}</span>
+                with columns[i % num_cols]:
+                    st.markdown(f"""
+                        <div style="
+                            background-color: {BackgroundGraphicColor}; 
+                            border: 1px solid #444; 
+                            border-radius: 10px; 
+                            padding: 12px 16px; 
+                            margin-bottom: 10px;
+                            color: black;
+                            min-height: 150px; /* Adjust this value as needed */
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="font-size: 16px;">{row['NomAgence']}</strong>
+                                <div style="display: flex; align-items: center;">
+                                    <span class="status-led {row['Status']}"></span> <span style="font-size: 14px;"></span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 14px;">
+                                Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
+                                Capacité Maximale : <strong>{max_cap}</strong><br>
+                                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
+                                    {services_dynamic_html}
                         </div>
-                    </div>
-                    <div style="margin-top: 10px; font-size: 14px;">
-                        Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
-                        {services_string}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)   
+                        
 
 
         

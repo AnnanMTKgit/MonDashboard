@@ -26,12 +26,12 @@ section.main {
 } */
 
 /* ========== SIDEBAR ========== */
-section[data-testid="stSidebar"] {
+/* section[data-testid="stSidebar"] {
     background-color: #acdafa;
     color: #212121;
     border-right: 2px solid #BBDEFB;
     height: 100vh !important;
-}
+} */
 
 /* NOUVELLE RÈGLE : Supprimer l'espace blanc en bas du contenu du sidebar */
 section[data-testid="stSidebarContent"] {
@@ -81,5 +81,4 @@ th {
 tr:nth-child(even) {
     background-color: #f2f2f2;
 }
-
 
