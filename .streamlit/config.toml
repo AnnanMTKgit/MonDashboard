@@ -3,10 +3,8 @@
 # Note : ces couleurs peuvent être surchargées par le CSS si elles sont plus spécifiques
 backgroundColor="#f5f2f2"         # Fond blanc cassé pour l'écran principal (correspond à .stApp background-color)
 textColor="#000000"               # Texte noir pour l'écran principal
-primaryColor="blue"
-secondaryBackgroundColor="#013447" # Fond de la barre latérale (noir très foncé)
+secondaryBackgroundColor="white" # Fond de la barre latérale (noir très foncé)
+primaryColor="#013447" #couleur de selection de multiselect
 font="sans serif"
 
-[theme]
-base="light"
 

@@ -28,8 +28,8 @@ section.main {
 /* ========== SIDEBAR ========== */
 section[data-testid="stSidebar"] {
     background-color: #013447; /* Fond de la sidebar : noir très foncé */
-    color: #000000; /* Cette couleur est pour le texte général de la sidebar, mais sera souvent surchargée */
-    border-right: 2px solid #BBDEFB;
+    color: #fbfbfb; /* Cette couleur est pour le texte général de la sidebar, mais sera souvent surchargée */
+    border-right: 2px solid #013447;
     height: 100vh !important;
 }
 
@@ -80,8 +80,8 @@ th, td {
     border-bottom: 1px solid #ddd;
 }
 th {
-    background-color: #1976D2;
-    color: white;
+    background-color: #ececec;
+    color: rgb(0, 0, 0);
 }
 tr:nth-child(even) {
     background-color: #f2f2f2;
@@ -98,7 +98,7 @@ button[data-testid^="stTabButton"][aria-selected="true"] {
 
 /* Optionnel : couleur de fond et bordure de l'onglet sélectionné pour un meilleur contraste */
 button[data-testid^="stTabButton"][aria-selected="true"] {
-    background-color: #013447 !important; /* Fond blanc */
+    background-color: #f7f7f7 !important; /* Fond blanc */
     border-bottom-color: #013447 !important; /* Bordure noire en bas de l'onglet sélectionné */
 }
 
@@ -110,7 +110,7 @@ section[data-testid="stSidebar"] p {
 /* Cibler les labels des inputs (st.text_input, st.number_input, etc.) dans le sidebar */
 section[data-testid="stSidebar"] label p {
     color: white !important;
-    background-color: #1976D2;
+    background-color: #013447;
 }
 
 /* ========== POP-OVER (st.popover) ========== */
@@ -118,7 +118,6 @@ section[data-testid="stSidebar"] label p {
 div[data-testid="stPopover"] p,
 div[data-testid="stPopover"] label p,
 div[data-testid="stPopover"] div.st-emotion-cache-1n76ycx p {
-    color: black !important;
+    color: rgb(0, 0, 0) !important;
 }
-
 
