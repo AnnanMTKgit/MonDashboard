@@ -38,14 +38,23 @@ BackgroundGraphicColor = "white"
 GraphicPlotColor = "#FFFFFF"
 GraphicTitleColor = 'black'
 OutsideBarColor = 'black'
-InsideBarColor = 'black'
+InsideBarColor = 'white'
 
 #### COLOR SPECIFIQUE A  ECOBANK###
 blue_color="#022737"
 green_color="#BBD600"
 blue_clair_color= "#1B698D"
+# colors=[blue_color,blue_clair_color,green_color,"#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF",
+#     "#FFBD33", "#33FFBD", "#8CFF33", "#FF33B8", "#33FFCC","#B833FF", "#FF336D", "#3385FF", "#FF8333", "#33A1FF","#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0",
+#     "#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF","#FFD433", "#33FFD4", "#BD33FF", "#FF33BD", "#33FF99","#FF33B8", "#33A1FF", "#FFBD33", "#33D4FF", "#FF33D4",
+#     "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF"
+# ]
 
+# palette non panacher
+palette_colors= ["#022737", "#083A53", "#104D6F", "#17608B", "#1B698D", "#2E86AB", "#4F9DBA", "#70B4C9", "#90CDD8", "#B0E4E7", "#D0FBFB", "#E6FCFC", "#6E7C00", "#879A00", "#A1B800", "#BBD600", "#C7DD2A", "#D3E455", "#E0EC80", "#EDF3AA", "#F6F9D5", "#2F3E46", "#4A5A63", "#65767F", "#80919C", "#9AABB8", "#B5C5D3", "#D0E0EE", "#EBF5FF", "#4C3A5A", "#6D557C", "#8E709E", "#A17FAB", "#B48ECC", "#C29AD4", "#D0A7DC", "#DDA4E3", "#00796B", "#00897B", "#26A69A", "#4DB6AC", "#80CBC4", "#B2DFDB", "#E0F2F1", "#B75D28", "#D18A00", "#E5A000", "#F7B42C", "#FFC954", "#FFDDA1", "#FFECC2", "#D4C5A3", "#E3D5B8", "#F2E5CC", "#C7007D", "#E0409A", "#F97FBA", "#FFAFD8", "#FFD6E9"]
 
+# Palette panacher 
+# palette_colors=['#022737', '#BBD600', '#4C3A5A', '#083A53', '#A1B800', '#6D557C', '#104D6F', '#879A00', '#8E709E', '#17608B', '#6E7C00', '#A17FAB', '#1B698D', '#C7DD2A', '#B48ECC', '#2E86AB', '#D3E455', '#C29AD4', '#4F9DBA', '#E0EC80', '#D0A7DC', '#70B4C9', '#EDF3AA', '#DDA4E3', '#90CDD8', '#F6F9D5', '#D0FBFB', '#B0E4E7', '#D18A00', '#EBF5FF', '#2F3E46', '#E5A000', '#D4C5A3', '#4A5A63', '#F7B42C', '#E3D5B8', '#65767F', '#FFC954', '#F2E5CC', '#80919C', '#FFDDA1', '#FFECC2', '#9AABB8', '#C7007D', '#80CBC4', '#B5C5D3', '#E0409A', '#B2DFDB', '#00796B', '#F97FBA', '#E0F2F1', '#00897B', '#FFAFD8', '#90CDD8', '#26A69A', '#FFD6E9', '#B0E4E7', '#4DB6AC', '#B75D28', '#D0FBFB']
 
 
 
@@ -321,7 +330,7 @@ def filter1(df_all):
     # UserName selection
 
     with st.sidebar:
-        with st.popover("Nom d'utilisateur",use_container_width=True):
+        with st.popover("Nom des Agents",use_container_width=True):
 
             show_multiselect = True
             if show_multiselect:
@@ -1012,14 +1021,10 @@ def stacked_service(data,type:str,concern:str,titre="Nombre de type d'opération
 
     top_categories=df.groupby([f'{concern}'])['Count'].sum().nlargest(53).reset_index()[f'{concern}'].to_list()
     
-    colors = [blue_color,blue_clair_color,green_color,"#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF",
-    "#FFBD33", "#33FFBD", "#8CFF33", "#FF33B8", "#33FFCC","#B833FF", "#FF336D", "#3385FF", "#FF8333", "#33A1FF","#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0",
-    "#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF","#FFD433", "#33FFD4", "#BD33FF", "#FF33BD", "#33FF99","#FF33B8", "#33A1FF", "#FFBD33", "#33D4FF", "#FF33D4",
-    "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF"
-]
+    
     color_scale = alt.Scale(
         domain=top_categories,  # The top categories you want to color specifically
-        range=colors   # Replace with the colors you want to assign to each category
+        range=palette_colors   # Replace with the colors you want to assign to each category
     )
 
 
@@ -1060,14 +1065,10 @@ def stacked_agent(data,type:str,concern:str,titre="Nombre de type d'opération p
     
     top_categories=df.groupby([f'{concern}'])['Count'].sum().nlargest(53).reset_index()[f'{concern}'].to_list()
     
-    colors = [blue_color,blue_clair_color,green_color,"#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF",
-    "#FFBD33", "#33FFBD", "#8CFF33", "#FF33B8", "#33FFCC","#B833FF", "#FF336D", "#3385FF", "#FF8333", "#33A1FF","#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0",
-    "#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF","#FFD433", "#33FFD4", "#BD33FF", "#FF33BD", "#33FF99","#FF33B8", "#33A1FF", "#FFBD33", "#33D4FF", "#FF33D4",
-    "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF"
-]
+   
     color_scale = alt.Scale(
         domain=top_categories,  # The top categories you want to color specifically
-        range=colors   # Replace with the colors you want to assign to each category
+        range=palette_colors   # Replace with the colors you want to assign to each category
     )
     chart = alt.Chart(df).mark_bar().encode(
         x=alt.X(f'{type}:O', title='Agent(s)'),
@@ -1225,7 +1226,7 @@ def plot_line_chart(df):
         )
     return fig 
 
-def create_bar_chart(df, status, title):
+def create_bar_chart(df, status, title,colors='#BBD600'):
     
     df_filtered = df[df['Nom'] == status]
     top = df_filtered.groupby(by=['UserName']).agg(TempOperation=('TempOperation',lambda x: np.round(np.mean(x)/60))).reset_index()
@@ -1241,10 +1242,10 @@ def create_bar_chart(df, status, title):
         dfmin=top[top['TempOperation'].apply(lambda x:(x<10) or (valmax-x>10))]
         
         fig.add_trace(go.Bar(go.Bar(x=dfmin['TempOperation'], y=dfmin['UserName'],orientation='h',text=dfmin['TempOperation'],
-        textposition='outside',showlegend=False,marker=dict(color=green_color),textfont=dict(color=OutsideBarColor))
+        textposition='outside',showlegend=False,marker=dict(color=colors),textfont=dict(color=OutsideBarColor))
         ))
         fig.add_trace(go.Bar(go.Bar(x=dfmax['TempOperation'], y=dfmax['UserName'],orientation='h',text=dfmax['TempOperation'],
-        textposition='inside',showlegend=False,marker=dict(color=green_color),textfont=dict(color=InsideBarColor))
+        textposition='inside',showlegend=False,marker=dict(color=colors),textfont=dict(color=InsideBarColor))
         ))
 
     
@@ -1295,7 +1296,7 @@ def create_pie_chart(df, title):
             labels=top['LabelWithNbs'],
             values=top['Nom'],
             pull=[0.1 if i == 1 else 0 for i in range(len(top))],  # Pull out the second slice ('B')
-            marker=dict(colors = [blue_color,green_color,blue_clair_color, '#EF553B',  '#AB63FA', '#19D3F3', '#FF6692', '#B6E880','#FF97FF', '#FECB52'], line=dict(color='#FFFFFF', width=2)),
+            marker=dict(colors = palette_colors, line=dict(color='#FFFFFF', width=2)),
             textinfo='percent' ,textposition= 'inside'
         ))
     #fig = px.pie(top, values='Nom', names='UserName',color_discrete_sequence=['#636EFA', '#EF553B', green_color, '#AB63FA','#FFA15A', '#19D3F3', '#FF6692', '#B6E880','#FF97FF', '#FECB52'], title=f'Personnes {title}s Par Agent')
@@ -1341,10 +1342,10 @@ def Graphs_bar(df_selected):
     
     
     figs = [
-        create_bar_chart(df_selected, 'Traitée', 'TempOperation/Traitée'),
+        create_bar_chart(df_selected, 'Traitée', 'TempOperation/Traitée',colors=blue_color),
         #create_bar_chart(df_selection, 'En Attente', 'En attente'),
-        create_bar_chart(df_selected, 'Passée', 'TempOperation/Passée'),
-        create_bar_chart(df_selected, 'Rejetée', 'TempOperation/Rejetée')
+        create_bar_chart(df_selected, 'Passée', 'TempOperation/Passée',colors=blue_clair_color),
+        create_bar_chart(df_selected, 'Rejetée', 'TempOperation/Rejetée',colors=green_color)
     ]
     config = {
     'staticPlot': True,  # Disable all interactive features

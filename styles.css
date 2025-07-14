@@ -5,7 +5,7 @@
     background-color: #f5f2f2;  
     color: black; /* Le texte par défaut de l'application sera noir */
     font-family: "Segoe UI", sans-serif;
-    /* margin-top: -80px; #Adjust this value as needed */
+    /* margin-top: -80px; #Adjust this value as needed */ */
 }
 
 
@@ -121,3 +121,10 @@ div[data-testid="stPopover"] div.st-emotion-cache-1n76ycx p {
     color: rgb(0, 0, 0) !important;
 }
 
+/* ... (votre CSS précédent pour les couleurs) ... */
+
+/* Nouvelle règle pour centrer les titres des onglets */
+[data-testid="stTabs"] [role="tablist"] {
+    justify-content: center;
+    gap: 60px; 
+}

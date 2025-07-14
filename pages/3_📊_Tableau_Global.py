@@ -45,7 +45,7 @@ if not AGG.empty:
     def tmo_col(val):
         return f'background-color: {green_color}' if val > 5 else ''
     def tma_col(val):
-        return f'background-color: {blue_clair_color}' if val > 15 else ''
+        return f'background-color: {blue_clair_color}; color: white' if val > 15 else ''
 
     columns_to_display = ['Période', "Nom d'Agence", "Temps Moyen d'Operation (MIN)", "Temps Moyen d'Attente (MIN)", "Temps Moyen de Passage(MIN)", 'Capacité', 'Total Tickets', 'Total Traités', 'TotalMobile']
     AGG_display = AGG[columns_to_display]

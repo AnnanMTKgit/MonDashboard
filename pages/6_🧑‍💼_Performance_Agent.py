@@ -34,7 +34,7 @@ if df_selection.empty:
 #st.divider()
 
 # --- Onglets de visualisation ---
-tab1, tab2, tab3 = st.tabs(["Performance en Volume", "Performance en Temps", "Vue par Catégorie"])
+tab1, tab2, tab3,tab4 = st.tabs(["Performance en Volume", "Performance en Temps","Evolution en Temps par Agent", "Vue par Catégorie"])
 
 with tab1:
     
@@ -48,8 +48,6 @@ with tab1:
         st.plotly_chart(pie_charts[2], use_container_width=True)
     
     
-    line_chart = plot_line_chart(df_selection)
-    st.plotly_chart(line_chart, use_container_width=True)
 
 with tab2:
     
@@ -63,8 +61,15 @@ with tab2:
         st.plotly_chart(bar_charts[2], use_container_width=True)
 
 with tab3:
-    
-    fig1 = stacked_chart(df_selection, 'TempOperation', 'UserName', "Catégorisation du Temps d'opération")
-    st.altair_chart(fig1, use_container_width=True)
-    fig2 = stacked_agent(df_selection, type='UserName', concern='Type_Operation')
-    st.altair_chart(fig2, use_container_width=True)
+    line_chart = plot_line_chart(df_selection)
+    st.plotly_chart(line_chart, use_container_width=True)
+
+
+with tab4:
+    tab1,tab2=st.tabs(["Catégorisation du Temps d'opération","Nombre de type d'opération par Agent"])
+    with tab1:
+        fig1 = stacked_chart(df_selection, 'TempOperation', 'UserName', titre=" ")
+        st.altair_chart(fig1, use_container_width=True)
+    with tab2:
+        fig2 = stacked_agent(df_selection, type='UserName', concern='Type_Operation',titre="")
+        st.altair_chart(fig2, use_container_width=True)
