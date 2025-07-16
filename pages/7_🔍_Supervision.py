@@ -10,6 +10,9 @@ if not st.session_state.get('logged_in'):
     st.error("Veuillez vous connecter pour accéder à cette page.")
     st.stop()
 
+
+
+
 create_sidebar_filters()
 conn = get_connection()
 df_all = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
