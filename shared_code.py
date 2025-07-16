@@ -209,7 +209,8 @@ def run_query(_connection, sql, params=None):
 def AgenceTable(df_all,df_queue):
 
     ########## Journalier ##################
-    
+    st.write(df_all)
+    st.write(df_queue)
     df1=df_all.copy()
     
 
@@ -246,8 +247,8 @@ NombreTickets=('NombreTickets', lambda x: np.sum(x)),AttenteActuel=("AttenteActu
     # detail=detail[order]
     # globale=globale[order]
   
-    globale=globale.replace(-9223372036854775808, 0)
-    detail=detail.replace(-9223372036854775808, 0)
+    # globale=globale.replace(-9223372036854775808, 0)
+    # detail=detail.replace(-9223372036854775808, 0)
     
    
     return detail,globale
