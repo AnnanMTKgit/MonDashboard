@@ -1368,7 +1368,7 @@ def Top10_Type(df_queue,title=""):
                 "color": GraphicTitleColor
             }
         },
-        "color":Simple_pallette,
+        "color":green_color,
         "tooltip": {
             "trigger": 'axis',  # 'axis' trigger is better for bar charts
             "axisPointer": {
