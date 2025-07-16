@@ -1279,7 +1279,7 @@ def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération 
     
     df=df.groupby([f'{concern}',f'{type}']).size().reset_index(name='Count')
     
-    top_categories=df.groupby([f'{type}'])['Count'].sum().nlargest(10).reset_index()[f'{type}'].to_list()
+    top_categories=df[type].unique()
     
     # Apply this filter to the dataframe. This is the key step that was missing.
     df_filtered = df[df[type].isin(top_categories)]
@@ -1296,13 +1296,14 @@ def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération 
         values="Count",
         fill_value=0
     )
+    tooltip_formatter_js = JsCode("function(params){var agentName=params[0].name;var html=`<b>${agentName}</b><br/>`;let nonZeroSeries=params.filter(p=>p.value>0);nonZeroSeries.sort((a,b)=>b.value-a.value);let top10Series=nonZeroSeries.slice(0,10);if(top10Series.length===0){html+='Aucune valeur non-nulle';return html;}top10Series.forEach(p=>{html+=`${p.marker} ${p.seriesName}: <b>${p.value}</b><br/>`;});if(nonZeroSeries.length>10){html+=`... et ${nonZeroSeries.length-10} autre(s)`;}return html;}").js_code
     options = {
         "backgroundColor":BackgroundGraphicColor,
         "title": {"text": titre,"left": 'center',
     "textStyle": {
             "color": GraphicTitleColor
         }},
-    "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+    "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}, "formatter": tooltip_formatter_js },
     # Get legend data from the pivoted DataFrame's columns
     #"legend": {"data": df_pivoted.columns.tolist(),"left":'right'},
     "grid": {
