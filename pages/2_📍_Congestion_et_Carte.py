@@ -29,8 +29,8 @@ if df_all_filtered.empty:
 _, agg_global = AgenceTable(df_all_filtered, df_queue_filtered)
 agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
 
-TMO = agg_global["Temps Moyen d'Operation (MIN)"].mean()
-TMA = agg_global["Temps Moyen d'Attente (MIN)"].mean()
+TMO = agg_global["Temps Moyen d'Operation (MIN)"].sum()/len(agg_global)
+TMA = agg_global["Temps Moyen d'Attente (MIN)"].sum()/len(agg_global)
 NMC = agg_global['Total Tickets'].sum()
 
 c1, c2, c3 = st.columns(3)
