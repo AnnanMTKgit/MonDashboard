@@ -209,8 +209,7 @@ def run_query(_connection, sql, params=None):
 def AgenceTable(df_all,df_queue):
 
     ########## Journalier ##################
-    st.write(df_all)
-    st.write(df_queue)
+    
     df1=df_all.copy()
     
 
