@@ -3,7 +3,13 @@ import streamlit as st
 from shared_code import *
 
 
+
+
+# -----------------------------------------------
+
 st.markdown("<h1 style='text-align: center;'>Performance des Agents</h1>", unsafe_allow_html=True)
+
+st.markdown(""" <style>iframe[title="streamlit_echarts.st_echarts"]{ height: 600px !important } """, unsafe_allow_html=True)
 load_and_display_css()
 
 if not st.session_state.get('logged_in'):
@@ -38,27 +44,49 @@ tab1, tab2, tab3,tab4 = st.tabs(["Performance en Volume", "Performance en Temps"
 
 with tab1:
     
-    pie_charts = Graphs_pie(df_selection)
+    #pie_charts = Graphs_pie(df_selection)
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.plotly_chart(pie_charts[0], use_container_width=True)
+       
+        option1=create_pie_chart2(df_selection,title='Traitée')
+        st_echarts( options=option1, height="600px")
+        
+        # st.plotly_chart(pie_charts[0], use_container_width=True)
     with c2:
-        st.plotly_chart(pie_charts[1], use_container_width=True)
+        
+        option2=create_pie_chart2(df_selection,title='Passée')
+        st_echarts( options=option2, height="600px")
+        #st.plotly_chart(pie_charts[1], use_container_width=True)
     with c3:
-        st.plotly_chart(pie_charts[2], use_container_width=True)
+        
+        option3=create_pie_chart2(df_selection,title='Rejetée')
+        st_echarts( options=option3, height="600px")
+        #st.plotly_chart(pie_charts[2], use_container_width=True)
     
     
 
 with tab2:
-    
-    bar_charts = Graphs_bar(df_selection)
+    #bar_charts=Graphs_bar(df_selection)
+    #st.plotly_chart(bar_charts[1], use_container_width=True)
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.plotly_chart(bar_charts[0], use_container_width=True)
+       
+        option1=create_bar_chart2(df_selection,status='Traitée')
+    
+        st_echarts( options=option1, height="600px")
+        
+        # st.plotly_chart(pie_charts[0], use_container_width=True)
     with c2:
-        st.plotly_chart(bar_charts[1], use_container_width=True)
+        
+        option2=create_bar_chart2(df_selection,status='Passée')
+        st_echarts( options=option2, height="600px")
+        #st.plotly_chart(pie_charts[1], use_container_width=True)
     with c3:
-        st.plotly_chart(bar_charts[2], use_container_width=True)
+        
+        option3=create_bar_chart2(df_selection,status='Rejetée')
+        st_echarts( options=option3, height="600px")
+        #st.plotly_chart(pie_charts[2], use_container_width=True)
+    
 
 with tab3:
     line_chart = plot_line_chart(df_selection)
@@ -66,10 +94,49 @@ with tab3:
 
 
 with tab4:
-    tab1,tab2=st.tabs(["Catégorisation du Temps d'opération","Nombre de type d'opération par Agent"])
-    with tab1:
-        fig1 = stacked_chart(df_selection, 'TempOperation', 'UserName', titre=" ")
-        st.altair_chart(fig1, use_container_width=True)
-    with tab2:
-        fig2 = stacked_agent(df_selection, type='UserName', concern='Type_Operation',titre="")
-        st.altair_chart(fig2, use_container_width=True)
+    
+   
+    option1 = stacked_chart2(df_selection, 'TempOperation', 'UserName', titre="Total des opérations par Agent et par Catégorie")
+        
+    option2 = stacked_agent2(df_selection, concern='UserName', type='Type_Operation',titre="Top 10 des opérations effectuées par Agent")
+    
+    figures = [option1, option2]
+    total_figures = len(figures)
+    if 'current_stacked_agent' not in st.session_state:
+        st.session_state.current_stacked_agent = 0
+
+
+  
+    stacked_agent_index = st.session_state.current_stacked_agent
+
+    
+    st_echarts(
+        options=figures[stacked_agent_index],
+        height="600px",
+        key=f"area_{stacked_agent_index}" 
+    )
+
+    
+    # Étape B : Créer les colonnes pour la navigation EN DESSOUS de la figure.
+    # On utilise 3 colonnes pour un layout équilibré : [Bouton Précédent | Texte Central | Bouton Suivant]
+    col1, col2, col3 = st.columns([2, 1, 2]) # Le ratio donne plus d'espace aux boutons
+
+    with col1:
+        # Le bouton est désactivé si on est sur la première figure
+        if st.button("◀️ Précédent", use_container_width=True, disabled=(stacked_agent_index == 0),key="stacked_agent_prev"):
+            st.session_state.current_stacked_agent -= 1
+            st.rerun() # On force le rafraîchissement pour voir le changement
+
+    with col2:
+        # Affiche le statut "page / total" au centre.
+        # On utilise du Markdown pour centrer le texte.
+        st.markdown(
+            f"<p style='text-align: center; font-weight: bold;'>Figure {stacked_agent_index + 1} / {total_figures}</p>", 
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        # Le bouton est désactivé si on est sur la dernière figure
+        if st.button("Suivant ▶️", use_container_width=True, disabled=(stacked_agent_index>= total_figures - 1),key='area_next'):
+            st.session_state.current_stacked_agent += 1
+            st.rerun()

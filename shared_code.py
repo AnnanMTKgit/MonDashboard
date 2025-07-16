@@ -28,7 +28,7 @@ from openpyxl.utils import get_column_letter ##
 from openpyxl.worksheet.table import Table, TableStyleInfo ##
 import base64
 from streamlit_echarts import st_echarts,JsCode
-import math 
+import math
 
 # Variable de couleurs
 
@@ -44,6 +44,7 @@ InsideBarColor = 'white'
 blue_color="#022737"
 green_color="#BBD600"
 blue_clair_color= "#1B698D"
+
 # colors=[blue_color,blue_clair_color,green_color,"#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0","#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF",
 #     "#FFBD33", "#33FFBD", "#8CFF33", "#FF33B8", "#33FFCC","#B833FF", "#FF336D", "#3385FF", "#FF8333", "#33A1FF","#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33FFF0",
 #     "#FF8333", "#33FF83", "#8C33FF", "#FF3385", "#3385FF","#FFD433", "#33FFD4", "#BD33FF", "#FF33BD", "#33FF99","#FF33B8", "#33A1FF", "#FFBD33", "#33D4FF", "#FF33D4",
@@ -52,7 +53,7 @@ blue_clair_color= "#1B698D"
 
 # palette non panacher
 palette_colors= ["#022737", "#083A53", "#104D6F", "#17608B", "#1B698D", "#2E86AB", "#4F9DBA", "#70B4C9", "#90CDD8", "#B0E4E7", "#D0FBFB", "#E6FCFC", "#6E7C00", "#879A00", "#A1B800", "#BBD600", "#C7DD2A", "#D3E455", "#E0EC80", "#EDF3AA", "#F6F9D5", "#2F3E46", "#4A5A63", "#65767F", "#80919C", "#9AABB8", "#B5C5D3", "#D0E0EE", "#EBF5FF", "#4C3A5A", "#6D557C", "#8E709E", "#A17FAB", "#B48ECC", "#C29AD4", "#D0A7DC", "#DDA4E3", "#00796B", "#00897B", "#26A69A", "#4DB6AC", "#80CBC4", "#B2DFDB", "#E0F2F1", "#B75D28", "#D18A00", "#E5A000", "#F7B42C", "#FFC954", "#FFDDA1", "#FFECC2", "#D4C5A3", "#E3D5B8", "#F2E5CC", "#C7007D", "#E0409A", "#F97FBA", "#FFAFD8", "#FFD6E9"]
-
+Simple_pallette=[blue_color,blue_clair_color,green_color]
 # Palette panacher 
 # palette_colors=['#022737', '#BBD600', '#4C3A5A', '#083A53', '#A1B800', '#6D557C', '#104D6F', '#879A00', '#8E709E', '#17608B', '#6E7C00', '#A17FAB', '#1B698D', '#C7DD2A', '#B48ECC', '#2E86AB', '#D3E455', '#C29AD4', '#4F9DBA', '#E0EC80', '#D0A7DC', '#70B4C9', '#EDF3AA', '#DDA4E3', '#90CDD8', '#F6F9D5', '#D0FBFB', '#B0E4E7', '#D18A00', '#EBF5FF', '#2F3E46', '#E5A000', '#D4C5A3', '#4A5A63', '#F7B42C', '#E3D5B8', '#65767F', '#FFC954', '#F2E5CC', '#80919C', '#FFDDA1', '#FFECC2', '#9AABB8', '#C7007D', '#80CBC4', '#B5C5D3', '#E0409A', '#B2DFDB', '#00796B', '#F97FBA', '#E0F2F1', '#00897B', '#FFAFD8', '#90CDD8', '#26A69A', '#FFD6E9', '#B0E4E7', '#4DB6AC', '#B75D28', '#D0FBFB']
 
@@ -581,6 +582,202 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
     # from streamlit_echarts import st_echarts
     st_echarts(options=options, height="280px", key=key)
 
+################ Nouveau ###########
+def stacked_chart2(data,type:str,concern:str,titre):
+    """
+    Default values of type:
+    'TempsAttenteReel' and 'TempOperation'
+    """
+    df=data.copy()
+    df = df.dropna(subset=[type])
+
+    top_categories=['0-5min','5-10min','>10min']
+    # color_scale = alt.Scale(
+    #     domain=top_categories,  # The top categories you want to color specifically
+    #     range=[blue_color,blue_clair_color,green_color]   # Replace with the colors you want to assign to each category
+    # ) 
+      
+  
+    if  concern=='NomAgence':
+        
+        df['Categorie'] = df[type].apply(lambda x: 
+        '0-5min' if 0 <= np.round(x/60).astype(int) <= 5 else 
+        '5-10min' if 5 < np.round(x/60).astype(int) <= 10 else 
+        '>10min'
+    )
+        df=df.groupby([f'{concern}', 'Categorie']).size().reset_index(name='Count')
+        
+        df_pivoted = df.pivot_table(
+        index=concern,
+        columns="Categorie",
+        values="Count",
+        fill_value=0
+    )
+        options = {
+            "backgroundColor":BackgroundGraphicColor,
+            "title": {"text": titre,"left": 'center',
+        "textStyle": {
+                "color": GraphicTitleColor
+            }},
+            "color":Simple_pallette
+            ,
+        "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+        # Get legend data from the pivoted DataFrame's columns
+        "legend": {"data": df_pivoted.columns.tolist(),"left":'right'},
+        "grid": {
+            "left": "3%",
+            "right": "6%",
+            "bottom": "15%", # Increase bottom margin for rotated labels
+            "containLabel": True
+        },
+        # X-axis uses categories from the pivoted DataFrame's index
+        "xAxis": {
+            "type": "category",
+            "data": df_pivoted.index.tolist(),
+            "axisLabel": {
+                "rotate": 30,  # Rotate labels to prevent overlap
+                "interval": 0  # Ensure all labels are shown
+            },
+            "name":"Agences"
+        },
+        # Y-axis is the value axis
+        "yAxis": {"type": "value","name":"Valeur totale"},
+        # Create a series for each column in the pivoted DataFrame
+        "series": [
+            {
+                "name": category,
+                "type": "bar",
+                "stack": "total", # This key is what creates the stacking
+                "label": {"show": True, "position": "inside"},
+                "emphasis": {"focus": "series"},
+                "data": df_pivoted[category].tolist(),
+            }
+            for category in df_pivoted.columns
+        ],
+    }
+    else:
+        
+        df['Type_Operation'] = df['Type_Operation'].fillna('Inconnu')
+        # Ensure Categorie is correctly assigned based on TempOperation (in minutes)
+        df[type] = df[type].apply(lambda x: np.round(x / 60).astype(int))
+
+        df['Categorie'] = df[type].apply(
+            lambda x: 
+            '0-5min' if 0 <= x <= 5 else 
+            '5-10min' if 5 < x <= 10 else 
+            '>10min'
+        )
+  
+        
+
+
+        # Group by UserName and Categorie, count the occurrences
+        df_count = df.groupby([f'{concern}', 'Categorie']).size().reset_index(name='Count')
+
+        top_operations = df.groupby([concern, 'Categorie', 'Type_Operation', type]).size().reset_index(name='OperationCount')
+        top_operations = top_operations.sort_values(['UserName', 'Categorie', type], ascending=[True, True, False])
+        top_operations = top_operations.groupby([f'{concern}', 'Categorie']).head(5)
+        
+        
+        
+
+        # Combine the TypeOperation, TempOperation, and OperationCount into a single string for tooltips
+        top_operations['TopOperations'] = top_operations.apply(
+    lambda row: f"{row['Type_Operation']} ({row[type]} min, {row['OperationCount']} fois)", axis=1
+)
+        top_operations = top_operations.groupby([f'{concern}', 'Categorie'])['TopOperations'].apply(lambda x: ', '.join(x)).reset_index()
+        
+        df = pd.merge(df_count, top_operations, on=[f'{concern}', 'Categorie'], how='left')
+        # 2. Construct the ECharts options dictionary from the DataFrame
+        
+        
+
+        # Use pivot_table to structure data for ECharts series
+        df_pivot_count = df.pivot_table(index='UserName', columns='Categorie', values='Count', aggfunc='sum').fillna(0)
+        df_pivot_ops = df.pivot_table(index='UserName', columns='Categorie', values='TopOperations', aggfunc='first').fillna('')
+
+        # Define the explicit order for categories and get users
+        categories_order = ['0-5min', '5-10min', '>10min']
+        users = df_pivot_count.index.tolist()
+
+        # Reorder the columns in the pivot tables to match our desired stacking order
+        df_pivot_count = df_pivot_count.reindex(columns=categories_order, fill_value=0)
+        df_pivot_ops = df_pivot_ops.reindex(columns=categories_order, fill_value='')
+
+
+        # --- STEP 2: BUILD THE ENTIRE TOOLTIP HTML IN THE LIST COMPREHENSION ---
+        # All formatting logic is now in Python, which is safer and easier to debug.
+        
+        tooltip_formatter = """
+<b>Agent(s):</b> {b}<br/>
+<b>Queue:</b> {a}<br/>
+<b>Nombre:</b> {c}<br/>
+<b>5 premières opérations:</b>{operations}<br/>
+@{operations}
+"""
+        
+        
+        series_list = [
+    {
+        "name": category,
+        "type": "bar",
+        "stack": "total",
+        "emphasis": {"focus": "series"},
+        "data": [
+            {
+                "value": int(df_pivot_count.loc[user, category]),
+                # This custom property will be accessible in the tooltip formatter via @{operations}
+                "operations": (df_pivot_ops.loc[user, category].replace(', ', '<br/>') or 'N/A')
+            }
+            for user in users
+        ]
+    }
+    for category in categories_order
+]
+
+
+
+        # Define the full ECharts options dictionary
+        options = {
+            "title": {
+                "text": titre,
+                "left": "center"
+            },
+            "tooltip": {
+        "trigger": "item",
+        "formatter": tooltip_formatter, # Use the template string
+        "axisPointer": {"type": "shadow"},
+    },
+            "legend": {
+                "data": categories_order,
+                "top": "bottom"
+            },
+            "grid": {
+                "left": "3%",
+                "right": "6%",
+                "bottom": "10%",
+                "containLabel": True,
+            },
+            "xAxis": [
+                {
+                    "type": "category",
+                    "data": users,
+                    "axisLabel": {
+                        "rotate": 45,
+                        "interval": 0
+                    },
+                    "name":"Agents"
+                }
+            ],
+            "yAxis": [{"type": "value", "name": "Valeur totale"}],
+            "series": series_list,
+        }
+
+
+        
+    
+    return options
+
 
 def stacked_chart(data,type:str,concern:str,titre,w=1000,h=400):
     """
@@ -655,11 +852,12 @@ def stacked_chart(data,type:str,concern:str,titre,w=1000,h=400):
         #     lambda x: np.round(x.mean()).astype(int)
         # ).reset_index(name=type)
         #top_operations = top_operations.sort_values([f'{concern}', 'Categorie', type], ascending=[True, True, False])
-
+        
         top_operations = df.groupby(['UserName', 'Categorie', 'Type_Operation', type]).size().reset_index(name='OperationCount')
+    
         top_operations = top_operations.sort_values(['UserName', 'Categorie', type], ascending=[True, True, False])
         top_operations = top_operations.groupby([f'{concern}', 'Categorie']).head(5)
-        
+        st.write(top_operations)
         if len(top_operations)==0:
             chart = alt.Chart(top_operations).mark_bar().encode(
             x=alt.X(f'{concern}:O', title=f'{x}'),
@@ -701,7 +899,7 @@ def stacked_chart(data,type:str,concern:str,titre,w=1000,h=400):
         df_final = pd.merge(df_count, top_operations, on=[f'{concern}', 'Categorie'], how='left')
         #st.dataframe(df_final)
         # Create the Altair chart with tooltips
-
+        st.write(df_final)
         chart = alt.Chart(df_final).mark_bar().encode(
             x=alt.X(f'{concern}:O', title=f'{x}'),
             y=alt.Y('Count:Q', title='Nombre par Categorie'),
@@ -812,8 +1010,12 @@ def get_time_bins(min_date, max_date, bin_type):
 
     return time_bins
 
+################## NEW ######################
 
-def area_graph(data,concern='UserName',time='TempOperation',date_to_bin='Date_Fin',seuil=5,title='Courbe',w=1000,couleur=None):
+
+
+
+def area_graph2(data,concern='UserName',time='TempOperation',date_to_bin='Date_Fin',seuil=5,title='Courbe'):
     df=data.copy()
     df=df.dropna(subset=[date_to_bin])
 
@@ -846,26 +1048,16 @@ def area_graph(data,concern='UserName',time='TempOperation',date_to_bin='Date_Fi
 
     grouped_data = df.groupby([concern, 'Time_Bin'])[[time]].agg(lambda x: np.round(np.nanmean(x) / 60).astype(int)).reset_index()
     
-    
+#     seuil = st.number_input(
+#     "Définir la valeur du seuil",
+#     min_value=0,
+#     max_value=100,
+#     value=seuil, # Valeur par défaut
+#     step=1
+# )
     if len(grouped_data)==0:
-        fig=go.Figure()
-        fig.update_layout(
-        title={
-        'text': title,
-        'x': 0.5,  # Center the title
-        'xanchor': 'center'
-             
-        },plot_bgcolor=GraphicPlotColor,paper_bgcolor=BackgroundGraphicColor,
-        xaxis_title=f'Intervalle de Temps en {unit}',
-        yaxis_title='Temp Moyen (minutes)',
-        template='plotly_dark',
-        legend_title=concern,width=1000,
-         xaxis=dict(
-            tickvals=df['Time_Bin'].unique()  # Only show unique Time_Bin values present in agency_data
-        )
-
-    )
-        return fig
+        
+        return False
 
     # Select the top 5 agencies with the largest area under the curve
     if len(df['NomAgence'].unique())==1 and concern=='UserName':
@@ -885,65 +1077,94 @@ def area_graph(data,concern='UserName',time='TempOperation',date_to_bin='Date_Fi
     all_combinations = pd.merge(all_combinations, grouped_data, on=[concern, 'Time_Bin'], how='left').fillna(0)
     
     
-   
-    # Create a figure with go.Figure
-    fig = go.Figure()
-
-    # Add traces for each agency
-    for agence in top_agences:
-        agency_data = all_combinations[all_combinations[concern] == agence]
-        if unit=='Heure':
-            agency_data = agency_data.sort_values(by='Time_Bin', key=lambda x: pd.Categorical(x, categories=time_bin_labels, ordered=True))
-        fig.add_trace(go.Scatter(
-            x=agency_data['Time_Bin'],
-            y=agency_data[time],
-            mode='lines+markers',
-            fill='tozeroy',
-            name=agence,
-            line=dict(color=couleur) if couleur is not None else None,  # Set the color of the curve here
-            marker=dict(color=couleur)if couleur is not None else None,
-            showlegend=True
-        ))
-    
-    # Update layout for better visualization
-    fig.update_layout(
-        title={
-        'text': title,
-        'x': 0.5,  # Center the title
-        'xanchor': 'center'
-             
-        },plot_bgcolor=GraphicPlotColor,paper_bgcolor=BackgroundGraphicColor,
-        xaxis_title=f'Intervalle de Temps en {unit}',
-        yaxis_title='Temp Moyen (minutes)',
-        template='plotly_dark',
-        legend_title=concern,width=w,
-         xaxis=dict(
-            tickvals=all_combinations['Time_Bin'].unique()  # Only show unique Time_Bin values present in agency_data
+    if unit=='Heure':
+        all_combinations['Time_Bin'] = pd.Categorical(
+            all_combinations['Time_Bin'],
+            categories=time_bin_labels,
+            ordered=True
         )
 
-    )
-    # Ajouter une ligne horizontale avec une couleur différente des courbes
+    df_pivoted = all_combinations.pivot_table(
+        index='Time_Bin',    # This will become the x-axis
+        columns=concern,     # These will become the different series (lines)
+        values=time          # These are the y-axis values
+    ).reset_index() # .reset_index() makes 'Time_Bin' a column again
+
+        # --- 3. BUILD ECHARTS OPTIONS ---
+    # Let's also add some colors, similar to your `couleur` variable
+    colors = ['#5470C6', '#91CC75', '#EE6666', '#73C0DE', '#3BA272']
+
+    options = {"backgroundColor": GraphicPlotColor,
+    "title": {"text": title,"left": 'center',
+    "textStyle": {
+            "color": GraphicTitleColor
+        }},
+    "tooltip": {"trigger": "axis"},
+    "legend": {"data": top_agences,'orient':'vertical',"left": 'right'}, # Use the list of agencies for the legend
+    "grid": {"left": '10%', "right": '10%', "bottom": '5%',"top":"5%", "containLabel": True},
+    "toolbox": {"left": "5%", "feature": {"saveAsImage": {},"magicType": {
+                "show": True,
+                "type": ['line', 'bar', 'stack'], # Types de graphiques interchangeables
+                "title": {
+                    "line": "Passer en lignes",
+                    "bar": "Passer en barres",
+                    "stack": "Empiler"
+                }
+            }}},
+    "xAxis": {
+        "type": "category",
+        "boundaryGap": False,
+        "data": df_pivoted['Time_Bin'].tolist(), # X-axis from the pivoted table
+    },
+    "yAxis": {"type": "value"},
     
-    if unit=="Heure":
-        h=all_combinations.sort_values(by='Time_Bin', key=lambda x: pd.Categorical(x, categories=time_bin_labels, ordered=True))
-        h=list(h['Time_Bin'].unique())
-        if len(h)!=0:
-            a,b=h[0],h[-1]
-        else:
-            a,b=0,0
-    else:
-        a,b=all_combinations['Time_Bin'].min(),all_combinations['Time_Bin'].max()
-    fig.add_shape(
-        type="line",
-        x0=a,  # Début de la ligne sur l'axe x
-        x1=b,  # Fin de la ligne sur l'axe x
-        y0=seuil,  # Position de la ligne sur l'axe y
-        y1=seuil,  # Même que y0 pour que la ligne soit horizontale
-        line=dict(color="yellow", width=2, dash="dot")  # Couleur différente (ici, noir)
-    )
+    "series": [
+        {
+            "name": agence,
+            "type": "line",
+            "areaStyle": {},  # This is equivalent to Plotly's fill='tozeroy'
+            "emphasis": {"focus": "series"},
+            "data": df_pivoted[agence].tolist(), # Get data for each agency from its column
+            "lineStyle": {"color": colors[i % len(colors)]}, # Assign a color
+            "itemStyle": {"color": colors[i % len(colors)]}, # Color for markers
+            "markLine":{
+            "silent": True,               # La ligne n'est pas cliquable/interactive
+            "symbol": "none",             # Cache les flèches aux extrémités de la ligne
+            "lineStyle": {
+                "type": "dashed",         # 'dashed' pour des tirets, 'dotted' pour des points
+                "color": "#333",          # Couleur de la ligne (gris foncé)
+                "width": 2                # Épaisseur de la ligne
+            },
+            "data": [
+                {
+                    "yAxis": seuil, # Positionne la ligne sur l'axe Y à la valeur du seuil
+                    "name": "Seuil",      # Nom utilisé pour l'étiquette
+                    "label": {
+                        "show": True,
+                        "position": "end",  # Affiche l'étiquette à la fin de la ligne
+                        "formatter": "{b}: {c}", # Format: 'Nom: Valeur' (ex: "Seuil: 25")
+                        "color": "#333",
+                        "fontSize": 14
+                    }
+                }
+            ]
+        }
+        }
+        for i, agence in enumerate(top_agences) # Loop through agencies to build the series list
+    ],
+}
+    return options
     
-    # Display the chart in Streamlit
-    return fig,a,b,seuil
+
+
+
+
+
+
+
+
+
+#################################################
 
 def top_agence_freq(df_all,df_queue,title,color=[green_color,blue_clair_color]): 
     _,agg=AgenceTable(df_all,df_queue)
@@ -1052,47 +1273,77 @@ def stacked_service(data,type:str,concern:str,titre="Nombre de type d'opération
 )
     return chart
 
-def stacked_agent(data,type:str,concern:str,titre="Nombre de type d'opération par Agent",w=1000,h=400):
+def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération par Agent"):
     """
     Default values of type:
     'TempsAttenteReel' and 'TempOperation'
     """
     df=data.copy()
-    df=df.sample(n=min(5000, len(data)),replace=False)
-    df[concern] = df[concern].apply(lambda x: 'Inconnu' if pd.isnull(x) else x)
+    df[type] = df[type].apply(lambda x: 'Inconnu' if pd.isnull(x) else x)
     
-    df=df.groupby([f'{type}', f'{concern}']).size().reset_index(name='Count')
+    df=df.groupby([f'{concern}',f'{type}']).size().reset_index(name='Count')
     
-    top_categories=df.groupby([f'{concern}'])['Count'].sum().nlargest(53).reset_index()[f'{concern}'].to_list()
+    top_categories=df.groupby([f'{type}'])['Count'].sum().nlargest(10).reset_index()[f'{type}'].to_list()
     
-   
-    color_scale = alt.Scale(
-        domain=top_categories,  # The top categories you want to color specifically
-        range=palette_colors   # Replace with the colors you want to assign to each category
+    # Apply this filter to the dataframe. This is the key step that was missing.
+    df_filtered = df[df[type].isin(top_categories)]
+    
+    
+    # If filtering removed all data, handle it gracefully
+    if df_filtered.empty:
+        return {"title": {"text": f"{titre}\n(No data in top categories)", "left": 'center'}}
+        
+    # Pivot the *filtered* data for charting
+    df_pivoted = df_filtered.pivot_table(
+        index=concern,
+        columns=type,
+        values="Count",
+        fill_value=0
     )
-    chart = alt.Chart(df).mark_bar().encode(
-        x=alt.X(f'{type}:O', title='Agent(s)'),
-        y=alt.Y('Count:Q', title='Nombre par Categorie'),
-        color=alt.Color(f'{concern}:N', title="Type d'Opération",sort=top_categories,scale=color_scale),
-        order=alt.Order(f'Count:N', title="Type d'Opération",sort='descending')  # Ensures the stacking order
-    ).properties(
-        width=w,
-        height=h,
-        title={
-        "text": f"{titre}",
-        "anchor": "middle",
-        "fontSize": 16,
-        "font": "Helvetica",
-       'color': GraphicTitleColor
-    }
-       
-    ).configure(
-    background=BackgroundGraphicColor   # Set the background color for the entire figure
-)
+    options = {
+        "backgroundColor":BackgroundGraphicColor,
+        "title": {"text": titre,"left": 'center',
+    "textStyle": {
+            "color": GraphicTitleColor
+        }},
+    "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+    # Get legend data from the pivoted DataFrame's columns
+    #"legend": {"data": df_pivoted.columns.tolist(),"left":'right'},
+    "grid": {
+        "left": "3%",
+        "right": "4%",
+        "bottom": "6%", # Increase bottom margin for rotated labels
+        "containLabel": True
+    },
+    # X-axis uses categories from the pivoted DataFrame's index
+    "xAxis": {
+        "type": "category",
+        "data": df_pivoted.index.tolist(),
+        "axisLabel": {
+            "rotate": 30,  # Rotate labels to prevent overlap
+            "interval": 0  # Ensure all labels are shown
+        },
+    },
+    # Y-axis is the value axis
+    "yAxis": {"type": "value"},
+    # Create a series for each column in the pivoted DataFrame
+    "series": [
+        {
+            "name": category,
+            "type": "bar",
+            "stack": "total", # This key is what creates the stacking
+            #"label": {"show": True, "position": "inside"},
+            "emphasis": {"focus": "series"},
+            "data": df_pivoted[category].tolist(),
+        }
+        for category in df_pivoted.columns
+    ],
+}
 
-    return chart
 
-def Top10_Type(df_queue):
+    return options
+
+def Top10_Type(df_queue,title=""):
     df=df_queue.copy()
     df['Type_Operation'] = df['Type_Operation'].apply(lambda x: 'Inconnu' if pd.isnull(x) else x)
 
@@ -1101,35 +1352,87 @@ def Top10_Type(df_queue):
     top_counts=top_counts.sort_values(by='Type_Operation', ascending=False)
     top_counts=top_counts.head(10)
     top_counts = top_counts.iloc[::-1]
-    
-    
-    fig = go.Figure()
-    if top_counts.empty==False:
-        valmax=top_counts['Type_Operation'].max()
-        
-        dfmax=top_counts[top_counts['Type_Operation'].apply(lambda x:(x>=100) and (valmax-x<=100))]
-    
-        dfmin=top_counts[top_counts['Type_Operation'].apply(lambda x:(x<100) or (valmax-x>100))]
-    # Ajouter les barres pour les valeurs < 100
-        
-        # Ajouter les barres pour les valeurs >= 100
-        fig.add_trace(go.Bar(go.Bar(x=dfmin['Type_Operation'], y=dfmin['index'],orientation='h',text=dfmin['Type_Operation'],
-        textposition='outside',showlegend=False,textfont=dict(color=OutsideBarColor),marker=dict(color=green_color))
-        ))
-        fig.add_trace(go.Bar(go.Bar(x=dfmax['Type_Operation'], y=dfmax['index'],orientation='h',text=dfmax['Type_Operation'],
-        textposition='inside',showlegend=False,textfont=dict(color=InsideBarColor),marker=dict(color=green_color))
-        ))
 
-    fig.update_layout(title={
-        'text': "Top 10 Type d'Opération en nombre de clients",
-        'x': 0.5,  # Centers the title horizontally
-        'xanchor': 'center',  # Ensures proper alignment
-        'yanchor': 'top'  # Aligns the title vertically
-    },plot_bgcolor=GraphicPlotColor,paper_bgcolor=BackgroundGraphicColor,
-                  xaxis=dict(title='Nombre de Clients',tickfont=dict(size=10)),width=400,height=400,margin=dict(l=150, r=50, t=50, b=150),
-                  yaxis=dict(title='Type'))
+    # Renaming is also correct for ECharts
+    top_counts= top_counts.rename(columns={'Type_Operation': "value", 'index': "name"})
     
-    return fig
+    chart_data = top_counts.to_dict(orient='records')
+
+    # --- CORRECTED ECHARTS OPTIONS ---
+    options = {
+        "backgroundColor": GraphicPlotColor,
+        "title": {
+            "text": title, # Made title more descriptive
+            "left": 'center',
+            "textStyle": {
+                "color": GraphicTitleColor
+            }
+        },
+        "color":Simple_pallette,
+        "tooltip": {
+            "trigger": 'axis',  # 'axis' trigger is better for bar charts
+            "axisPointer": {
+                "type": 'shadow' 
+            },
+            # CORRECTED: Removed '{d}%' which is for pie charts
+            "formatter": '{b}: {c} ' 
+        },
+        "toolbox": {
+            "show": True,
+            "orient": "vertical",
+            "left": "right",
+            "top": "center",
+            "feature": {
+                "mark": {"show": True},
+                "dataView": {"show": True, "readOnly": False},
+                "restore": {"show": True},
+                "saveAsImage": {"show": True}
+            }
+        },
+        # ADDED: Bar charts require an xAxis and yAxis
+        "xAxis": {
+            "type": 'value', # The axis with numbers
+            "boundaryGap": [0, 0.01],
+            "axisLabel": {
+                "color": GraphicTitleColor,
+                "formatter": '{value}' # Add units to the axis
+            }
+        },
+        "yAxis": {
+            "type": 'category', # The axis with names/labels
+            # Data for the category axis is automatically taken 
+            # from the 'name' field in the series data
+            "data": [item['name'] for item in chart_data],
+            "axisLabel": {
+                "color": GraphicTitleColor
+            }
+        },
+        "series": [
+            {
+                "name": "Type d'Opération", # A more descriptive series name
+                "type": 'bar',
+                "label": {"show": True, "position": "inside"},
+                # REMOVED: 'radius' is not a bar chart property
+                "data": chart_data,
+                "emphasis": {
+                    "focus": 'series',
+                    "itemStyle": {
+                        "shadowBlur": 10,
+                        "shadowOffsetX": 0,
+                        "shadowColor": 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }
+        ],
+        # Optional: Add a grid to control padding
+        "grid": {
+            "left": '0%',
+            "right": '0%',
+            "bottom": '3%',
+            "containLabel": True
+        }
+    } 
+    return options
 
 
 # Plotting with Plotly
@@ -1226,132 +1529,151 @@ def plot_line_chart(df):
         )
     return fig 
 
-def create_bar_chart(df, status, title,colors='#BBD600'):
-    
+
+ 
+ ###################   NOUVEAU ###################
+
+def create_bar_chart2(df, status):
     df_filtered = df[df['Nom'] == status]
-    top = df_filtered.groupby(by=['UserName']).agg(TempOperation=('TempOperation',lambda x: np.round(np.mean(x)/60))).reset_index()
-    top=top.sort_values(by='TempOperation', ascending=True)
-
-    fig = go.Figure()
-    if top.empty==False:
-        
-        valmax=top['TempOperation'].max()
-        
-        dfmax=top[top['TempOperation'].apply(lambda x:(x>=10) and (valmax-x<=10))]
     
-        dfmin=top[top['TempOperation'].apply(lambda x:(x<10) or (valmax-x>10))]
-        
-        fig.add_trace(go.Bar(go.Bar(x=dfmin['TempOperation'], y=dfmin['UserName'],orientation='h',text=dfmin['TempOperation'],
-        textposition='outside',showlegend=False,marker=dict(color=colors),textfont=dict(color=OutsideBarColor))
-        ))
-        fig.add_trace(go.Bar(go.Bar(x=dfmax['TempOperation'], y=dfmax['UserName'],orientation='h',text=dfmax['TempOperation'],
-        textposition='inside',showlegend=False,marker=dict(color=colors),textfont=dict(color=InsideBarColor))
-        ))
+    # Your data processing is correct
+    top = df_filtered.groupby(by=['UserName']).agg(
+        TempOperation=('TempOperation', lambda x: np.round(np.mean(x) / 60))
+    ).reset_index()
+    top = top.sort_values(by='TempOperation', ascending=True)
 
+    # Renaming is also correct for ECharts
+    top = top.rename(columns={'TempOperation': "value", 'UserName': "name"})
     
-        
-    fig.update_layout(
-    title={
-        'text': f'Temps Moyen<br>Opération {status}',  # Utilisez <br> pour gérer la coupure en ligne
-        'x': 0.5,  # Center the title
-        'xanchor': 'center',
-             'font': {
-            'color': GraphicTitleColor  # Set your desired color
-        }
+    chart_data = top.to_dict(orient='records')
+
+    # --- CORRECTED ECHARTS OPTIONS ---
+    options = {
+        "backgroundColor": GraphicPlotColor,
+        "title": {
+            "text": f"Temps moyen d'opération {status}", # Made title more descriptive
+            "left": 'center',
+            "textStyle": {
+                "color": GraphicTitleColor
+            }
         },
-        margin={'t': 60},
-    xaxis_title='Temps en minutes',
-    yaxis_title='Agents',
-    font=dict(
-        family="Arial, sans-serif",
-        size=12,
-        color="white"
-    ),
-    plot_bgcolor=GraphicPlotColor,paper_bgcolor=BackgroundGraphicColor,
-    xaxis=dict(
-        showgrid=False
-    
-    ),height=500,
-    yaxis=dict(
-        showgrid=False,
-    )
-)   
-    fig.update_traces(hovertemplate='%{label}: %{value}<extra></extra>')
-    return fig
+        "tooltip": {
+            "trigger": 'axis',  # 'axis' trigger is better for bar charts
+            "axisPointer": {
+                "type": 'shadow' 
+            },
+            # CORRECTED: Removed '{d}%' which is for pie charts
+            "formatter": '{b}: {c} min' 
+        },
+        "toolbox": {
+            "show": True,
+            "orient": "vertical",
+            "left": "right",
+            "top": "center",
+            "feature": {
+                "mark": {"show": True},
+                "dataView": {"show": True, "readOnly": False},
+                "restore": {"show": True},
+                "saveAsImage": {"show": True}
+            }
+        },
+        # ADDED: Bar charts require an xAxis and yAxis
+        "xAxis": {
+            "type": 'value', # The axis with numbers
+            "boundaryGap": [0, 0.01],
+            "axisLabel": {
+                "color": GraphicTitleColor,
+                "formatter": '{value} min' # Add units to the axis
+            }
+        },
+        "yAxis": {
+            "type": 'category', # The axis with names/labels
+            # Data for the category axis is automatically taken 
+            # from the 'name' field in the series data
+            "data": [item['name'] for item in chart_data],
+            "axisLabel": {
+                "color": GraphicTitleColor
+            }
+        },
+        "series": [
+            {
+                "name": 'Temps moyen', # A more descriptive series name
+                "type": 'bar',
+                # REMOVED: 'radius' is not a bar chart property
+                "data": chart_data,
+                "emphasis": {
+                    "focus": 'series',
+                    "itemStyle": {
+                        "shadowBlur": 10,
+                        "shadowOffsetX": 0,
+                        "shadowColor": 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }
+        ],
+        # Optional: Add a grid to control padding
+        "grid": {
+            "left": '0%',
+            "right": '0%',
+            "bottom": '3%',
+            "containLabel": True
+        }
+    } 
+    return options
     
 
-def create_pie_chart(df, title):
-
+def create_pie_chart2(df, title='Traitée'):
+   
     df=df[df['Nom']==title]
     top = df.groupby(by=['UserName'])['Nom'].count().reset_index()
+    top=top.rename(columns={'Nom':"value",'UserName':"name"})
     
+    chart_data = top.to_dict(orient='records')
+    options = {
+        "backgroundColor": GraphicPlotColor,
+  "title": {
+    "text": title,
+    "left": 'center',
+    "textStyle": {
+            "color": GraphicTitleColor
+        }
+  },
+  "toolbox": {
+            "show": True,
+            "feature": {
+                "mark": {"show": True},
+                "dataView": {"show": True, "readOnly": False},
+                "restore": {"show": True},
+                "saveAsImage": {"show": True}
+            }
+        },
+  
 
-    fig = go.Figure()
+  "tooltip": {"left": "10%", 
+   " trigger": 'item',
+   "formatter": '{a} <br/>{b}: {c} ({d}%)', # Example of a nice formatter
    
-    
-    if top.empty==False:
-        top['LabelWithNbs'] = top['UserName'] + ' (' + top['Nom'].round(2).astype(str) + ')'
-
-        fig.add_trace(go.Pie(
-            labels=top['LabelWithNbs'],
-            values=top['Nom'],
-            pull=[0.1 if i == 1 else 0 for i in range(len(top))],  # Pull out the second slice ('B')
-            marker=dict(colors = palette_colors, line=dict(color='#FFFFFF', width=2)),
-            textinfo='percent' ,textposition= 'inside'
-        ))
-    #fig = px.pie(top, values='Nom', names='UserName',color_discrete_sequence=['#636EFA', '#EF553B', green_color, '#AB63FA','#FFA15A', '#19D3F3', '#FF6692', '#B6E880','#FF97FF', '#FECB52'], title=f'Personnes {title}s Par Agent')
-    
-    
-
-    # Update layout for aesthetics
-    fig.update_layout(
-        title={
-        'text': f'Personnes {title}s<br>Par Agent',
-        'x': 0.5,  # Center the title
-        'xanchor': 'center',
-             'font': {
-            'color': GraphicTitleColor  # Set your desired color
+  }
+  ,
+  "series": [
+    {
+      "name": 'Nom et Score',
+      "type": 'pie',
+      "radius": '50%',
+      "data": chart_data,
+      "emphasis": {
+        "itemStyle": {
+          "shadowBlur": 10,
+          "shadowOffsetX": 0,
+          "shadowColor": 'rgba(0, 0, 0, 0.5)'
         }
-        }
-        ,
-        legend=dict(
-        title="Legend",
-        itemsizing='constant',
-        font=dict(size=10)
-    ),height=500,
-        annotations=[dict(text='', x=0.5, y=0.5, font_size=12, showarrow=False)],
-        showlegend=True,
-        paper_bgcolor=BackgroundGraphicColor,
-        plot_bgcolor=GraphicPlotColor
-    )
-
-
-    fig.update_traces(hovertemplate='%{label}: %{value}<extra></extra>')
-    return fig
-
-def Graphs_pie(df_selected):
-    pie=[
-        create_pie_chart(df_selected, 'Traitée'),
-        #create_pie_chart(df_selection, 'En attente'),
-        create_pie_chart(df_selected, 'Passée'),
-        create_pie_chart(df_selected, 'Rejetée')
-    ]
-    return pie
-
-def Graphs_bar(df_selected):
+      }
+    }
+  ]
+} 
+    return options
     
-    
-    figs = [
-        create_bar_chart(df_selected, 'Traitée', 'TempOperation/Traitée',colors=blue_color),
-        #create_bar_chart(df_selection, 'En Attente', 'En attente'),
-        create_bar_chart(df_selected, 'Passée', 'TempOperation/Passée',colors=blue_clair_color),
-        create_bar_chart(df_selected, 'Rejetée', 'TempOperation/Rejetée',colors=green_color)
-    ]
-    config = {
-    'staticPlot': True,  # Disable all interactive features
-    'displayModeBar': False  # Hide the mode bar (but still offer the download button via Streamlit)
-}
-    return figs
+
 
 
 def circle(input_text,input_response,list_2color):
