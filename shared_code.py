@@ -1533,7 +1533,7 @@ def plot_line_chart(df):
  
  ###################   NOUVEAU ###################
 
-def create_bar_chart2(df, status):
+def create_bar_chart2(df, status,color=blue_color):
     df_filtered = df[df['Nom'] == status]
     
     # Your data processing is correct
@@ -1557,6 +1557,7 @@ def create_bar_chart2(df, status):
                 "color": GraphicTitleColor
             }
         },
+        "color":color,
         "tooltip": {
             "trigger": 'axis',  # 'axis' trigger is better for bar charts
             "axisPointer": {
@@ -1630,14 +1631,17 @@ def create_pie_chart2(df, title='Traitée'):
     
     chart_data = top.to_dict(orient='records')
     options = {
-        "backgroundColor": GraphicPlotColor,
-  "title": {
-    "text": title,
-    "left": 'center',
-    "textStyle": {
-            "color": GraphicTitleColor
-        }
-  },
+    "backgroundColor": GraphicPlotColor,
+    
+    "title": {
+        "text": title,
+        "left": 'center',
+        "textStyle": {
+                "color": GraphicTitleColor
+            }
+    },
+    
+
   "toolbox": {
             "show": True,
             "feature": {
@@ -1648,13 +1652,13 @@ def create_pie_chart2(df, title='Traitée'):
             }
         },
   
-
+  
   "tooltip": {"left": "10%", 
    " trigger": 'item',
    "formatter": '{a} <br/>{b}: {c} ({d}%)', # Example of a nice formatter
    
-  }
-  ,
+  },
+  
   "series": [
     {
       "name": 'Nom et Score',

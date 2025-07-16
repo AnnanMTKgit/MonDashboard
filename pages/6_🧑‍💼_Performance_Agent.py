@@ -78,12 +78,12 @@ with tab2:
         # st.plotly_chart(pie_charts[0], use_container_width=True)
     with c2:
         
-        option2=create_bar_chart2(df_selection,status='Passée')
+        option2=create_bar_chart2(df_selection,status='Passée',color=green_color)
         st_echarts( options=option2, height="600px")
         #st.plotly_chart(pie_charts[1], use_container_width=True)
     with c3:
         
-        option3=create_bar_chart2(df_selection,status='Rejetée')
+        option3=create_bar_chart2(df_selection,status='Rejetée',color=blue_clair_color)
         st_echarts( options=option3, height="600px")
         #st.plotly_chart(pie_charts[2], use_container_width=True)
     
