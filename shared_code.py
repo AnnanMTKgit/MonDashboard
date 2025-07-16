@@ -708,15 +708,11 @@ def stacked_chart2(data,type:str,concern:str,titre):
         # --- STEP 2: BUILD THE ENTIRE TOOLTIP HTML IN THE LIST COMPREHENSION ---
         # All formatting logic is now in Python, which is safer and easier to debug.
         
-        tooltip_formatter = """
-<b>Agent(s):</b> {b}<br/>
-<b>Queue:</b> {a}<br/>
-<b>Nombre:</b> {c}<br/>
-<b>5 premières opérations:</b>{operations}<br/>
-@{operations}
-"""
         
         
+        tooltip_formatter_js = JsCode("function (params) {return `<b>Agent(s):</b> ${params.name}<br/><b>Queue:</b> ${params.seriesName}<br/><b>Nombre:</b> ${params.value}<br/><b>5 premières opérations:</b><br/>${params.data.operations}`;}").js_code
+
+
         series_list = [
     {
         "name": category,
@@ -745,7 +741,7 @@ def stacked_chart2(data,type:str,concern:str,titre):
             },
             "tooltip": {
         "trigger": "item",
-        "formatter": tooltip_formatter, # Use the template string
+        "formatter": tooltip_formatter_js, # Use the template string
         "axisPointer": {"type": "shadow"},
     },
             "legend": {
