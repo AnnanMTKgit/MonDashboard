@@ -219,51 +219,174 @@ def run_query(_connection, sql, params=None):
 
 # --- Fonctions de Traitement de Données (depuis functions.py) ---
 
-def AgenceTable(df_all,df_queue):
+def AgenceTable(df_all, df_queue):
+    
+    # Créer des copies pour ne pas modifier les dataframes originaux
+    df1 = df_all.copy()
+    df2 = df_queue.copy()
 
+    # S'assurer que les colonnes de date sont bien au format datetime
+    df1['Date_Reservation'] = pd.to_datetime(df1['Date_Reservation'])
+    df2['Date_Reservation'] = pd.to_datetime(df2['Date_Reservation'])
+    
     ########## Journalier ##################
-    
-    df1=df_all.copy()
-    
-
     df1['Période'] = df1['Date_Reservation'].dt.date
-    agg1 = df1.groupby(['Période','NomAgence',"Region", 'Capacites']).agg(
-    Temps_Moyen_Operation=('TempOperation', lambda x: np.round(np.mean(x)/60).astype(int)),
-    Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.round(np.mean(x)/60).astype(int)),NombreTraites=('Nom',lambda x: (x == 'Traitée').sum()),NombreRejetee=('Nom',lambda x: (x == 'Rejetée').sum()),NombrePassee=('Nom',lambda x: (x == 'Passée').sum())
-).reset_index()
-    agg1["Temps Moyen de Passage(MIN)"]=agg1['Temps_Moyen_Attente']+agg1['Temps_Moyen_Operation']
-    df2=df_queue.copy()
+    
+    # Étape 1: Agréger sans forcer la conversion en int. Les résultats seront des floats.
+    agg1 = df1.groupby(['Période', 'NomAgence', "Region", 'Capacites']).agg(
+        Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60),
+        Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60),
+        NombreTraites=('Nom', lambda x: (x == 'Traitée').sum()),
+        NombreRejetee=('Nom', lambda x: (x == 'Rejetée').sum()),
+        NombrePassee=('Nom', lambda x: (x == 'Passée').sum())
+    ).reset_index()
+
     df2['Période'] = df2['Date_Reservation'].dt.date
-    agg2=df2.groupby(['Période','NomAgence',"Region", 'Capacites','Longitude','Latitude']).agg(NombreTickets=('Date_Reservation', np.count_nonzero),AttenteActuel=("NomAgence",lambda x: current_attente(df2,agence=x.iloc[0],HeureFermeture=df2[df2['NomAgence']==x.iloc[0]]['HeureFermeture'].values[0])),TotalMobile=('IsMobile',lambda x: int(sum(x)))).reset_index()
+    agg2 = df2.groupby(['Période', 'NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(
+        NombreTickets=('Date_Reservation', 'count'), # 'count' est plus direct que np.count_nonzero
+        AttenteActuel=("NomAgence", lambda x: current_attente(df2, agence=x.iloc[0], HeureFermeture=df2[df2['NomAgence']==x.iloc[0]]['HeureFermeture'].values[0])),
+        TotalMobile=('IsMobile', 'sum')
+    ).reset_index()
     
-    detail=pd.merge(agg2,agg1,on=['Période','NomAgence',"Region", 'Capacites'],how='outer')
+    # La fusion outer peut créer des NaN, c'est normal
+    detail = pd.merge(agg2, agg1, on=['Période', 'NomAgence', "Region", 'Capacites'], how='outer')
     
+    # Étape 2: Remplacer les NaN créés par 0. C'est ici la clé.
+    # On cible les colonnes numériques qui peuvent avoir des valeurs manquantes.
+    cols_to_fill = [
+        'Temps_Moyen_Operation', 'Temps_Moyen_Attente', 'NombreTraites', 
+        'NombreRejetee', 'NombrePassee', 'NombreTickets', 'TotalMobile'
+    ]
+    for col in cols_to_fill:
+        if col in detail.columns:
+            detail[col] = detail[col].fillna(0)
+
+    # Calculer le temps de passage après avoir rempli les NaN
+    detail["Temps Moyen de Passage(MIN)"] = detail['Temps_Moyen_Attente'] + detail['Temps_Moyen_Operation']
+
     ##### Global ############
-    globale=detail.groupby(['NomAgence',"Region", 'Capacites','Longitude','Latitude']).agg(
-    Temps_Moyen_Operation=('Temps_Moyen_Operation', lambda x: np.round(np.mean(x)).astype(int)),
-    Temps_Moyen_Attente=('Temps_Moyen_Attente', lambda x: np.round(np.mean(x)).astype(int)),NombreTraites=('NombreTraites',lambda x: x.sum()),NombreRejetee=('NombreRejetee',lambda x: x.sum()),NombrePassee=('NombrePassee',lambda x: x.sum()),
-    TMP=("Temps Moyen de Passage(MIN)", lambda x: np.round(np.mean(x)).astype(int)),
-NombreTickets=('NombreTickets', lambda x: np.sum(x)),AttenteActuel=("AttenteActuel",lambda x: x.sum()),TotalMobile=('TotalMobile',lambda x: int(sum(x)))).reset_index()
-    globale["Période"]=f"{df_queue['Date_Reservation'].min().strftime('%Y-%m-%d')} - {df_queue['Date_Reservation'].max().strftime('%Y-%m-%d')}"
-    globale["Temps Moyen de Passage(MIN)"]=globale['Temps_Moyen_Attente']+globale['Temps_Moyen_Operation']
-    ###########
+    # Agrégation globale à partir du dataframe 'detail' déjà nettoyé
+    globale = detail.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(
+        Temps_Moyen_Operation=('Temps_Moyen_Operation', 'mean'),
+        Temps_Moyen_Attente=('Temps_Moyen_Attente', 'mean'),
+        NombreTraites=('NombreTraites', 'sum'),
+        NombreRejetee=('NombreRejetee', 'sum'),
+        NombrePassee=('NombrePassee', 'sum'),
+        NombreTickets=('NombreTickets', 'sum'),
+        AttenteActuel=('AttenteActuel', 'last'), # 'last' ou 'mean' selon la logique désirée
+        TotalMobile=('TotalMobile', 'sum')
+    ).reset_index()
+
+    # Recalculer le temps de passage pour la vue globale
+    globale["Temps Moyen de Passage(MIN)"] = globale['Temps_Moyen_Attente'] + globale['Temps_Moyen_Operation']
     
-    new_name={'NomAgence':"Nom d'Agence",'Capacites':'Capacité','Temps_Moyen_Operation':"Temps Moyen d'Operation (MIN)",'Temps_Moyen_Attente':"Temps Moyen d'Attente (MIN)",'NombreTraites':'Total Traités','NombreRejetee':'Total Rejetées','NombrePassee':'Total Passées','NombreTickets':'Total Tickets','AttenteActuel':'Nbs de Clients en Attente'}
+    # Définir la période pour la vue globale
+    if not df_queue.empty:
+        globale["Période"] = f"{df_queue['Date_Reservation'].min().strftime('%Y-%m-%d')} - {df_queue['Date_Reservation'].max().strftime('%Y-%m-%d')}"
+    else:
+        globale["Période"] = "N/A"
+
+    ########### Conversion finale et renommage ###########
+    
+    # Liste des colonnes à arrondir et convertir en entier
+    cols_to_int = [
+        'Temps_Moyen_Operation', 'Temps_Moyen_Attente', 'Temps Moyen de Passage(MIN)',
+        'NombreTraites', 'NombreRejetee', 'NombrePassee', 'NombreTickets', 'TotalMobile'
+    ]
+
+    for col in cols_to_int:
+        if col in detail.columns:
+            detail[col] = np.round(detail[col]).astype(int)
+        if col in globale.columns:
+            globale[col] = np.round(globale[col]).astype(int)
+
+    new_name = {
+        'NomAgence': "Nom d'Agence",
+        'Capacites': 'Capacité',
+        'Temps_Moyen_Operation': "Temps Moyen d'Operation (MIN)",
+        'Temps_Moyen_Attente': "Temps Moyen d'Attente (MIN)",
+        'NombreTraites': 'Total Traités',
+        'NombreRejetee': 'Total Rejetées',
+        'NombrePassee': 'Total Passées',
+        'NombreTickets': 'Total Tickets',
+        'AttenteActuel': 'Nbs de Clients en Attente',
+        'TotalMobile': 'TotalMobile' # Renommage suggéré
+    }
+
+    detail = detail.rename(columns=new_name)
+    globale = globale.rename(columns=new_name)
+
+    # Mettre les colonnes dans l'ordre souhaité
+    order = [
+        'Période', "Nom d'Agence", 'Region', "Temps Moyen d'Operation (MIN)", 
+        "Temps Moyen d'Attente (MIN)", "Temps Moyen de Passage(MIN)", 
+        'Capacité', 'Total Tickets', 'Total Traités', 'Total Rejetées', 
+        'Total Passées', 'TotalMobile', 'Nbs de Clients en Attente', 
+        'Longitude', 'Latitude'
+    ]
+    
+    # Filtrer les colonnes pour ne garder que celles qui existent dans les dataframes
+    detail_order = [col for col in order if col in detail.columns]
+    globale_order = [col for col in order if col in globale.columns]
+
+    detail = detail[detail_order]
+    globale = globale[globale_order]
+   
+    return detail, globale
 
 
-    detail=detail.rename(columns=new_name)
-    globale=globale.rename(columns=new_name)
+
+
+
+
+
+
+
+# def AgenceTable(df_all,df_queue):
+
+#     ########## Journalier ##################
+    
+#     df1=df_all.copy()
+    
+    
+#     df1['Période'] = df1['Date_Reservation'].dt.date
+#     agg1 = df1.groupby(['Période','NomAgence',"Region", 'Capacites']).agg(
+#     Temps_Moyen_Operation=('TempOperation', lambda x: np.round(np.mean(x)/60).astype(int)),
+#     Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.round(np.mean(x)/60).astype(int)),NombreTraites=('Nom',lambda x: (x == 'Traitée').sum()),NombreRejetee=('Nom',lambda x: (x == 'Rejetée').sum()),NombrePassee=('Nom',lambda x: (x == 'Passée').sum())
+# ).reset_index()
+#     agg1["Temps Moyen de Passage(MIN)"]=agg1['Temps_Moyen_Attente']+agg1['Temps_Moyen_Operation']
+#     df2=df_queue.copy()
+#     df2['Période'] = df2['Date_Reservation'].dt.date
+#     agg2=df2.groupby(['Période','NomAgence',"Region", 'Capacites','Longitude','Latitude']).agg(NombreTickets=('Date_Reservation', np.count_nonzero),AttenteActuel=("NomAgence",lambda x: current_attente(df2,agence=x.iloc[0],HeureFermeture=df2[df2['NomAgence']==x.iloc[0]]['HeureFermeture'].values[0])),TotalMobile=('IsMobile',lambda x: int(sum(x)))).reset_index()
+    
+#     detail=pd.merge(agg2,agg1,on=['Période','NomAgence',"Region", 'Capacites'],how='outer')
+    
+#     ##### Global ############
+#     globale=detail.groupby(['NomAgence',"Region", 'Capacites','Longitude','Latitude']).agg(
+#     Temps_Moyen_Operation=('Temps_Moyen_Operation', lambda x: np.round(np.mean(x)).astype(int)),
+#     Temps_Moyen_Attente=('Temps_Moyen_Attente', lambda x: np.round(np.mean(x)).astype(int)),NombreTraites=('NombreTraites',lambda x: x.sum()),NombreRejetee=('NombreRejetee',lambda x: x.sum()),NombrePassee=('NombrePassee',lambda x: x.sum()),
+#     TMP=("Temps Moyen de Passage(MIN)", lambda x: np.round(np.mean(x)).astype(int)),
+# NombreTickets=('NombreTickets', lambda x: np.sum(x)),AttenteActuel=("AttenteActuel",lambda x: x.sum()),TotalMobile=('TotalMobile',lambda x: int(sum(x)))).reset_index()
+#     globale["Période"]=f"{df_queue['Date_Reservation'].min().strftime('%Y-%m-%d')} - {df_queue['Date_Reservation'].max().strftime('%Y-%m-%d')}"
+#     globale["Temps Moyen de Passage(MIN)"]=globale['Temps_Moyen_Attente']+globale['Temps_Moyen_Operation']
+#     ###########
+    
+#     new_name={'NomAgence':"Nom d'Agence",'Capacites':'Capacité','Temps_Moyen_Operation':"Temps Moyen d'Operation (MIN)",'Temps_Moyen_Attente':"Temps Moyen d'Attente (MIN)",'NombreTraites':'Total Traités','NombreRejetee':'Total Rejetées','NombrePassee':'Total Passées','NombreTickets':'Total Tickets','AttenteActuel':'Nbs de Clients en Attente'}
+
+
+#     detail=detail.rename(columns=new_name)
+#     globale=globale.rename(columns=new_name)
     
 
-    # order=['Période',"Nom d'Agence", "Temps Moyen d'Operation (MIN)", "Temps Moyen d'Attente (MIN)","Temps Moyen de Passage(MIN)",'Capacité','Total Tickets','Total Traités','Total Rejetées','Total Passées','TotalMobile','Nbs de Clients en Attente','Longitude','Latitude']
-    # detail=detail[order]
-    # globale=globale[order]
+#     # order=['Période',"Nom d'Agence", "Temps Moyen d'Operation (MIN)", "Temps Moyen d'Attente (MIN)","Temps Moyen de Passage(MIN)",'Capacité','Total Tickets','Total Traités','Total Rejetées','Total Passées','TotalMobile','Nbs de Clients en Attente','Longitude','Latitude']
+#     # detail=detail[order]
+#     # globale=globale[order]
   
-    # globale=globale.replace(-9223372036854775808, 0)
-    # detail=detail.replace(-9223372036854775808, 0)
+#     # globale=globale.replace(-9223372036854775808, 0)
+#     # detail=detail.replace(-9223372036854775808, 0)
     
    
-    return detail,globale
+#     return detail,globale
 def current_attente(df_queue,agence,HeureFermeture=None):
     current_date = datetime.now().date()
     current_datetime = datetime.now()
