@@ -56,7 +56,20 @@ palette_colors= ["#022737", "#083A53", "#104D6F", "#17608B", "#1B698D", "#2E86AB
 Simple_pallette=[blue_color,blue_clair_color,green_color]
 # Palette panacher 
 # palette_colors=['#022737', '#BBD600', '#4C3A5A', '#083A53', '#A1B800', '#6D557C', '#104D6F', '#879A00', '#8E709E', '#17608B', '#6E7C00', '#A17FAB', '#1B698D', '#C7DD2A', '#B48ECC', '#2E86AB', '#D3E455', '#C29AD4', '#4F9DBA', '#E0EC80', '#D0A7DC', '#70B4C9', '#EDF3AA', '#DDA4E3', '#90CDD8', '#F6F9D5', '#D0FBFB', '#B0E4E7', '#D18A00', '#EBF5FF', '#2F3E46', '#E5A000', '#D4C5A3', '#4A5A63', '#F7B42C', '#E3D5B8', '#65767F', '#FFC954', '#F2E5CC', '#80919C', '#FFDDA1', '#FFECC2', '#9AABB8', '#C7007D', '#80CBC4', '#B5C5D3', '#E0409A', '#B2DFDB', '#00796B', '#F97FBA', '#E0F2F1', '#00897B', '#FFAFD8', '#90CDD8', '#26A69A', '#FFD6E9', '#B0E4E7', '#4DB6AC', '#B75D28', '#D0FBFB']
-
+data_visualization_colors = [
+    "#3498DB",  # Bleu Azur
+    "#48C9B0",  # Vert Menthe
+    "#E76F51",  # Corail Doux
+    "#F4A261",  # Orange Safran
+    "#8E7CC3",  # Lavande
+    "#2A9D8F",  # Vert Marin
+    "#F7C181",  # Pêche Claire
+    "#5DADE2",  # Bleu Ciel
+    "#D98880",  # Vieux Rose
+    "#AF7AC5",  # Mauve
+    "#F1C40F",  # Jaune Tournesol
+    "#586F7C",  # Gris Ardoise
+]
 
 
 # --- Classes et Fonctions de Connexion BDD (depuis query.py et sql.py) ---
@@ -492,9 +505,11 @@ def create_folium_map(agg):
 def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_length=100,key="1"):
     value = int(queue_length)
     max_value = int(max_length)
-
     
-
+    max_gauge=100
+    min_gauge=0
+    
+    
     # Ensure splitNumber is within a reasonable range for ECharts
     final_split_number = 1
     
@@ -506,81 +521,99 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
     )
     
     status={"white":'Vide',green_color:"Modérement occupée",blue_clair_color:"Fortement occupée",blue_color:"Très fortement occupée ",'#FF0000':'Congestionnée'}
+    
+    
+    
+    seuil_pourcentage = max_value / 100
+    # Crée une petite zone rouge autour du seuil (ex: de 29% à 31% si le seuil est 30)
+    debut_rouge = max(0, seuil_pourcentage - 0.01)
+    fin_rouge = min(1, seuil_pourcentage + 0.01)
+    
 
-
-
-    options = {
-        "backgroundColor":BackgroundGraphicColor,
-        "graphic": [ # <--- Ajout du composant graphique pour le texte
-            {
-                "type": "text",
-                "left": "center",
-                "top": "-1%", # Ajustez cette valeur pour positionner le texte
-                "style": {
-                    "text": status[pointer_color],
-                    "font": "20px sans-serif", # Taille et police du texte
-                    "fill": pointer_color # Couleur du texte
-                },
-                "z": 100 # Assure que le texte est au-dessus des autres éléments
-            }
-        ],
-        "series": [
-            {
-                "type": "gauge",
-                "max": max_value,  # Set the maximum value of the gauge
-                "splitNumber": final_split_number, # <--- Corrected to use the calculated value
-                "radius":'90%', # Hardcoded
-                "axisLine": {
-                    "lineStyle": {
-                        "width": 30, # Hardcoded
-                        "color": [
-                            [0.5 , '#BEE0F9'],  # 0-50% Green (was Blue)
-                            [0.8 , "#BEE0F9"],  # 50-80% Orange (was Yellow)
-                            [1  , "#BEE0F9"]     # 80-100% Red (was Green)
-                        ]
-                    }
-                },
-                "progress": {
-                    "show": True,
-                    "width": 30 # Hardcoded
-                },
-                "detail": {
-                    "valueAnimation": True,
-                    "formatter": '{value}',
-                    "color": 'auto',
-                    "fontSize": 50, # Hardcoded
-                    "offsetCenter": [0, '70%'] # Hardcoded
-                },
-                "data": [{"value": value, "name": title}],
-                "title": {
-                    "show": True,
-                    "offsetCenter": [0, '100%'], # Hardcoded
-                    "fontSize": 20, # Hardcoded
-                   'color': GraphicTitleColor # Hardcoded
-                },
-                "axisTick": {
-                    "show": False
-                },
-                "splitLine": {
-                    "show": False
-                },
-                "axisLabel": {
-                    "show": True,
-                    "distance": 10, # Hardcoded
-                    "formatter": '{value}',
-                   'color': GraphicTitleColor,
-                    "fontSize": 15 # Hardcoded
-                },
+    options = {"backgroundColor":BackgroundGraphicColor,
+               "title": {"text": status[pointer_color],"left": 'center',"top":'2%',
+        "textStyle": {
+                "color": pointer_color
+            }},
+    "series": [
+        {   
+            "type": "gauge",
+            "startAngle": 200,
+            "endAngle": -20,
+            "min": 0,
+            "max": 100,
+            "splitNumber": max_gauge,
+            "progress": {
+                "show": True,
+                "width": 20,
                 "itemStyle": {
-                    "color": "#1976D2" #pointer_color
-                     
+                    "color": blue_clair_color
                 }
-            }
-        ]
-    }
+            },
+            "axisLine": {
+                "lineStyle": {
+                    "width": 20,
+                    "color": [
+                        [debut_rouge, "lightblue"],
+                        [fin_rouge, "red"],
+                        [1, "lightblue"]
+                    ]
+                }
+            },
+            "pointer": {
+                "show": True,
+                "length": "65%",
+                "width": 6,
+                "itemStyle": {
+                    "color": "black"
+                }
+            },
+        
+            # --- MODIFICATION 1 : Masquer les petits traits ---
+            "axisTick": {
+                "show": False# On cache les petits traits de graduation internes
+            },
+            "splitLine": {
+                "show": False
+            },
+            # --- MODIFICATION 2 : N'afficher que le label "30" ---
+            "axisLabel": {
+                "show": True, # L'axe des labels doit rester visible
+                "distance": 5, # Distance du label par rapport à la jauge
+                "color": "#333",
+                "fontSize": 16,
+                "interval": 0,
+                # Astuce JS pour n'afficher que le label "30"
+                "formatter": JsCode(f"function(value){{if(value==={min_gauge}||value==={max_gauge}||value==={max_value}){{return value;}}return '';}}").js_code
+            },
+            "detail": {
+                "valueAnimation": True,
+                "formatter": f"{value}",
+                "fontSize": 60,
+                "fontWeight": "bold",
+                "color": "#005EB8",
+                "offsetCenter": [0, "40%"]
+            },
+            "title": {
+                "show": True,
+                "offsetCenter": [0, "75%"],
+                "fontSize": 22,
+                "color": "#333"
+            },
+            "data": [
+                {
+                    "value": value,
+                    "name": "Clients en Attente"
+                }
+            ],
+          
+            
+        }
+    ]
+}
     # Ensure st_echarts is imported
     # from streamlit_echarts import st_echarts
-    st_echarts(options=options, height="280px", key=key)
+    st_echarts(options=options, height="280px", key='4')
 
 ################ Nouveau ###########
 def stacked_chart2(data,type:str,concern:str,titre):
@@ -1303,6 +1336,7 @@ def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération 
     "textStyle": {
             "color": GraphicTitleColor
         }},
+        "color":data_visualization_colors,
     "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}, "formatter": tooltip_formatter_js },
     # Get legend data from the pivoted DataFrame's columns
     #"legend": {"data": df_pivoted.columns.tolist(),"left":'right'},
@@ -1541,8 +1575,9 @@ def create_bar_chart2(df, status,color=blue_color):
 
     # Renaming is also correct for ECharts
     top = top.rename(columns={'TempOperation': "value", 'UserName': "name"})
-    
+   
     chart_data = top.to_dict(orient='records')
+    
 
     # --- CORRECTED ECHARTS OPTIONS ---
     options = {
