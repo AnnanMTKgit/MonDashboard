@@ -817,7 +817,7 @@ def stacked_chart2(data,type:str,concern:str,titre):
         ],
     }
     else:
-        st.write(df)
+       
         df['Type_Operation'] = df['Type_Operation'].fillna('Inconnu')
         # Ensure Categorie is correctly assigned based on TempOperation (in minutes)
         df[type] = df[type].apply(lambda x: np.round(x / 60).astype(int))
@@ -841,7 +841,7 @@ def stacked_chart2(data,type:str,concern:str,titre):
         
         
         
-        st.write(top_operations)
+        
         # Combine the TypeOperation, TempOperation, and OperationCount into a single string for tooltips
         top_operations['TopOperations'] = top_operations.apply(
     lambda row: f"{row['Type_Operation']} ({row[type]} min, {row['OperationCount']} fois)", axis=1
@@ -1356,7 +1356,7 @@ def top_agence_freq(df_all,df_queue,title,color=[green_color,blue_clair_color]):
                   yaxis=dict(title="Nom d'Agence"))
     return fig
 
-def GraphsGlob(df_all):
+def GraphsGlob2(df_all,titre="",color=blue_color):
     
 
     df=df_all.copy()
@@ -1364,26 +1364,86 @@ def GraphsGlob(df_all):
     df = df.groupby(by=['NomService']).agg(
     TempOperation=('TempOperation', lambda x: np.round(np.mean(x)/60).astype(int))).reset_index()
 
-
-    fig_tempOp_1 = go.Figure()
+ 
+    df = df.rename(columns={'TempOperation': "value", 'NomService': "name"})
    
-    fig_tempOp_1.add_trace(go.Bar(go.Bar(x=df['NomService'],y=df['TempOperation'],orientation='v',text=df['TempOperation'],width=[0.6] * len(df['NomService']) , # Réduire la largeur de la barre
-    textposition='inside',showlegend=False,marker=dict(color=blue_color)
-    )))
+    chart_data = df.to_dict(orient='records')
+    
 
-
-    fig_tempOp_1.update_layout(title={
-        'text': "Temps Moyen d'Opération par Type de Service",
-        'x': 0.5,  # Centers the title horizontally
-        'xanchor': 'center',  # Ensures proper alignment
-        'yanchor': 'top'  # Aligns the title vertically
-    },
-        xaxis=(dict(tickmode='linear')),width=400,height=400,
-        plot_bgcolor=GraphicPlotColor,paper_bgcolor=BackgroundGraphicColor,
-                             yaxis=(dict(title='Temps (min)',showgrid=False)))
-     
-
-    return fig_tempOp_1
+    # --- CORRECTED ECHARTS OPTIONS ---
+    options = {
+        "backgroundColor": GraphicPlotColor,
+        "title": {
+            "text": f"{titre}", # Made title more descriptive
+            "left": 'center',
+            "textStyle": {
+                "color": GraphicTitleColor
+            }
+        },
+        "color":color,
+        "tooltip": {
+            "trigger": 'axis',  # 'axis' trigger is better for bar charts
+            "axisPointer": {
+                "type": 'shadow' 
+            },
+            # CORRECTED: Removed '{d}%' which is for pie charts
+            "formatter": '{b}: {c} min' 
+        },
+        "toolbox": {
+            "show": True,
+            "orient": "vertical",
+            "left": "right",
+            "top": "center",
+            "feature": {
+                "mark": {"show": True},
+                "dataView": {"show": True, "readOnly": False},
+                "restore": {"show": True},
+                "saveAsImage": {"show": True}
+            }
+        },
+        # ADDED: Bar charts require an xAxis and yAxis
+        "xAxis": {
+            "type": 'value', # The axis with numbers
+            "boundaryGap": [0, 0.01],
+            "axisLabel": {
+                "color": GraphicTitleColor,
+                "formatter": '{value} min' # Add units to the axis
+            }
+        },
+        "yAxis": {
+            "type": 'category', # The axis with names/labels
+            # Data for the category axis is automatically taken 
+            # from the 'name' field in the series data
+            "data": [item['name'] for item in chart_data],
+            "axisLabel": {
+                "color": GraphicTitleColor
+            }
+        },
+        "series": [
+            {
+                "name": 'Temps moyen', # A more descriptive series name
+                "type": 'bar',
+                # REMOVED: 'radius' is not a bar chart property
+                "data": chart_data,
+                "emphasis": {
+                    "focus": 'series',
+                    "itemStyle": {
+                        "shadowBlur": 10,
+                        "shadowOffsetX": 0,
+                        "shadowColor": 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }
+        ],
+        # Optional: Add a grid to control padding
+        "grid": {
+            "left": '0%',
+            "right": '0%',
+            "bottom": '3%',
+            "containLabel": True
+        }
+    } 
+    return options
 
 def stacked_service(data,type:str,concern:str,titre="Nombre de type d'opération par Service"):
     """

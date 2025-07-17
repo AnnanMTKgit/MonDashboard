@@ -28,16 +28,16 @@ tabs=st.tabs(["Temps de traitement moyen par type de service","Types de transact
 with tabs[0]:
     
         
-    fig_temps_op = GraphsGlob(df_all_filtered)
-    st.plotly_chart(fig_temps_op, use_container_width=True)
+    option1 = GraphsGlob2(df_all_filtered,"Temps Moyen d'opération par Service")
+    st_echarts(option1,height="600px",key="fig_temps_op")
     
 with tabs[1]:
-    fig_top10 = Top10_Type(df_queue_filtered,title="Top10 des Opérations le plus courantes")
-    st_echarts(fig_top10,height="600px")
+    option2 = Top10_Type(df_queue_filtered,title="Top10 des Opérations le plus courantes")
+    st_echarts(option2,height="600px",key='fig_top10')
         
 with tabs[2]:
-    chart_service = stacked_agent2(df_all_filtered, type='Type_Operation', concern='NomService',titre="Total Clients par type de transaction")
-    st_echarts(chart_service,height="600px")
+    option3 = stacked_agent2(df_all_filtered, type='Type_Operation', concern='NomService',titre="Total Clients par type de transaction")
+    st_echarts(option3,height="600px",key="chart_service")
     
         
         
