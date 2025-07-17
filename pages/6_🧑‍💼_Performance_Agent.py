@@ -51,18 +51,18 @@ with tab1:
     with c1:
        
         option1=create_pie_chart2(df_selection,title='Traitée')
-        st_echarts( options=option1, height="600px")
+        st_echarts( options=option1, height="600px",key='pie_1')
         
         # st.plotly_chart(pie_charts[0], use_container_width=True)
     with c2:
         
         option2=create_pie_chart2(df_selection,title='Passée')
-        st_echarts( options=option2, height="600px")
+        st_echarts( options=option2, height="600px",key="pie_2")
         #st.plotly_chart(pie_charts[1], use_container_width=True)
     with c3:
         
         option3=create_pie_chart2(df_selection,title='Rejetée')
-        st_echarts( options=option3, height="600px")
+        st_echarts( options=option3, height="600px",key="pie_3")
         #st.plotly_chart(pie_charts[2], use_container_width=True)
     
     
@@ -75,18 +75,18 @@ with tab2:
        
         option1=create_bar_chart2(df_selection,status='Traitée')
     
-        st_echarts( options=option1, height="600px")
+        st_echarts( options=option1, height="600px",key="bar_1")
         
         # st.plotly_chart(pie_charts[0], use_container_width=True)
     with c2:
         
         option2=create_bar_chart2(df_selection,status='Passée',color=green_color)
-        st_echarts( options=option2, height="600px")
+        st_echarts( options=option2, height="600px",key="bar_2")
         #st.plotly_chart(pie_charts[1], use_container_width=True)
     with c3:
         
         option3=create_bar_chart2(df_selection,status='Rejetée',color=blue_clair_color)
-        st_echarts( options=option3, height="600px")
+        st_echarts( options=option3, height="600px",key="bar_3")
         #st.plotly_chart(pie_charts[2], use_container_width=True)
     
 

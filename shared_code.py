@@ -747,6 +747,11 @@ def stacked_chart2(data,type:str,concern:str,titre):
     df=data.copy()
     df = df.dropna(subset=[type])
 
+    if df.empty:
+        return {"title": {"text": f"(Pas de données)", "left": 'center'}}
+
+
+
     top_categories=['0-5min','5-10min','>10min']
     # color_scale = alt.Scale(
     #     domain=top_categories,  # The top categories you want to color specifically
@@ -812,7 +817,7 @@ def stacked_chart2(data,type:str,concern:str,titre):
         ],
     }
     else:
-        
+        st.write(df)
         df['Type_Operation'] = df['Type_Operation'].fillna('Inconnu')
         # Ensure Categorie is correctly assigned based on TempOperation (in minutes)
         df[type] = df[type].apply(lambda x: np.round(x / 60).astype(int))
@@ -836,7 +841,7 @@ def stacked_chart2(data,type:str,concern:str,titre):
         
         
         
-
+        st.write(top_operations)
         # Combine the TypeOperation, TempOperation, and OperationCount into a single string for tooltips
         top_operations['TopOperations'] = top_operations.apply(
     lambda row: f"{row['Type_Operation']} ({row[type]} min, {row['OperationCount']} fois)", axis=1
@@ -1207,9 +1212,10 @@ def area_graph2(data,concern='UserName',time='TempOperation',date_to_bin='Date_F
 #     value=seuil, # Valeur par défaut
 #     step=1
 # )
-    if len(grouped_data)==0:
+    
         
-        return False
+    if grouped_data.empty:
+        return {"title": {"text": f"(Pas de données)", "left": 'center'}}
 
     # Select the top 5 agencies with the largest area under the curve
     if len(df['NomAgence'].unique())==1 and concern=='UserName':
@@ -1443,7 +1449,8 @@ def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération 
     
     # If filtering removed all data, handle it gracefully
     if df_filtered.empty:
-        return {"title": {"text": f"{titre}\n(No data in top categories)", "left": 'center'}}
+        return {"title": {"text": f"(Pas de données)", "left": 'center'}}
+
         
     # Pivot the *filtered* data for charting
     df_pivoted = df_filtered.pivot_table(
@@ -1499,6 +1506,8 @@ def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération 
 
 def Top10_Type(df_queue,title=""):
     df=df_queue.copy()
+    if df.empty:
+        return {"title": {"text": f"(Pas de données)", "left": 'center'}}
     df['Type_Operation'] = df['Type_Operation'].apply(lambda x: 'Inconnu' if pd.isnull(x) else x)
 
     
@@ -1690,6 +1699,9 @@ def plot_line_chart(df):
 def create_bar_chart2(df, status,color=blue_color):
     df_filtered = df[df['Nom'] == status]
     
+    if df_filtered.empty:
+        return {"title": {"text": f"(Pas de données)", "left": 'center'}}
+
     # Your data processing is correct
     top = df_filtered.groupby(by=['UserName']).agg(
         TempOperation=('TempOperation', lambda x: np.round(np.mean(x) / 60))
@@ -1781,6 +1793,8 @@ def create_bar_chart2(df, status,color=blue_color):
 def create_pie_chart2(df, title='Traitée'):
    
     df=df[df['Nom']==title]
+    if df.empty:
+        return {"title": {"text": f"(Pas de données)", "left": 'center'}}
     top = df.groupby(by=['UserName'])['Nom'].count().reset_index()
     top=top.rename(columns={'Nom':"value",'UserName':"name"})
     
