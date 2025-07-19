@@ -5,7 +5,7 @@
     background-color: #f5f2f2;  
     color: black; /* Le texte par défaut de l'application sera noir */
     font-family: "Segoe UI", sans-serif;
-    /* margin-top: -80px; #Adjust this value as needed */ */
+    margin-top: -70px; #Adjust this value as needed */
 }
 
 
@@ -15,9 +15,9 @@
     display: none;
 } */
 /* Supprime la marge intérieure supérieure de la section principale de l'application */
-section.main {
+/* section.main {
     padding-top: 0rem;
-}
+} */
 
 
 /* ========== MASQUER LE BOUTON D'OUVERTURE/FERMETURE DU SIDEBAR ========== */
@@ -30,7 +30,8 @@ section[data-testid="stSidebar"] {
     background-color: #013447; /* Fond de la sidebar : noir très foncé */
     color: #fbfbfb; /* Cette couleur est pour le texte général de la sidebar, mais sera souvent surchargée */
     border-right: 2px solid #013447;
-    height: 100vh !important;
+    height: 200vh !important;
+   
 }
 
 /* NOUVELLE RÈGLE : Supprimer l'espace blanc en bas du contenu du sidebar */
@@ -128,3 +129,4 @@ div[data-testid="stPopover"] div.st-emotion-cache-1n76ycx p {
     justify-content: center;
     gap: 60px; 
 }
+

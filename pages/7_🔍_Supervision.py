@@ -121,7 +121,7 @@ with tab1:
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <strong style="font-size: 16px;">{row['NomAgence']}</strong>
                                 <div style="display: flex; align-items: center;">
-                                    <span class="status-led {row['Status']}"></span> <span style="font-size: 14px;"></span>
+                                    <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
                                 </div>
                             </div>
                             <div style="margin-top: 10px; font-size: 14px;">
