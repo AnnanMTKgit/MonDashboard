@@ -97,7 +97,7 @@
     bottom: 100%; /* Position the tooltip above the LED */
     left: 70%;
     margin-left: -60px; /* Use half of the width to center the tooltip */
-    opacity: 0;
+    opacity:0;
     transition: opacity 0.3s;
     font-size: 20px;
 }
@@ -107,8 +107,8 @@
     content: "";
     position: absolute;
     top: 100%; /* At the bottom of the tooltip */
-    left: 50%;
-    margin-left: -5px;
+    left: 70%;
+    margin-left: -3px;
     border-width: 5px;
     border-style: solid;
     border-color: #555 transparent transparent transparent;

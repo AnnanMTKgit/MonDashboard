@@ -51,10 +51,26 @@ if not AGG.empty:
 
     columns_to_display = ['Période', "Nom d'Agence", "Temps Moyen d'Operation (MIN)", "Temps Moyen d'Attente (MIN)", "Temps Moyen de Passage(MIN)", 'Capacité', 'Total Tickets', 'Total Traités', 'TotalMobile']
     AGG_display = AGG[columns_to_display]
+
+      # Exemple avec plus de styles pour les en-têtes
+    header_styles = [
+        {
+            'selector': 'th',
+            'props': [
+                ('background-color', '#f2f2f2'), # Fond gris clair
+                ('color', 'black'),              # Texte en noir
+                ('font-weight', 'bold'),         # Texte en gras
+                ('text-align', 'center'),        # Texte centré
+            ]
+        }
+    ]
     
     styled_agg = AGG_display.style.format("{:.0f}", subset=["Temps Moyen d'Operation (MIN)", "Temps Moyen d'Attente (MIN)", "Temps Moyen de Passage(MIN)"]) \
                                    .applymap(tmo_col, subset=["Temps Moyen d'Operation (MIN)"]) \
-                                   .applymap(tma_col, subset=["Temps Moyen d'Attente (MIN)"])
+                                   .applymap(tma_col, subset=["Temps Moyen d'Attente (MIN)"])\
+                                   .set_table_styles(header_styles)
+
+    
 
     st.dataframe(styled_agg, use_container_width=True)
 
