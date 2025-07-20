@@ -181,7 +181,7 @@ with tab3:
         key=f"area_{area_index}" 
     )
 
-    st.markdown("---") # Ajoute une ligne de séparation pour un look plus propre
+    #st.markdown("---") # Ajoute une ligne de séparation pour un look plus propre
 
     # Étape B : Créer les colonnes pour la navigation EN DESSOUS de la figure.
     # On utilise 3 colonnes pour un layout équilibré : [Bouton Précédent | Texte Central | Bouton Suivant]
