@@ -627,24 +627,23 @@ def create_folium_map(agg):
 
 
 def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_length=100,key="1"):
-    value = int(queue_length)
+    value = 9#int(queue_length)
     max_value = int(max_length)
     
     max_gauge=100
     min_gauge=0
     
     
-    # Ensure splitNumber is within a reasonable range for ECharts
-    final_split_number = 1
+   
     
     # --- Determine Pointer Color based on Gauge Progress ---
     current_percentage = value / max_value
     
-    pointer_color = '#FF0000' if value >= max_value else ('white' if current_percentage ==0 else
+    pointer_color = '#FF0000' if value >= max_value else ('black' if current_percentage ==0 else
         green_color if current_percentage < 0.5 else blue_clair_color if current_percentage < 0.8 else blue_color
     )
     
-    status={"white":'Vide',green_color:"Modérement occupée",blue_clair_color:"Fortement occupée",blue_color:"Très fortement occupée ",'#FF0000':'Congestionnée'}
+    status={"black":'Vide',green_color:"Modérement occupée",blue_clair_color:"Fortement occupée",blue_color:"Très fortement occupée ",'#FF0000':'Congestionnée'}
     
     
     
@@ -667,21 +666,25 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
             "min": 0,
             "max": 100,
             "splitNumber": max_gauge,
+            # --- La barre de progression qui montre la valeur actuelle ---
             "progress": {
                 "show": True,
                 "width": 20,
                 "itemStyle": {
-                    "color": blue_clair_color
-                }
+                    "color": "transparent"
+                } 
             },
             "axisLine": {
                 "lineStyle": {
                     "width": 20,
-                    "color": [
-                        [debut_rouge, "lightblue"],
-                        [fin_rouge, "red"],
-                        [1, "lightblue"]
-                    ]
+                    "color": [[value/100,"#013447"],[debut_rouge, "lightblue"],[fin_rouge, "red"],[1,"lightblue"]] if (value/100)<debut_rouge else
+                        
+                        [[value/100, "#013447"],[fin_rouge, "red"],[1,"lightblue"]] if (value/100)<fin_rouge and (value/100)>=debut_rouge else 
+
+                        [[debut_rouge, "#013447"],[fin_rouge, "red"],[1,"lightblue"]] if (value/100)==fin_rouge else 
+
+                        [[debut_rouge, "#013447"],[fin_rouge, "red"],[value/100,"#013447"],[1,"lightblue"]]
+                        
                 }
             },
             "pointer": {
@@ -689,7 +692,7 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
                 "length": "65%",
                 "width": 6,
                 "itemStyle": {
-                    "color": "black"
+                    "color": "#013447"
                 }
             },
         
@@ -704,10 +707,10 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
             "axisLabel": {
                 "show": True, # L'axe des labels doit rester visible
                 "distance": 5, # Distance du label par rapport à la jauge
-                "color": "#333",
+                "color": blue_color, #"#333",
                 "fontSize": 16,
                 "interval": 0,
-                # Astuce JS pour n'afficher que le label "30"
+                # Astuce JS pour n'afficher que le label "0,100 ou max_value"
                 "formatter": JsCode(f"function(value){{if(value==={min_gauge}||value==={max_gauge}||value==={max_value}){{return value;}}return '';}}").js_code
             },
             "detail": {
@@ -715,12 +718,12 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
                 "formatter": f"{value}",
                 "fontSize": 60,
                 "fontWeight": "bold",
-                "color": "#005EB8",
-                "offsetCenter": [0, "40%"]
+                "color": pointer_color,
+                "offsetCenter": [0, "100%"]
             },
             "title": {
                 "show": True,
-                "offsetCenter": [0, "75%"],
+                "offsetCenter": [0, "60%"],
                 "fontSize": 22,
                 "color": "#333"
             },
