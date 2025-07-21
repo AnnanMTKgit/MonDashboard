@@ -60,15 +60,15 @@ Simple_pallette=[blue_color,blue_clair_color,green_color]
 data_visualization_colors = [
     "#3498DB",  # Bleu Azur
     "#48C9B0",  # Vert Menthe
-    "#E76F51",  # Corail Doux
-    "#F4A261",  # Orange Safran
+    "#013447",  # Corail Doux
+    blue_color,  # Orange Safran
     "#8E7CC3",  # Lavande
     "#2A9D8F",  # Vert Marin
     "#F7C181",  # Pêche Claire
     "#5DADE2",  # Bleu Ciel
-    "#D98880",  # Vieux Rose
+    blue_clair_color,  # Vieux Rose
     "#AF7AC5",  # Mauve
-    "#F1C40F",  # Jaune Tournesol
+    green_color,  # Jaune Tournesol
     "#586F7C",  # Gris Ardoise
 ]
 
@@ -627,7 +627,7 @@ def create_folium_map(agg):
 
 
 def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_length=100,key="1"):
-    value = 9#int(queue_length)
+    value = int(queue_length)
     max_value = int(max_length)
     
     max_gauge=100
@@ -1524,6 +1524,8 @@ def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération 
         fill_value=0
     )
     tooltip_formatter_js = JsCode("function(params){var agentName=params[0].name;var html=`<b>${agentName}</b><br/>`;let nonZeroSeries=params.filter(p=>p.value>0);nonZeroSeries.sort((a,b)=>b.value-a.value);let top10Series=nonZeroSeries.slice(0,10);if(top10Series.length===0){html+='Aucune valeur non-nulle';return html;}top10Series.forEach(p=>{html+=`${p.marker} ${p.seriesName}: <b>${p.value}</b><br/>`;});if(nonZeroSeries.length>10){html+=`... et ${nonZeroSeries.length-10} autre(s)`;}return html;}").js_code
+    
+    
     options = {
         "backgroundColor":BackgroundGraphicColor,
         "title": {"text": titre,"left": 'center',
