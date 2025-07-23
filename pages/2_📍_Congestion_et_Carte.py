@@ -2,7 +2,7 @@
 import streamlit as st
 from shared_code import *
 
-st.markdown("<h1 style='text-align: center;'>Congestion - Localisation des Agences</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Congestion et Localisation des Agences</h1>", unsafe_allow_html=True)
 
 load_and_display_css()
 
