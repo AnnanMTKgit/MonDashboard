@@ -94,5 +94,5 @@ else:
     else:
         
         #st.sidebar.info(f"{st.session_state.username}")
-        st.title(f"Bienvenue sur le Dashboard de Marlodj, {st.session_state.username}!")
+        st.title(f"Bienvenue sur le Dashboard Marlodj, {st.session_state.username}!")
         st.info("Utilisez le menu sur la gauche pour naviguer entre les différentes sections d'analyse.")
