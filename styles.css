@@ -15,9 +15,9 @@
     display: none;
 } */
 /* Supprime la marge intérieure supérieure de la section principale de l'application */
-/* section.main {
+section.main {
     padding-top: 0rem;
-} */
+}
 
 
 /* ========== MASQUER LE BOUTON D'OUVERTURE/FERMETURE DU SIDEBAR ========== */
