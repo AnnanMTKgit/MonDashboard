@@ -11,13 +11,13 @@
 
 /* ========== SUPPRIMER L'ESPACE BLANC EN HAUT DE PAGE (PAGE PRINCIPALE) ========== */
 /* Masque l'en-tête par défaut de Streamlit si elle existe et crée un espace */
-/* header[data-testid="stHeader"] {
+header[data-testid="stHeader"] {
     display: none;
-} */
-/* Supprime la marge intérieure supérieure de la section principale de l'application */
-section.main {
-    padding-top: 0rem;
 }
+/* Supprime la marge intérieure supérieure de la section principale de l'application */
+/* section.main {
+    padding-top: 0rem;
+} */
 
 
 /* ========== MASQUER LE BOUTON D'OUVERTURE/FERMETURE DU SIDEBAR ========== */
