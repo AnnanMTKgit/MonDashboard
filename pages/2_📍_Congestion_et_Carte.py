@@ -1,7 +1,7 @@
 # pages/2_📍_Congestion_et_Carte.py
 import streamlit as st
 from shared_code import *
-
+st.write('HI')
 st.markdown("<h1 style='text-align: center;'>Congestion et Localisation des Agences</h1>", unsafe_allow_html=True)
 
 load_and_display_css()
