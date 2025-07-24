@@ -7,7 +7,7 @@ st.markdown("<h1 style='text-align: center;'>Congestion et Localisation des Agen
 load_and_display_css()
 
 if not st.session_state.get('logged_in'):
-    st.error("Veuillez vous connecter pour accéder à cette page.")
+    st.error("Veuillez-vous connecter pour accéder à cette page.")
     st.stop()
 
 # --- Dessine la sidebar et charge les données ---
