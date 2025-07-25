@@ -48,6 +48,11 @@ section[data-testid="stSidebarContent"] {
 }
 /* --- FIN DE L'AJOUT --- */
 
+[data-testid="stSidebarNav"] ul {
+    max-height: 500px; /* Adaptez cette valeur */
+    overflow-y: hidden;
+}
+
 
 /* ========== TITRES (h1, h2, h3...) ========== */
 h1, h2, h3, h4, h5 {
