@@ -206,13 +206,9 @@ def get_connection():
         """)
         st.stop()
 
+@st.cache_data(hash_funcs={pyodbc.Connection: id}, show_spinner=False)
+def run_query_cached(_connection, sql, params):
 
-def run_query(_connection, sql, params=None):
-    """
-    Exécute une requête SQL en utilisant une connexion existante 
-    et retourne un DataFrame Pandas.
-    NE FERME PAS LA CONNEXION.
-    """
     try:
         # Exécuter la requête et retourner le résultat
         df = pd.read_sql_query(sql, _connection, params=params)
@@ -221,6 +217,28 @@ def run_query(_connection, sql, params=None):
         st.error(f"Erreur lors de l'exécution de la requête : {e}")
         return pd.DataFrame() # Retourner un DataFrame vide en cas d'erreur
 
+    
+
+def run_query(_connection, sql, params=None):
+    """
+    Exécute une requête SQL en utilisant une connexion existante 
+    et retourne un DataFrame Pandas.
+    NE FERME PAS LA CONNEXION.
+    """
+    current_date = datetime.now().date()
+    current_hour=datetime.now().hour
+    if params==None or (params[1] == current_date and current_hour<18 and current_hour>7):
+        try:
+            
+            # Exécuter la requête et retourner le résultat
+            df = pd.read_sql_query(sql, _connection, params=params)
+            return df
+        except Exception as e:
+            st.error(f"Erreur lors de l'exécution de la requête : {e}")
+            return pd.DataFrame() # Retourner un DataFrame vide en cas d'erreur
+    else:
+        
+        return run_query_cached(_connection, sql, params)
 # --- Fonctions de Traitement de Données (depuis functions.py) ---
 
 def AgenceTable(df_all, df_queue):
