@@ -2,7 +2,7 @@
 import streamlit as st
 from shared_code import *
 from st_aggrid.shared import JsCode
-st.markdown("<h1 style='text-align: center;'>Tableau de Bord Global</h1>", unsafe_allow_html=True)
+
 
 load_and_display_css()
 
@@ -25,6 +25,16 @@ if df_all_filtered.empty:
     st.stop()
 
 
+Kpi=df_all_filtered.groupby("NomService")["UserName"].nunique().reset_index()
+Kpi = Kpi.rename(columns={"UserName": "Nombre_Agents"})
+
+
+
+cols = st.columns(2)  # une colonne par service
+for i, row in Kpi.iterrows():
+    with cols[i]:
+        st.metric(label="Nombre Agents " + row["NomService"], value=row["Nombre_Agents"])
+st.markdown("<h1 style='text-align: center;'>Tableau de Bord Global</h1>", unsafe_allow_html=True)
 
 
 # --- Affichage du tableau ---

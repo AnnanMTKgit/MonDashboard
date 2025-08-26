@@ -7,7 +7,7 @@ st.markdown("<h1 style='text-align: center;'>Congestion et Localisation des Agen
 load_and_display_css()
 
 if not st.session_state.get('logged_in'):
-    st.error("Veuillez-vous connecter pour accéder à cette page.")
+    st.error("Veuillez vous connecter pour accéder à cette page.")
     st.stop()
 
 # --- Dessine la sidebar et charge les données ---
@@ -30,6 +30,7 @@ if df_all_filtered.empty:
 _, agg_global = AgenceTable(df_all_filtered, df_queue_filtered)
 agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
 
+st.write(df_all_filtered)
 TMO = agg_global["Temps Moyen d'Operation (MIN)"].sum()/len(agg_global)
 TMA = agg_global["Temps Moyen d'Attente (MIN)"].sum()/len(agg_global)
 NMC = agg_global['Total Tickets'].sum()

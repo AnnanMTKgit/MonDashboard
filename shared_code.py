@@ -30,7 +30,10 @@ from openpyxl.worksheet.table import Table, TableStyleInfo ##
 import base64
 from streamlit_echarts import st_echarts,JsCode
 import math
-
+import pyspark
+from pyspark.sql import SparkSession, Window, DataFrame
+from pyspark.sql.functions import col, lit, sum, countDistinct, monotonically_increasing_id
+from pyspark.sql.types import TimestampType
 # Variable de couleurs
 
 
@@ -2182,3 +2185,76 @@ def option_agent(df_all_service,df_queue_service):
             st.altair_chart(fig1,use_container_width=True)
 
         st.stop()
+
+
+
+def client_per_hour(df_input: DataFrame) -> DataFrame:
+    """
+    Calcule le nombre d'agents en attente (nb_attente) et le nombre d'agents
+    actifs (nb_agent) pour chaque réservation dans un DataFrame.
+
+    :param df_input: DataFrame Spark contenant les réservations.
+                     Doit contenir les colonnes : Date_Reservation, Date_Fin, NomAgence, UserName.
+    :return: DataFrame Spark enrichi avec les colonnes nb_attente et nb_agent.
+    """
+    # Étape 1: Préparation des données (typage et ID unique)
+    # On travaille sur une copie pour ne pas modifier le DataFrame original en dehors de la fonction
+    df = df_input.withColumn("Date_Reservation", col("Date_Reservation").cast(TimestampType())) \
+                 .withColumn("Date_Fin", col("Date_Fin").cast(TimestampType()))
+
+    df_id = df.withColumn("row_id", monotonically_increasing_id())
+    # Le cache est utile pour les DataFrames qui sont utilisés plusieurs fois
+    df_id.cache()
+
+    # --- Étape 2: Calcul de 'nb_attente' PAR AGENCE (Méthode Window Function) ---
+
+    starts = df_id.select(col("Date_Reservation").alias("time"), lit(1).alias("change"), col("NomAgence"))
+    ends = df_id.select(col("Date_Fin").alias("time"), lit(-1).alias("change"), col("NomAgence"))
+
+    events = starts.unionAll(ends)
+
+    window_spec_by_agency = Window.partitionBy("NomAgence") \
+                                   .orderBy("time") \
+                                   .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+
+    events_with_active_count = events.withColumn("active_clients_in_agency", sum("change").over(window_spec_by_agency))
+
+    nb_attente_df = df_id.join(
+        events_with_active_count,
+        (df_id["Date_Reservation"] == events_with_active_count["time"]) &
+        (df_id["NomAgence"] == events_with_active_count["NomAgence"])
+    ).select(
+        col("row_id"),
+        (col("active_clients_in_agency") - 1).alias("nb_attente")
+    ).dropDuplicates(["row_id"])
+
+
+    # --- Étape 3: Calcul de 'nb_agent' PAR AGENCE (Méthode avec Self-Join) ---
+
+    df1 = df_id.alias("df1")
+    df2 = df_id.alias("df2")
+
+    join_condition = (
+        (col("df1.NomAgence") == col("df2.NomAgence")) &
+        (col("df1.Date_Reservation") >= col("df2.Date_Reservation")) &
+        (col("df1.Date_Reservation") < col("df2.Date_Fin")) &
+        (col("df1.row_id") != col("df2.row_id"))
+    )
+
+    nb_agent_df = df1.join(df2, join_condition, "left") \
+        .groupBy("df1.row_id") \
+        .agg(
+            countDistinct("df2.UserName").alias("nb_agent")
+        )
+
+    # --- Étape 4: Assemblage final des résultats ---
+
+    final_df = df_id.join(nb_attente_df, "row_id", "left") \
+                    .join(nb_agent_df, "row_id", "left")
+
+    final_df = final_df.na.fill(0, subset=["nb_attente", "nb_agent"])
+    
+    # On retire le cache qui n'est plus nécessaire
+    df_id.unpersist()
+
+    return final_df
