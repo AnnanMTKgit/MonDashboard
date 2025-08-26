@@ -22,20 +22,25 @@
     animation-name: glow-green;
 }
 
+.status-led-yellow {
+    background-color: #ffd700; /* ou #ffff00 si vous préférez */
+    animation: glow-gold 2s infinite; /* ou glow-yellow */
+}
 .status-led-orange {
     background-color: #ff9500; /* Bright Orange */
     animation-name: glow-orange;
 }
+
 
 .status-led-red {
     background-color: #ff3b30; /* Bright Red */
     animation-name: glow-red;
 }
 
-.status-led-blue {
+/* .status-led-blue {
     background-color: #007aff; /* Bright Blue */
-    animation-name: glow-blue;
-}
+    /* animation-name: glow-blue; */
+/* } */ 
 
 .status-led-black {
     background-color: #333333; /* Dark Grey/Black for unavailable */
@@ -54,7 +59,11 @@
     50% { box-shadow: 0 0 12px rgba(52, 199, 89, 0.8); }
     100% { box-shadow: 0 0 4px rgba(52, 199, 89, 0.4); }
 }
-
+@keyframes glow-yellow {
+    0% { box-shadow: 0 0 4px rgba(255, 255, 0, 0.4); }
+    50% { box-shadow: 0 0 12px rgba(255, 255, 0, 0.8); }
+    100% { box-shadow: 0 0 4px rgba(255, 255, 0, 0.4); }
+}
 @keyframes glow-orange {
     0% { box-shadow: 0 0 4px rgba(255, 149, 0, 0.4); }
     50% { box-shadow: 0 0 12px rgba(255, 149, 0, 0.8); }
@@ -67,11 +76,11 @@
     100% { box-shadow: 0 0 4px rgba(255, 59, 48, 0.4); }
 }
 
-@keyframes glow-blue {
+/* @keyframes glow-blue {
     0% { box-shadow: 0 0 4px rgba(0, 122, 255, 0.4); }
     50% { box-shadow: 0 0 12px rgba(0, 122, 255, 0.8); }
     100% { box-shadow: 0 0 4px rgba(0, 122, 255, 0.4); }
-}
+} */
 
 @keyframes glow-black {
     0% { box-shadow: 0 0 4px rgba(51, 51, 51, 0.4); }
@@ -131,15 +140,15 @@
     content: "Modérement occupée"; /* Text for green status */
 }
 
-.status-led-orange .tooltiptext::before {
+.status-led-yellow .tooltiptext::before {
     content: "Fortement occupée"; /* Text for orange status */
 }
 
-.status-led-red .tooltiptext::before {
+.status-led-orange .tooltiptext::before {
     content: "Très fortement occupée"; /* Text for red status */
 }
 
-.status-led-blue .tooltiptext::before {
+.status-led-red .tooltiptext::before {
     content: "Congestionnée"; /* Text for blue status */
 }
 

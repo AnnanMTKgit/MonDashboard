@@ -418,6 +418,7 @@ def current_attente(df_queue,agence,HeureFermeture=None):
                 # If it fails, just continue to the next format
                 continue
         #time_obj =datetime.strptime(HeureFermeture, "%H:%M").time()
+
         six_pm_datetime=datetime.combine(current_date, time_obj)
 
     if current_datetime > six_pm_datetime:
@@ -676,7 +677,7 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
     options = {"backgroundColor":BackgroundGraphicColor,
                "title": {"text": status[pointer_color],"left": 'center',"top":'2%',
         "textStyle": {
-                "color": pointer_color
+                "color": blue_color
             }},
     "series": [
         {   
@@ -738,7 +739,7 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
                 "formatter": f"{value}",
                 "fontSize": 60,
                 "fontWeight": "bold",
-                "color": pointer_color,
+                "color": blue_color,
                 "offsetCenter": [0, "100%"]
             },
             "title": {
@@ -2055,11 +2056,11 @@ def get_status_info(clients, capacite):
     elif ratio < 0.5: 
         return  "status-led-green"
     elif ratio < 0.8: 
-        return "status-led-orange"
+        return "status-led-yellow"
     elif ratio < 1: 
-        return  "status-led-red"
+        return  "status-led-orange"
     else:   
-        return  "status-led-blue"
+        return  "status-led-red"
 
 
 
