@@ -246,6 +246,7 @@ def AgenceTable(df_all, df_queue):
     ).reset_index()
 
     df2['Période'] = df2['Date_Reservation'].dt.date
+    
     agg2 = df2.groupby(['Période', 'NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(
         NombreTickets=('Date_Reservation', 'count'), # 'count' est plus direct que np.count_nonzero
         AttenteActuel=("NomAgence", lambda x: current_attente(df2, agence=x.iloc[0], HeureFermeture=df2[df2['NomAgence']==x.iloc[0]]['HeureFermeture'].values[0])),
@@ -399,8 +400,24 @@ def current_attente(df_queue,agence,HeureFermeture=None):
     if HeureFermeture==None:
         six_pm_datetime = current_datetime.replace(hour=18, minute=0, second=0, microsecond=0)
     else:
-        
-        time_obj =datetime.strptime(HeureFermeture, "%H:%M").time()
+        # List of formats to try, from most to least specific
+        formats_to_try = [
+            '%Hh%M',    
+            '%H:%M',    
+            '%H.%M',    
+            '%H %M',    
+            '%H'       
+        ]
+
+        for fmt in formats_to_try:
+            try:
+                # Try to parse the string with the current format
+                time_obj = datetime.strptime(HeureFermeture, fmt).time()
+                break
+            except ValueError:
+                # If it fails, just continue to the next format
+                continue
+        #time_obj =datetime.strptime(HeureFermeture, "%H:%M").time()
         six_pm_datetime=datetime.combine(current_date, time_obj)
 
     if current_datetime > six_pm_datetime:
