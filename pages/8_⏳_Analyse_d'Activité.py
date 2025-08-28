@@ -37,12 +37,12 @@ import os
 def render_activity_page():
     
     # AFFICHER LES INFORMATIONS DE DÉBOGAGE
-    with st.expander("🕵️ Informations de débogage de l'environnement"):
-        st.code(
-            f"Variable LANG vue par Python: {os.environ.get('LANG')}\n"
-            f"Variable LC_ALL vue par Python: {os.environ.get('LC_ALL')}\n"
-            f"Locale actuel (avant modification): {locale.getlocale(locale.LC_TIME)}"
-        )
+    try:
+        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+    except locale.Error:
+        st.warning("Le locale français n'est pas disponible, affichage en anglais.")
+    # -------------------------------------------
+
     
     rapport_pd = run_analysis_pipeline(df_queue_filtered)
     if rapport_pd.empty: return
