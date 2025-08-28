@@ -24,6 +24,7 @@ import plotly.figure_factory as ff
 import plotly.subplots as sp
 import io 
 import folium
+from itertools import product
 from datetime import datetime, timedelta
 from openpyxl.utils import get_column_letter ##
 from openpyxl.worksheet.table import Table, TableStyleInfo ##
@@ -2223,3 +2224,157 @@ def option_agent(df_all_service,df_queue_service):
         st.stop()
 
 
+############ Page 8 ##################
+
+
+def filtrer_derniere_semaine_pandas(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty: return df
+    df['Date_Reservation'] = pd.to_datetime(df['Date_Reservation'])
+    df['max_date_agence'] = df.groupby('NomAgence')['Date_Reservation'].transform('max')
+    start_date_period = df['max_date_agence'] - pd.Timedelta(days=7)
+    df_filtered = df[df['Date_Reservation'] >= start_date_period].copy()
+    df_filtered.drop(columns=['max_date_agence'], inplace=True)
+    return df_filtered
+
+def calculer_metriques_agents_pandas(df_input: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcule nb_attente et nb_agent en utilisant Pandas.
+    """
+    if df_input.empty:
+        return pd.DataFrame(columns=list(df_input.columns) + ['nb_attente', 'nb_agent'])
+    
+    df = df_input.copy()
+    # Conversion des dates et création d'un ID unique
+    df['Date_Reservation'] = pd.to_datetime(df['Date_Reservation'])
+    df['Date_Fin'] = pd.to_datetime(df['Date_Fin'])
+    df = df.reset_index().rename(columns={'index': 'row_id'})
+
+    # --- Calcul de 'nb_attente' (méthode événementielle) ---
+    starts = df[['Date_Reservation', 'NomAgence']].copy()
+    starts.rename(columns={'Date_Reservation': 'time'}, inplace=True)
+    starts['change'] = 1
+
+    ends = df[['Date_Fin', 'NomAgence']].copy()
+    ends.rename(columns={'Date_Fin': 'time'}, inplace=True)
+    ends['change'] = -1
+
+    events = pd.concat([starts, ends])
+    # Traiter les départs (-1) avant les arrivées (+1) en cas d'égalité de temps
+    events.sort_values(by=['time', 'change'], ascending=[True, False], inplace=True)
+
+    # Calcul de la somme cumulative par agence
+    events['active_clients'] = events.groupby('NomAgence')['change'].cumsum()
+    
+    # On ne garde que les événements d'arrivée pour la jointure
+    arrival_events = events[events['change'] == 1].copy()
+    arrival_events['nb_attente'] = arrival_events['active_clients'] - 1
+    # Assurer que nb_attente n'est jamais négatif
+    arrival_events['nb_attente'] = arrival_events['nb_attente'].clip(lower=0)
+
+    # Joindre les résultats au DataFrame original
+    df = pd.merge(
+        df,
+        arrival_events[['time', 'NomAgence', 'nb_attente']],
+        left_on=['Date_Reservation', 'NomAgence'],
+        right_on=['time', 'NomAgence'],
+        how='left'
+    ).drop(columns=['time'])
+
+    df.fillna({'nb_attente': 0}, inplace=True)
+    return df
+
+# MODIFIÉ : Version robuste de la fonction
+def filtrer_derniere_semaine_pandas(df: pd.DataFrame) -> pd.DataFrame: #...
+    if df.empty: return df
+    df['Date_Reservation'] = pd.to_datetime(df['Date_Reservation'])
+    df['max_date_agence'] = df.groupby('NomAgence')['Date_Reservation'].transform('max')
+    start_date_period = df['max_date_agence'] - pd.Timedelta(days=7)
+    df_filtered = df[df['Date_Reservation'] >= start_date_period].copy()
+    df_filtered.drop(columns=['max_date_agence'], inplace=True)
+    return df_filtered
+def calculer_attente_pandas(df_input: pd.DataFrame) -> pd.DataFrame: #...
+    if df_input.empty: return pd.DataFrame(columns=list(df_input.columns) + ['nb_attente'])
+    df = df_input.copy(); df['Date_Reservation'] = pd.to_datetime(df['Date_Reservation']); df['Date_Fin'] = pd.to_datetime(df['Date_Fin'])
+    starts = df[['Date_Reservation', 'NomAgence']].copy(); starts.rename(columns={'Date_Reservation': 'time'}, inplace=True); starts['change'] = 1
+    ends = df[['Date_Fin', 'NomAgence']].copy(); ends.rename(columns={'Date_Fin': 'time'}, inplace=True); ends['change'] = -1
+    events = pd.concat([starts, ends]); events.sort_values(by=['time', 'change'], ascending=[True, False], inplace=True)
+    events['active_clients'] = events.groupby('NomAgence')['change'].cumsum()
+    arrival_events = events[events['change'] == 1].copy(); arrival_events['nb_attente'] = (arrival_events['active_clients'] - 1).clip(lower=0)
+    df_final = pd.merge(df, arrival_events[['time', 'NomAgence', 'nb_attente']], left_on=['Date_Reservation', 'NomAgence'], right_on=['time', 'NomAgence'], how='left').drop(columns=['time'])
+    df_final.fillna({'nb_attente': 0}, inplace=True); return df_final
+
+
+# --- 4. FONCTION PRINCIPALE DE LA PAGE (MODIFIÉE) ---
+def calculer_moyenne_hebdomadaire(rapport_df: pd.DataFrame) -> pd.DataFrame:
+    df = rapport_df.copy()
+    df['Jour_semaine'] = df['Heure'].dt.day_name(locale='fr_FR')
+    df['Heure_jour'] = df['Heure'].dt.hour
+    moyenne_df = df.groupby(['NomAgence', 'Jour_semaine', 'Heure_jour'])['nb_attente'].mean().reset_index()
+    moyenne_df.rename(columns={'nb_attente': 'nb_attente_moyen'}, inplace=True)
+    jours_ordre = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+    moyenne_df['Jour_semaine'] = pd.Categorical(moyenne_df['Jour_semaine'], categories=jours_ordre, ordered=True)
+    return moyenne_df.sort_values(by=['NomAgence', 'Jour_semaine', 'Heure_jour'])
+
+# --- NOUVELLE FONCTION POUR LE GRAPHIQUE À BARRES ---
+def calculer_charge_journaliere_moyenne(rapport_moyen: pd.DataFrame) -> pd.DataFrame:
+    """Agrège la charge horaire moyenne pour obtenir une charge journalière totale."""
+    charge_jour = rapport_moyen.groupby('Jour_semaine')['nb_attente_moyen'].sum().reset_index()
+    charge_jour.rename(columns={'nb_attente_moyen': 'Charge_Journaliere'}, inplace=True)
+    charge_jour = charge_jour.sort_values('Jour_semaine')
+    return charge_jour
+
+# REMPLACEZ L'ANCIENNE FONCTION PAR CELLE-CI
+def creer_rapport_horaire_pandas_simple(df_metriques: pd.DataFrame) -> pd.DataFrame:
+    """
+    Version finale :
+    1. Crée un rapport horaire strict de 08h à 18h.
+    2. Applique une tolérance de 1 heure pour l'activité continue.
+    3. Supprime les heures futures du rapport par rapport à l'heure actuelle.
+    """
+    if df_metriques.empty:
+        return pd.DataFrame(columns=['Heure', 'NomAgence', 'nb_attente'])
+        
+    df = df_metriques[['Date_Reservation', 'NomAgence', 'nb_attente']].copy()
+    df.rename(columns={'Date_Reservation': 'Heure'}, inplace=True)
+    df.sort_values('Heure', inplace=True)
+
+    df['jour'] = df['Heure'].dt.normalize()
+    jours_agences_uniques = df[['jour', 'NomAgence']].drop_duplicates()
+    
+    grille_globale = []
+    for _, row in jours_agences_uniques.iterrows():
+        grille_journaliere = pd.date_range(
+            start=row['jour'] + pd.Timedelta(hours=8),
+            end=row['jour'] + pd.Timedelta(hours=18),
+            freq='H'
+        )
+        grille_globale.append(pd.DataFrame({'Heure': grille_journaliere, 'NomAgence': row['NomAgence']}))
+
+    if not grille_globale:
+        return pd.DataFrame(columns=['Heure', 'NomAgence', 'nb_attente'])
+        
+    grille_df = pd.concat(grille_globale).sort_values('Heure')
+
+    rapport_df = pd.merge_asof(
+        grille_df, df[['Heure', 'NomAgence', 'nb_attente']],
+        on='Heure', by='NomAgence', direction='backward', tolerance=pd.Timedelta('1 hour')
+    )
+    
+    rapport_df['nb_attente'].fillna(0, inplace=True)
+    rapport_df = rapport_df[['Heure', 'NomAgence', 'nb_attente']].astype({'nb_attente': int})
+    
+    # --- NOUVELLE ÉTAPE : Supprimer les heures futures du rapport ---
+    now = pd.Timestamp.now()
+    rapport_df_final = rapport_df[rapport_df['Heure'] <= now].copy()
+    
+    return rapport_df_final
+
+# --- 3. PIPELINE DE TRAITEMENT (INCHANGÉ) ---
+
+def run_analysis_pipeline(_df_source, filtrer_semaine=True):
+    if filtrer_semaine: df_a_traiter = filtrer_derniere_semaine_pandas(_df_source)
+    else: df_a_traiter = _df_source.copy()
+    df_evenements = calculer_attente_pandas(df_a_traiter)
+    
+    df_rapport = creer_rapport_horaire_pandas_simple(df_evenements)
+    return df_rapport
