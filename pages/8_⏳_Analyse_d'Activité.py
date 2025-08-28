@@ -2,11 +2,6 @@
 import streamlit as st
 from shared_code import *
 import locale
-# --- CONFIGURATION DU LOCALE POUR LES NOMS DE JOURS/MOIS EN FRANÇAIS ---
-try:
-    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-except locale.Error:
-    st.warning("Le locale 'fr_FR.UTF-8' n'est pas disponible. Les noms des jours/mois pourraient être en anglais.")
 
 
 st.markdown("<h1 style='text-align: center;'>📊 Analyse de l'Attente en Agence</h1>", unsafe_allow_html=True)
@@ -32,17 +27,10 @@ if df_all_filtered.empty:
     st.stop()
 
 
-import os
+
 # --- FONCTION PRINCIPALE DE LA PAGE ---
 def render_activity_page():
     
-    # AFFICHER LES INFORMATIONS DE DÉBOGAGE
-    try:
-        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-    except locale.Error:
-        st.warning("Le locale français n'est pas disponible, affichage en anglais.")
-    # -------------------------------------------
-
     
     rapport_pd = run_analysis_pipeline(df_queue_filtered)
     if rapport_pd.empty: return

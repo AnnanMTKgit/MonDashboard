@@ -2306,13 +2306,31 @@ def calculer_attente_pandas(df_input: pd.DataFrame) -> pd.DataFrame: #...
 
 # --- 4. FONCTION PRINCIPALE DE LA PAGE (MODIFIÉE) ---
 def calculer_moyenne_hebdomadaire(rapport_df: pd.DataFrame) -> pd.DataFrame:
+    """Version infaillible avec traduction manuelle des jours de la semaine."""
     df = rapport_df.copy()
-    df['Jour_semaine'] = df['Heure'].dt.day_name(locale='fr_FR')
+
+    # --- MODIFICATION DÉFINITIVE ---
+    # 1. Obtenir les noms des jours en anglais (fonctionne toujours)
+    df['Jour_semaine_en'] = df['Heure'].dt.day_name()
+
+    # 2. Dictionnaire de traduction
+    jours_traduction = {
+        'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
+        'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
+    }
+
+    # 3. Appliquer la traduction pour créer la colonne en français
+    df['Jour_semaine'] = df['Jour_semaine_en'].map(jours_traduction)
+    # --------------------------------
+
     df['Heure_jour'] = df['Heure'].dt.hour
     moyenne_df = df.groupby(['NomAgence', 'Jour_semaine', 'Heure_jour'])['nb_attente'].mean().reset_index()
     moyenne_df.rename(columns={'nb_attente': 'nb_attente_moyen'}, inplace=True)
+    
+    # L'ordre est maintenant basé sur la colonne française traduite
     jours_ordre = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
     moyenne_df['Jour_semaine'] = pd.Categorical(moyenne_df['Jour_semaine'], categories=jours_ordre, ordered=True)
+
     return moyenne_df.sort_values(by=['NomAgence', 'Jour_semaine', 'Heure_jour'])
 
 # --- NOUVELLE FONCTION POUR LE GRAPHIQUE À BARRES ---
