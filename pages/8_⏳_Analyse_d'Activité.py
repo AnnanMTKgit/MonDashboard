@@ -32,10 +32,17 @@ if df_all_filtered.empty:
     st.stop()
 
 
-
+import os
 # --- FONCTION PRINCIPALE DE LA PAGE ---
 def render_activity_page():
     
+    # AFFICHER LES INFORMATIONS DE DÉBOGAGE
+    with st.expander("🕵️ Informations de débogage de l'environnement"):
+        st.code(
+            f"Variable LANG vue par Python: {os.environ.get('LANG')}\n"
+            f"Variable LC_ALL vue par Python: {os.environ.get('LC_ALL')}\n"
+            f"Locale actuel (avant modification): {locale.getlocale(locale.LC_TIME)}"
+        )
     
     rapport_pd = run_analysis_pipeline(df_queue_filtered)
     if rapport_pd.empty: return
