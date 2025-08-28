@@ -35,7 +35,10 @@ def render_activity_page():
     rapport_pd = run_analysis_pipeline(df_queue_filtered)
     if rapport_pd.empty: return
     rapport_pd = rapport_pd[rapport_pd['Heure'] <= pd.Timestamp.now()].copy()
-
+    
+    # --- NOUVEAU: Pré-calcul du nombre de jours d'activité ---
+    # On normalise pour ne compter que les jours, pas les heures
+    jours_activite_par_agence = rapport_pd.groupby('NomAgence')['Heure'].apply(lambda x: x.dt.normalize().nunique())
    
     agences_dispo = sorted(rapport_pd['NomAgence'].unique())
     agence_selectionnee = st.selectbox(
@@ -52,7 +55,8 @@ def render_activity_page():
     min_date = df_agence['Heure'].min().normalize()
     max_date = df_agence['Heure'].max().normalize()
     diff_jours = (max_date - min_date).days
-
+    
+    
    
 
     # --- SECTION DES KPIs ---
@@ -128,9 +132,13 @@ def render_activity_page():
 
     # --- SECTION DES VISUALISATIONS (inchangée) ---
     if diff_jours > 0:
+        nb_jours_activite = jours_activite_par_agence.get(agence_selectionnee, 0)
+        st.markdown(f"<h1 style='text-align: center;font-size:1.5em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
+       
         st.markdown("<h1 style='text-align: center;font-size:1.5em;'>Vue d'analyse : Tendance Hebdomadaire Moyenne</h1>", unsafe_allow_html=True)
         
-        st.info(f"Les données s'étalent sur {diff_jours + 1} jours. Affichage des moyennes par jour de la semaine.")
+        # --- SECTION DES KPIs ---
+        # Récupérer la valeur pré-calculée
         
         rapport_moyen = calculer_moyenne_hebdomadaire(df_agence)
         
