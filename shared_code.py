@@ -1631,7 +1631,7 @@ def analyse_activity(data, type: str, concern: str, titre="Nombre de type d'opé
     def create_rose_chart_options(df: pd.DataFrame, service_name: str, type_col: str, count_col: str):
         data = [{"value": int(row[count_col]), "name": row[type_col]} for _, row in df.iterrows()]
         return {
-            "title": {"text": f"{service_name}","left":"center"},
+            "title": {"text": f"{service_name}","left":"center"},"backgroundColor":BackgroundGraphicColor,
             "tooltip": {"trigger": "item", "formatter": '{b}: {c} ({d}%)'},
             
             "series": [{"name": service_name, "type": 'pie', "radius": ['20%', '70%'],"label": {"show": True, "formatter": "{b}\n{c}"},
@@ -1642,7 +1642,7 @@ def analyse_activity(data, type: str, concern: str, titre="Nombre de type d'opé
         df_sorted = df.sort_values(count_col, ascending=False)
         data = [{"value": int(row[count_col]), "name": row[type_col]} for _, row in df_sorted.iterrows()]
         return {
-            "title": {"text": f"{service_name}","left":"center"},
+            "title": {"text": f"{service_name}","left":"center"},"backgroundColor":BackgroundGraphicColor,
             "tooltip": {"trigger": "item", "formatter": "{b}: {c}"},
             
             "series": [{"name": service_name, "type": 'funnel', "sort": 'descending', "gap": 2,"label": {"show": True, "position": 'inside', "formatter": '{b}\n{c}'},
@@ -1652,7 +1652,7 @@ def analyse_activity(data, type: str, concern: str, titre="Nombre de type d'opé
     def create_treemap_chart_options(df: pd.DataFrame, service_name: str, type_col: str, count_col: str):
         data = [{"value": int(row[count_col]), "name": row[type_col]} for _, row in df.iterrows()]
         return {
-            "title": {"text": f"{service_name}","left":"center"},
+            "title": {"text": f"{service_name}","left":"center"},"backgroundColor":BackgroundGraphicColor,
             "tooltip": {"formatter": '{b}: {c}'},
             "series": [{"type": 'treemap', "data": data,  "label": {"show": True, "formatter": "{b}\n{c}"},
                         "itemStyle": {"borderColor": "#fff"}}]
