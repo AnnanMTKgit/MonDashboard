@@ -92,12 +92,12 @@ with c2:
 """, unsafe_allow_html=True)
     
     folium_map=create_folium_map(agg_map)
-    folium_map.save('map.html')
+    # folium_map.save('map.html')
     # #@st.cache_data()
-    def get_golden_map():
-        HtmlFile = open("map.html", 'r', encoding='utf-8')
-        bcn_map_html = HtmlFile.read()
-        return bcn_map_html
-    bcn_map_html = get_golden_map()
+    # def get_golden_map():
+    #     HtmlFile = open("map.html", 'r', encoding='utf-8')
+    #     bcn_map_html = HtmlFile.read()
+    #     return bcn_map_html
+    # bcn_map_html = get_golden_map()
     with st.container():
-        html(bcn_map_html, height=450)
+        html(folium_map, height=450)

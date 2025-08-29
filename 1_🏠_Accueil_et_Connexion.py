@@ -18,6 +18,7 @@ load_and_display_css()
 
 # Initialisation de l'état de session
 if 'logged_in' not in st.session_state:
+    st.cache_data.clear()
     st.session_state.logged_in = False
     st.session_state.username = None
     st.session_state.user_profile = None

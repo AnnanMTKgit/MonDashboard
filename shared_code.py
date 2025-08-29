@@ -549,7 +549,7 @@ def create_sidebar_filters():
     # Initialiser dans st.session_state si la clé n'existe pas
     if "selected_agencies" not in st.session_state:
         conn = get_connection()
-        df_agences = run_query(conn, SQLQueries().AllAgences)
+        df_agences = run_query(conn, SQLQueries().AllAgences,params=None)
         available_agencies = df_agences['NomAgence'].unique()
         st.session_state.all_agencies = available_agencies
         st.session_state.selected_agencies = available_agencies  # valeur par défaut
@@ -597,6 +597,7 @@ def create_folium_map(agg):
     legend_html = ''  # Variable pour stocker la légende HTML
     
     df=agg.copy()
+    
     df['Temps_Moyen_Attente']=df['Temps_Moyen_Attente'].fillna(' ')
     # Définition des couleurs uniques par NomAgence
     agences = list(df["NomAgence"].unique())
@@ -663,7 +664,7 @@ def create_folium_map(agg):
                 icon=folium.Icon(color=agence_couleur[row["NomAgence"]], icon="info-sign")
             ).add_to(m)
 
-    return m  
+    return m._repr_html_()  
 
 
 def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_length=100,key="1"):
