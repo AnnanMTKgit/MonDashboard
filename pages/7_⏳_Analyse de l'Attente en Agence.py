@@ -223,7 +223,7 @@ def render_activity_page():
                     },
                     "series": [{"name": "Attente Moyenne", "type": "heatmap", "data": heatmap_data, "label": {"show": True}, "emphasis": {"itemStyle": {"shadowBlur": 10, "shadowColor": "rgba(0, 0, 0, 0.5)"}}}],
                 }
-                st_echarts(options=options_heatmap, height="500px", key=f"heatmap_{agence_selectionnee}")
+                st_echarts(options=options_heatmap, height="400px", key=f"heatmap_{agence_selectionnee}")
 
        
         with tab2:
@@ -249,7 +249,7 @@ def render_activity_page():
                 "yAxis": {"type": "value"},
                 "series": series_line,
             }
-            st_echarts(options=options_line, height="500px", key=f"line_chart_{agence_selectionnee}")
+            st_echarts(options=options_line, height="400px", key=f"line_chart_{agence_selectionnee}")
 
         
         
