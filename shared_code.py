@@ -1536,8 +1536,81 @@ def stacked_service(data,type:str,concern:str,titre="Nombre de type d'opération
     return chart
 
 
+def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération par Agent"):
+    """
+    Default values of type:
+    'TempsAttenteReel' and 'TempOperation'
+    """
+    df=data.copy()
+    df[type] = df[type].apply(lambda x: 'Inconnu' if pd.isnull(x) else x)
+    
+    df=df.groupby([f'{concern}',f'{type}']).size().reset_index(name='Count')
+    
+    top_categories=df[type].unique()
+    
+    # Apply this filter to the dataframe. This is the key step that was missing.
+    df_filtered = df[df[type].isin(top_categories)]
+    
+    
+    # If filtering removed all data, handle it gracefully
+    if df_filtered.empty:
+        return {"title": {"text": f"(Pas de données)", "left": 'center'}}
 
-def stacked_agent2(data, type: str, concern: str, titre="Nombre de type d'opération par Agent"):
+        
+    # Pivot the *filtered* data for charting
+    df_pivoted = df_filtered.pivot_table(
+        index=concern,
+        columns=type,
+        values="Count",
+        fill_value=0
+    )
+    tooltip_formatter_js = JsCode("function(params){var agentName=params[0].name;var html=`<b>${agentName}</b><br/>`;let nonZeroSeries=params.filter(p=>p.value>0);nonZeroSeries.sort((a,b)=>b.value-a.value);let top10Series=nonZeroSeries.slice(0,10);if(top10Series.length===0){html+='Aucune valeur non-nulle';return html;}top10Series.forEach(p=>{html+=`${p.marker} ${p.seriesName}: <b>${p.value}</b><br/>`;});if(nonZeroSeries.length>10){html+=`... et ${nonZeroSeries.length-10} autre(s)`;}return html;}").js_code
+    
+    
+    options = {
+        "backgroundColor":BackgroundGraphicColor,
+        "title": {"text": titre,"left": 'center',
+    "textStyle": {
+            "color": GraphicTitleColor
+        }},
+        "color":data_visualization_colors,
+    "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}, "formatter": tooltip_formatter_js },
+    # Get legend data from the pivoted DataFrame's columns
+    #"legend": {"data": df_pivoted.columns.tolist(),"left":'right'},
+    "grid": {
+        "left": "3%",
+        "right": "4%",
+        "bottom": "6%", # Increase bottom margin for rotated labels
+        "containLabel": True
+    },
+    # X-axis uses categories from the pivoted DataFrame's index
+    "xAxis": {
+        "type": "category",
+        "data": df_pivoted.index.tolist(),
+        "axisLabel": {
+            "rotate": 30,  # Rotate labels to prevent overlap
+            "interval": 0  # Ensure all labels are shown
+        },
+    },
+    # Y-axis is the value axis
+    "yAxis": {"type": "value"},
+    # Create a series for each column in the pivoted DataFrame
+    "series": [
+        {
+            "name": category,
+            "type": "bar",
+            "stack": "total", # This key is what creates the stacking
+            #"label": {"show": True, "position": "inside"},
+            "emphasis": {"focus": "series"},
+            "data": df_pivoted[category].tolist(),
+        }
+        for category in df_pivoted.columns
+    ],
+}
+
+
+    return options
+def analyse_activity(data, type: str, concern: str, titre="Nombre de type d'opération par Agent"):
     """
     Affiche un graphique dynamique différent pour chaque catégorie de 'concern'.
     """
@@ -2167,7 +2240,7 @@ def option_agent(df_all_service,df_queue_service):
                 fig=stacked_chart(df_all_service,'TempOperation','UserName',"Catégorisation du Temps d'opération")
                 st.altair_chart(fig, use_container_width=True)  
             with c[1]:
-                fig1=stacked_agent(df_all_service,type='UserName',titre="Nombre de type d'opération",concern='Type_Operation')
+                fig1=stacked_agent2(df_all_service,type='UserName',titre="Nombre de type d'opération",concern='Type_Operation')
                 st.altair_chart(fig1, use_container_width=True)
             
         with col[2]:
