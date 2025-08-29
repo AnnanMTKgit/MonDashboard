@@ -167,6 +167,7 @@ def render_activity_page():
                     
                 options_bar = {
                     "title": {"text": "Charge Moyenne Totale par Jour de la Semaine", "left": "center"},
+                    "backgroundColor":BackgroundGraphicColor,
                     "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
                     "xAxis": {
                         "type": "category",
@@ -209,6 +210,7 @@ def render_activity_page():
 
                 options_heatmap = {
                     "title": {"text": "Heatmap de la Charge Moyenne par Jour et par heure", "left": "center"},
+                    "backgroundColor":BackgroundGraphicColor,
                     "tooltip": {"position": "top"},
                     "grid": {"height": "50%", "top": "20%"},
                     "xAxis": {"type": "category", "data": heures_str, "splitArea": {"show": True}},
@@ -239,7 +241,7 @@ def render_activity_page():
                 "title": {
                     "text": "Tendance Moyenne par Jour de la Semaine",
                     "left": "center"
-                },
+                },"backgroundColor":BackgroundGraphicColor,
                 "tooltip": {"trigger": "axis"},
                 "legend": {"data": jours_disponibles,"right":'right'},
                 # Utiliser heures_str pour l'affichage de l'axe X
@@ -258,27 +260,72 @@ def render_activity_page():
         # Vue journalière (inchangée)
         st.markdown(f"<h1 style='text-align: center;font-size:1em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité ( Journée du {min_date.strftime('%Y-%m-%d')}) pendant cette période pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
         
+        col1, col2 = st.columns(2)
         
         
-        # Préparation des données pour ECharts
-        x_axis_data = df_agence['Heure'].dt.strftime('%H:%M').tolist()
-        y_axis_data = df_agence['nb_attente'].tolist()
+       
+        with col1:
+            # Préparation des données pour ECharts
+            x_axis_data = df_agence['Heure'].dt.strftime('%H:%M').tolist()
+            y_axis_data = df_agence['nb_attente'].tolist()
 
-        options_daily = {
-            "title": {"text": "Évolution horaire du nombre de Client en attente", "left": "center"},
-            "tooltip": {"trigger": "axis"},
-            "toolbox": {"show": True, "feature": {"saveAsImage": {"show": True, "title": "Sauvegarder"}}},
-            "xAxis": {"type": "category", "data": x_axis_data},
-            "yAxis": {"type": "value"},
-            "series": [{
-                "name": "Attente",
-                "type": "line",
-                "smooth": True,
-                "data": y_axis_data
-            }]
-        }
-        st_echarts(options=options_daily, height="400px", key=f"daily_chart_{agence_selectionnee}")
+            options_daily = {
+                "title": {"text": "Évolution horaire du nombre de Client en attente", "left": "center"},
+                "backgroundColor":BackgroundGraphicColor,
+                "tooltip": {"trigger": "axis"},
+                "toolbox": {"show": True, "feature": {"saveAsImage": {"show": True, "title": "Sauvegarder"}}},
+                "xAxis": {"type": "category", "data": x_axis_data},
+                "yAxis": {"type": "value"},
+                "series": [{
+                    "name": "Attente",
+                    "type": "line",
+                    "smooth": True,
+                    "data": y_axis_data
+                }]
+            }
+            st_echarts(options=options_daily, height="400px", key=f"daily_chart_{agence_selectionnee}")
         
+
+        with col2:
+        
+            
+            # Préparation des données pour la heatmap journalière
+            df_jour = df_agence.copy()
+            df_jour['Heure_jour'] = df_jour['Heure'].dt.hour
+            
+            heures_int = sorted(df_jour['Heure_jour'].unique())
+            heures_str = [f"{h:02d}h" for h in heures_int]
+            
+            # MODIFICATION 1: Obtenir le nom du jour au lieu de la date
+            jour_nom = [min_date.day_name(locale='fr_FR').capitalize()]
+
+            heatmap_data = []
+            for x, heure in enumerate(heures_int):
+                valeur = df_jour[df_jour['Heure_jour'] == heure]['nb_attente'].values
+                if len(valeur) > 0:
+                    heatmap_data.append([x, 0, int(valeur[0])])
+            
+            options_heatmap_jour = {
+                "title": {"text": "Heatmap de la Journée", "left": "center"},
+                "backgroundColor":BackgroundGraphicColor,
+                "tooltip": {"position": "top"},
+                # MODIFICATION 3: Ajuster la grille pour l'axe Y visible
+                "grid": {"height": "25%", "top": "25%", "left": "15%"}, 
+                "xAxis": {"type": "category", "data": heures_str},
+                # MODIFICATION 2: Afficher l'axe Y avec le nom du jour
+                "yAxis": {"type": "category", "data": jour_nom, "show": True},
+                "visualMap": {
+                    "min": int(df_jour['nb_attente'].min()),
+                    "max": int(df_jour['nb_attente'].max()),
+                    "calculable": True, "orient": "horizontal", "left": "center", "bottom": "10%",
+                },
+                "series": [{
+                    "name": "Attente", "type": "heatmap", "data": heatmap_data,
+                    "label": {"show": True},
+                    "emphasis": {"itemStyle": {"shadowBlur": 10, "shadowColor": "rgba(0, 0, 0, 0.5)"}}
+                }]
+            }
+            st_echarts(options=options_heatmap_jour, height="400px", key=f"heatmap_jour_{agence_selectionnee}")
 
 if __name__ == "__main__":
     render_activity_page()
