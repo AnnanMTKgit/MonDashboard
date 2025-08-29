@@ -4,7 +4,7 @@ from shared_code import *
 import locale
 
 
-st.markdown("<h1 style='text-align: center;'>📊 Analyse de l'Attente en Agence</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;font-size:1.5em;'>Vue d'analyse : Tendance Hebdomadaire Moyenne</h1>", unsafe_allow_html=True)
 st.markdown(""" <style>iframe[title="streamlit_echarts.st_echarts"]{ height: 500px !important } """, unsafe_allow_html=True)
 load_and_display_css()
 
@@ -55,7 +55,7 @@ def render_activity_page():
     min_date = df_agence['Heure'].min().normalize()
     max_date = df_agence['Heure'].max().normalize()
     diff_jours = (max_date - min_date).days
-    
+    nb_jours_activite = jours_activite_par_agence.get(agence_selectionnee, 0)
     
    
 
@@ -132,99 +132,91 @@ def render_activity_page():
 
     # --- SECTION DES VISUALISATIONS (inchangée) ---
     if diff_jours > 0:
-        nb_jours_activite = jours_activite_par_agence.get(agence_selectionnee, 0)
-        st.markdown(f"<h1 style='text-align: center;font-size:1.5em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
+        
+        st.markdown(f"<h1 style='text-align: center;font-size:1em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité pendant cette période pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
        
-        st.markdown("<h1 style='text-align: center;font-size:1.5em;'>Vue d'analyse : Tendance Hebdomadaire Moyenne</h1>", unsafe_allow_html=True)
+        
         
         # --- SECTION DES KPIs ---
         # Récupérer la valeur pré-calculée
         
         rapport_moyen = calculer_moyenne_hebdomadaire(df_agence)
         
-        # --- NOUVEAU: GRAPHIQUE À BARRES DE LA CHARGE JOURNALIÈRE ---
-        charge_journaliere_df = calculer_charge_journaliere_moyenne(rapport_moyen)
-        
-        max_charge = charge_journaliere_df['Charge_Journaliere'].max()
-        
-        # Préparation des données pour la série, en stylisant la barre max
-        bar_data = []
-        for _, row in charge_journaliere_df.iterrows():
-            charge_val = row['Charge_Journaliere']
-            item = {"value": round(charge_val, 2)}
-            if charge_val == max_charge:
-                item["itemStyle"] = {"color": "#546E7A"} # Couleur foncée pour le max
-            bar_data.append(item)
+        col1, col2 = st.columns(2)
+        with col1:
+            # --- NOUVEAU: GRAPHIQUE À BARRES DE LA CHARGE JOURNALIÈRE ---
+            charge_journaliere_df = calculer_charge_journaliere_moyenne(rapport_moyen)
             
-        options_bar = {
-            "title": {"text": "Charge Moyenne Totale par Jour de la Semaine", "left": "center"},
-            "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
-            "xAxis": {
-                "type": "category",
-                "data": charge_journaliere_df['Jour_semaine'].tolist()
-            },
-            "yAxis": {"type": "value"},
-            "series": [{
-                "name": "Charge Journalière",
-                "type": "bar",
-                "data": bar_data,
-                "itemStyle": {"color": "#6c8dff"} # Couleur par défaut pour les autres barres
-            }]
-        }
-        st_echarts(options=options_bar, height="400px", key=f"bar_chart_{agence_selectionnee}")
-
-
-        # --- MODIFIÉ: Préparation des listes d'heures ---
-        # Garder une liste d'entiers pour la logique...
-        heures_int = [int(h) for h in sorted(rapport_moyen['Heure_jour'].unique())]
-        # ... et créer une liste de strings formatés pour l'affichage.
-        heures_str = [f"{h:02d}h" for h in heures_int]
-
-        # --- GRAPHIQUE LINÉAIRE ---
-        # series_line = []
-        # jours_disponibles = rapport_moyen['Jour_semaine'].unique().tolist()
-        
-        # for jour in jours_disponibles:
-        #     data_jour = rapport_moyen[rapport_moyen['Jour_semaine'] == jour]
-        #     data_map = data_jour.set_index('Heure_jour')['nb_attente_moyen']
-        #     series_data = [float(data_map.get(h)) if data_map.get(h) is not None else None for h in heures_int]
-        #     series_line.append({"name": jour, "type": "line", "smooth": True, "data": series_data})
-
-        # options_line = {
-        #     "title": {"text": f"Comparaison de la charge moyenne pour {agence_selectionnee}", "left": "center"},
-        #     "tooltip": {"trigger": "axis"},
-        #     "legend": {"data": jours_disponibles, "top": "12%"},
-        #     "grid": {"top": "25%", "bottom": "10%"},
+            max_charge = charge_journaliere_df['Charge_Journaliere'].max()
             
-        #     # --- AJOUT DU TOOLBOX ICI ---
-        #     "toolbox": {
-        #         "show": True,
-        #         "left": "5%",
-        #         "feature": {
-        #             "magicType": {
-        #                 "show": True,
-        #                 "type": ['line', 'bar', 'stack'], # Types de graphiques interchangeables
-        #                 "title": {
-        #                     "line": "Vue Lignes",
-        #                     "bar": "Vue Barres",
-        #                     "stack": "Empiler"
-        #                 }
-        #             },
-        #             "restore": {
-        #                 "show": True,
-        #                 "title": "Restaurer"
-        #             },
-        #             "saveAsImage": {
-        #                 "show": True,
-        #                 "title": "Sauvegarder"
-        #             }
-        #         }
-        #     },
-            
-        #     "xAxis": {"type": "category", "data": heures_str},
-        #     "yAxis": {"type": "value"},
-        #     "series": series_line,
-        # }
+            # Préparation des données pour la série, en stylisant la barre max
+            bar_data = []
+            for _, row in charge_journaliere_df.iterrows():
+                charge_val = row['Charge_Journaliere']
+                item = {"value": round(charge_val, 2)}
+                if charge_val == max_charge:
+                    item["itemStyle"] = {"color": "#546E7A"} # Couleur foncée pour le max
+                bar_data.append(item)
+                
+            options_bar = {
+                "title": {"text": "Charge Moyenne Totale par Jour de la Semaine", "left": "center"},
+                "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+                "xAxis": {
+                    "type": "category",
+                    "data": charge_journaliere_df['Jour_semaine'].tolist()
+                },
+                "yAxis": {"type": "value"},
+                "series": [{
+                    "name": "Charge Journalière",
+                    "type": "bar",
+                    "data": bar_data,
+                    "itemStyle": {"color": "#6c8dff"} # Couleur par défaut pour les autres barres
+                }]
+            }
+            st_echarts(options=options_bar, height="400px", key=f"bar_chart_{agence_selectionnee}")
+
+
+        with col2:
+            rapport_moyen = calculer_moyenne_hebdomadaire(df_agence) # S'assurer que les données sont fraîches
+            heures_int = [int(h) for h in sorted(rapport_moyen['Heure_jour'].unique())]
+            heures_str = [f"{h:02d}h" for h in heures_int]
+
+            jours_ordre_complet = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+            jours_disponibles = rapport_moyen['Jour_semaine'].unique().tolist()
+            jours_a_afficher_chrono = [jour for jour in jours_ordre_complet if jour in jours_disponibles]
+
+            # Inversion de l'ordre pour l'affichage sur l'axe Y
+            jours_a_afficher_inverse = jours_a_afficher_chrono[::-1]
+
+            # On utilise la liste inversée pour l'index du pivot et l'axe Y du graphique
+            heatmap_pivot = rapport_moyen.pivot_table(
+                index='Jour_semaine', columns='Heure_jour', values='nb_attente_moyen'
+            ).reindex(index=jours_a_afficher_inverse)
+
+            heatmap_data = []
+            for y, jour in enumerate(jours_a_afficher_inverse):
+                for x, heure in enumerate(heures_int):
+                    valeur = rapport_moyen[(rapport_moyen['Jour_semaine'] == jour) & (rapport_moyen['Heure_jour'] == heure)]['nb_attente_moyen'].values
+                    if len(valeur) > 0:
+                        heatmap_data.append([x, y, round(float(valeur[0]), 2)])
+
+            options_heatmap = {
+                "title": {"text": "Heatmap de la Charge Moyenne par Jour et par heure", "left": "center"},
+                "tooltip": {"position": "top"},
+                "grid": {"height": "50%", "top": "20%"},
+                "xAxis": {"type": "category", "data": heures_str, "splitArea": {"show": True}},
+                "yAxis": {"type": "category", "data": jours_a_afficher_inverse, "splitArea": {"show": True}},
+                "visualMap": {
+                    "min": float(rapport_moyen['nb_attente_moyen'].min()),
+                    "max": float(rapport_moyen['nb_attente_moyen'].max()),
+                    "calculable": True, "orient": "horizontal", "left": "center", "bottom": "15%",
+                    "inRange": {"color": ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']}
+                },
+                "series": [{"name": "Attente Moyenne", "type": "heatmap", "data": heatmap_data, "label": {"show": True}, "emphasis": {"itemStyle": {"shadowBlur": 10, "shadowColor": "rgba(0, 0, 0, 0.5)"}}}],
+            }
+            st_echarts(options=options_heatmap, height="500px", key=f"heatmap_{agence_selectionnee}")
+
+       
         
         series_line = []
         jours_disponibles = rapport_moyen['Jour_semaine'].unique().tolist()
@@ -252,49 +244,13 @@ def render_activity_page():
 
         
         
-        rapport_moyen = calculer_moyenne_hebdomadaire(df_agence) # S'assurer que les données sont fraîches
-        heures_int = [int(h) for h in sorted(rapport_moyen['Heure_jour'].unique())]
-        heures_str = [f"{h:02d}h" for h in heures_int]
-
-        jours_ordre_complet = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
-        jours_disponibles = rapport_moyen['Jour_semaine'].unique().tolist()
-        jours_a_afficher_chrono = [jour for jour in jours_ordre_complet if jour in jours_disponibles]
-
-        # Inversion de l'ordre pour l'affichage sur l'axe Y
-        jours_a_afficher_inverse = jours_a_afficher_chrono[::-1]
-
-        # On utilise la liste inversée pour l'index du pivot et l'axe Y du graphique
-        heatmap_pivot = rapport_moyen.pivot_table(
-            index='Jour_semaine', columns='Heure_jour', values='nb_attente_moyen'
-        ).reindex(index=jours_a_afficher_inverse)
-
-        heatmap_data = []
-        for y, jour in enumerate(jours_a_afficher_inverse):
-            for x, heure in enumerate(heures_int):
-                valeur = rapport_moyen[(rapport_moyen['Jour_semaine'] == jour) & (rapport_moyen['Heure_jour'] == heure)]['nb_attente_moyen'].values
-                if len(valeur) > 0:
-                    heatmap_data.append([x, y, round(float(valeur[0]), 2)])
-
-        options_heatmap = {
-            "title": {"text": "Heatmap de la Charge Moyenne par Jour et par heure", "left": "center"},
-            "tooltip": {"position": "top"},
-            "grid": {"height": "50%", "top": "20%"},
-            "xAxis": {"type": "category", "data": heures_str, "splitArea": {"show": True}},
-            "yAxis": {"type": "category", "data": jours_a_afficher_inverse, "splitArea": {"show": True}},
-            "visualMap": {
-                "min": float(rapport_moyen['nb_attente_moyen'].min()),
-                "max": float(rapport_moyen['nb_attente_moyen'].max()),
-                "calculable": True, "orient": "horizontal", "left": "center", "bottom": "15%",
-                "inRange": {"color": ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']}
-            },
-            "series": [{"name": "Attente Moyenne", "type": "heatmap", "data": heatmap_data, "label": {"show": True}, "emphasis": {"itemStyle": {"shadowBlur": 10, "shadowColor": "rgba(0, 0, 0, 0.5)"}}}],
-        }
-        st_echarts(options=options_heatmap, height="500px", key=f"heatmap_{agence_selectionnee}")
+        
 
 
     else:
         # Vue journalière (inchangée)
-        st.markdown(f"<h1 style='text-align: center;font-size:1.5em;'>Vue d'analyse : Journée du {min_date.strftime('%Y-%m-%d')}</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='text-align: center;font-size:1em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité ( Journée du {min_date.strftime('%Y-%m-%d')}) pendant cette période pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
+        
         
         
         # Préparation des données pour ECharts
