@@ -1,7 +1,7 @@
 # pages/8_Analyse_d'activite.py
 import streamlit as st
 from shared_code import *
-import locale
+
 
 
 st.markdown("<h1 style='text-align: center;font-size:1.5em;'>Vue d'analyse : Tendance Hebdomadaire Moyenne</h1>", unsafe_allow_html=True)
@@ -297,7 +297,14 @@ def render_activity_page():
             heures_str = [f"{h:02d}h" for h in heures_int]
             
             # MODIFICATION 1: Obtenir le nom du jour au lieu de la date
-            jour_nom = [min_date.day_name(locale='fr_FR').capitalize()]
+            jours_traduction = {
+    'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
+    'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
+}
+            jour_en = min_date.day_name()
+            jour_fr = jours_traduction.get(jour_en, jour_en)
+            jour_nom = [jour_fr.capitalize()]
+            
 
             heatmap_data = []
             for x, heure in enumerate(heures_int):
