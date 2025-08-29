@@ -207,7 +207,7 @@ def get_connection():
         """)
         st.stop()
 
-@st.cache_data(hash_funcs={pyodbc.Connection: id}, show_spinner=False)
+@st.cache_data(hash_funcs={pyodbc.Connection: id}, show_spinner=False,ttl=None)
 def run_query_cached(_connection, sql, params):
 
     try:
@@ -228,6 +228,10 @@ def run_query(_connection, sql, params=None):
     """
     current_date = datetime.now().date()
     current_hour=datetime.now().hour
+
+
+
+
     if params==None or (params[1] == current_date and current_hour<18 and current_hour>7):
         try:
             
