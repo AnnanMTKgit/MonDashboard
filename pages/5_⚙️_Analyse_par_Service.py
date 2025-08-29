@@ -36,7 +36,7 @@ with tabs[1]:
     st_echarts(option2,height="600px",key='fig_top10')
         
 with tabs[2]:
-    figures=stacked_agent2(df_all_filtered, type='Type_Operation', concern='NomService')
+    figures=analyse_activity(df_all_filtered, type='Type_Operation', concern='NomService')
     
     
 
