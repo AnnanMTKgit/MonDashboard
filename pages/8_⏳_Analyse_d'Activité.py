@@ -45,7 +45,7 @@ def render_activity_page():
         "**1. Choisissez une agence**",
         options=agences_dispo
     )
-
+    
     if not agence_selectionnee:
         st.info("Veuillez choisir une agence pour commencer l'analyse.")
         return

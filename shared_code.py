@@ -1535,80 +1535,76 @@ def stacked_service(data,type:str,concern:str,titre="Nombre de type d'opération
 )
     return chart
 
-def stacked_agent2(data,type:str,concern:str,titre="Nombre de type d'opération par Agent"):
-    """
-    Default values of type:
-    'TempsAttenteReel' and 'TempOperation'
-    """
-    df=data.copy()
-    df[type] = df[type].apply(lambda x: 'Inconnu' if pd.isnull(x) else x)
-    
-    df=df.groupby([f'{concern}',f'{type}']).size().reset_index(name='Count')
-    
-    top_categories=df[type].unique()
-    
-    # Apply this filter to the dataframe. This is the key step that was missing.
-    df_filtered = df[df[type].isin(top_categories)]
-    
-    
-    # If filtering removed all data, handle it gracefully
-    if df_filtered.empty:
-        return {"title": {"text": f"(Pas de données)", "left": 'center'}}
 
-        
-    # Pivot the *filtered* data for charting
-    df_pivoted = df_filtered.pivot_table(
-        index=concern,
-        columns=type,
-        values="Count",
-        fill_value=0
-    )
-    tooltip_formatter_js = JsCode("function(params){var agentName=params[0].name;var html=`<b>${agentName}</b><br/>`;let nonZeroSeries=params.filter(p=>p.value>0);nonZeroSeries.sort((a,b)=>b.value-a.value);let top10Series=nonZeroSeries.slice(0,10);if(top10Series.length===0){html+='Aucune valeur non-nulle';return html;}top10Series.forEach(p=>{html+=`${p.marker} ${p.seriesName}: <b>${p.value}</b><br/>`;});if(nonZeroSeries.length>10){html+=`... et ${nonZeroSeries.length-10} autre(s)`;}return html;}").js_code
+
+def stacked_agent2(data, type: str, concern: str, titre="Nombre de type d'opération par Agent"):
+    """
+    Affiche un graphique dynamique différent pour chaque catégorie de 'concern'.
+    """
+    df_source = data.copy()
     
+    # 1. Préparation initiale des données (votre logique)
+    df_source[type] = df_source[type].apply(lambda x: 'Inconnu' if pd.isnull(x) else x)
     
-    options = {
-        "backgroundColor":BackgroundGraphicColor,
-        "title": {"text": titre,"left": 'center',
-    "textStyle": {
-            "color": GraphicTitleColor
-        }},
-        "color":data_visualization_colors,
-    "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}, "formatter": tooltip_formatter_js },
-    # Get legend data from the pivoted DataFrame's columns
-    #"legend": {"data": df_pivoted.columns.tolist(),"left":'right'},
-    "grid": {
-        "left": "3%",
-        "right": "4%",
-        "bottom": "6%", # Increase bottom margin for rotated labels
-        "containLabel": True
-    },
-    # X-axis uses categories from the pivoted DataFrame's index
-    "xAxis": {
-        "type": "category",
-        "data": df_pivoted.index.tolist(),
-        "axisLabel": {
-            "rotate": 30,  # Rotate labels to prevent overlap
-            "interval": 0  # Ensure all labels are shown
-        },
-    },
-    # Y-axis is the value axis
-    "yAxis": {"type": "value"},
-    # Create a series for each column in the pivoted DataFrame
-    "series": [
-        {
-            "name": category,
-            "type": "bar",
-            "stack": "total", # This key is what creates the stacking
-            #"label": {"show": True, "position": "inside"},
-            "emphasis": {"focus": "series"},
-            "data": df_pivoted[category].tolist(),
+    # On groupe pour obtenir le compte par service (concern) et sous-catégorie (type)
+    df_grouped = df_source.groupby([concern, type]).size().reset_index(name='Count')
+    
+    # S'il n'y a pas de données après le group by, on s'arrête
+    if df_grouped.empty:
+        st.info("Aucune donnée à afficher avec les filtres actuels.")
+        return
+
+
+    def create_rose_chart_options(df: pd.DataFrame, service_name: str, type_col: str, count_col: str):
+        data = [{"value": int(row[count_col]), "name": row[type_col]} for _, row in df.iterrows()]
+        return {
+            "title": {"text": f"{service_name}","left":"center"},
+            "tooltip": {"trigger": "item", "formatter": '{b}: {c} ({d}%)'},
+            
+            "series": [{"name": service_name, "type": 'pie', "radius": ['20%', '70%'],"label": {"show": True, "formatter": "{b}\n{c}"},
+                        "roseType": 'area', "itemStyle": {"borderRadius": 8}, "data": data}]
         }
-        for category in df_pivoted.columns
-    ],
-}
 
+    def create_funnel_chart_options(df: pd.DataFrame, service_name: str, type_col: str, count_col: str):
+        df_sorted = df.sort_values(count_col, ascending=False)
+        data = [{"value": int(row[count_col]), "name": row[type_col]} for _, row in df_sorted.iterrows()]
+        return {
+            "title": {"text": f"{service_name}","left":"center"},
+            "tooltip": {"trigger": "item", "formatter": "{b}: {c}"},
+            
+            "series": [{"name": service_name, "type": 'funnel', "sort": 'descending', "gap": 2,"label": {"show": True, "position": 'inside', "formatter": '{b}\n{c}'},
+                        "label": {"show": True, "position": 'inside'}, "data": data}]
+        }
 
-    return options
+    def create_treemap_chart_options(df: pd.DataFrame, service_name: str, type_col: str, count_col: str):
+        data = [{"value": int(row[count_col]), "name": row[type_col]} for _, row in df.iterrows()]
+        return {
+            "title": {"text": f"{service_name}","left":"center"},
+            "tooltip": {"formatter": '{b}: {c}'},
+            "series": [{"type": 'treemap', "data": data,  "label": {"show": True, "formatter": "{b}\n{c}"},
+                        "itemStyle": {"borderColor": "#fff"}}]
+        }
+
+    # 3. Logique d'affichage dynamique (simplifiée)
+    
+    # Obtenir la liste des services (ex: la liste des agents)
+    unique_services = df_grouped[concern].unique()
+    chart_functions = [create_rose_chart_options, create_funnel_chart_options, create_treemap_chart_options]
+    
+    generated_figures = []
+
+    for i, service in enumerate(unique_services):
+        df_service_simple = df_grouped[df_grouped[concern] == service]
+        
+        # Choisir la fonction de création d'options
+        chart_function_to_use = chart_functions[i % len(chart_functions)]
+        
+        # Créer les options et les ajouter à la liste
+        options = chart_function_to_use(df_service_simple, service, type_col=type, count_col='Count')
+        generated_figures.append(options)
+        
+    return generated_figures
+    
 
 def Top10_Type(df_queue,title=""):
     df=df_queue.copy()

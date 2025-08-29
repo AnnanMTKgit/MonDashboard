@@ -24,6 +24,9 @@ if df_all_filtered.empty:
     st.error("Aucune donnée disponible pour la sélection.")
     st.stop()
 
+st.markdown("<h1 style='text-align: center;'>Tableau de Bord Global</h1>", unsafe_allow_html=True)
+
+st.markdown("<br/><br/>", unsafe_allow_html=True)
 
 Kpi=df_all_filtered.groupby("NomService")["UserName"].nunique().reset_index()
 Kpi = Kpi.rename(columns={"UserName": "Nombre_Agents"})
@@ -34,8 +37,8 @@ cols = st.columns(len(Kpi))  # une colonne par service
 for i, row in Kpi.iterrows():
     with cols[i]:
         st.metric(label="Nombre Agents " + row["NomService"], value=row["Nombre_Agents"])
-st.markdown("<h1 style='text-align: center;'>Tableau de Bord Global</h1>", unsafe_allow_html=True)
 
+st.markdown("<br/>", unsafe_allow_html=True)
 
 # --- Affichage du tableau ---
 _, AGG = AgenceTable(df_all_filtered, df_queue_filtered )
@@ -123,6 +126,7 @@ if not AGG.empty:
     # Display the AgGrid table
     grid_response=AgGrid(
         AGG,
+        height=500,
         gridOptions=gridOptions,
         
         allow_unsafe_jscode=True,
