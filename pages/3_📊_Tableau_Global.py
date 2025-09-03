@@ -41,18 +41,43 @@ for i, row in Kpi.iterrows():
 st.markdown("<br/>", unsafe_allow_html=True)
 
 # --- Affichage du tableau ---
-_, AGG = AgenceTable(df_all_filtered, df_queue_filtered )
+(
+    agence_mensuel,
+    agence_global,
+    reseau_mensuel,
+    reseau_global
+) = AgenceTable2(df_all_filtered, df_queue_filtered)
+
+# --- 2. Création du sélecteur de vue dans l'interface Streamlit ---
+st.markdown("## Visualisation des Données de Performance")
+
+view_options = {
+    "Statistiques Globales par Agence": (agence_global, "Global_Agence"),
+    "Statistiques Mensuelles par Agence": (agence_mensuel, "Mensuel_Agence"),
+    "Statistiques Globales du Réseau": (reseau_global, "Global_Reseau"),
+    "Statistiques Mensuelles du Réseau": (reseau_mensuel, "Mensuel_Reseau"),
+}
+
+# Créez le selectbox pour que l'utilisateur choisisse la vue
+selected_view_name = st.selectbox(
+    "Choisissez la vue à afficher :",
+    options=list(view_options.keys())
+)
+
+# Récupérez le DataFrame et le préfixe de fichier correspondant au choix
+df_to_display, file_prefix = view_options[selected_view_name]
 
 
-if not AGG.empty:
-    st.markdown(f"### Statistiques Globales par Agence")
+# --- 3. Affichage du tableau dynamique basé sur la sélection ---
+if not df_to_display.empty:
+    st.markdown(f"### {selected_view_name}")
     
-    # Bouton de téléchargement
-    buffer = create_excel_buffer(AGG)
+    # Bouton de téléchargement principal (pour la table complète)
+    buffer = create_excel_buffer(df_to_display)
     st.download_button(
-        label="📥 Télécharger en Excel",
+        label="📥 Télécharger la vue actuelle en Excel",
         data=buffer,
-        file_name=f'Global_{st.session_state.start_date}_to_{st.session_state.end_date}.xlsx',
+        file_name=f'{file_prefix}_{st.session_state.start_date}_to_{st.session_state.end_date}.xlsx',
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
@@ -67,28 +92,28 @@ if not AGG.empty:
 
     
     # Build the GridOptions
-    gb = GridOptionsBuilder.from_dataframe(AGG)
+    gb = GridOptionsBuilder.from_dataframe(df_to_display)
 
-    # Apply the conditional styling
+    # Appliquer le style conditionnel
     gb.configure_column("Temps Moyen d'Operation (MIN)", cellStyle=cellsytle_jscode_operation)
     gb.configure_column("Temps Moyen d'Attente (MIN)", cellStyle=cellsytle_jscode_attente)
 
-    # Configure all columns to be flexible and have a minimum width
+    # Configuration par défaut pour toutes les colonnes
     gb.configure_default_column(
         flex=1,
-        minWidth=200,
+        minWidth=180, # Légère réduction pour une meilleure vue d'ensemble
         groupable=True,
         enableRowGroup=True,
         aggFunc='sum',
         editable=False,
-        filter=True          # <-- ACTIVER LE FILTRE
-       
+        filter=True
     )
-
-    # Hide Longitude and Latitude by default (users can unhide from the sidebar)
-    gb.configure_column('Longitude', hide=True)
-    gb.configure_column('Latitude', hide=True)
-    
+     # Cacher Longitude et Latitude SEULEMENT si elles existent dans le DataFrame
+    # Ceci évite les erreurs pour les vues "Réseau"
+    if 'Longitude' in df_to_display.columns:
+        gb.configure_column('Longitude', hide=True)
+    if 'Latitude' in df_to_display.columns:
+        gb.configure_column('Latitude', hide=True)
     
 
 
@@ -117,47 +142,43 @@ if not AGG.empty:
 
    
     
-    # Add other interactive features
+    # Ajouter les autres fonctionnalités interactives
     gb.configure_selection('multiple', use_checkbox=True, groupSelectsChildren=True)
     gb.configure_side_bar()
 
     gridOptions = gb.build()
 
-    # Display the AgGrid table
-    grid_response=AgGrid(
-        AGG,
+    # Afficher la table AgGrid
+    grid_response = AgGrid(
+        df_to_display,
         height=500,
         gridOptions=gridOptions,
-        
         allow_unsafe_jscode=True,
         enable_enterprise_modules=False,
         theme='alpine',
         custom_css=custom_css
-)
+    )
 
-    
-
+    # --- Gestion de la sélection pour le téléchargement partiel ---
     selected_rows = grid_response['selected_rows']
     
-    # 2. If rows are selected, create a new DataFrame and a download button.
-    if not selected_rows is None:
-        if not selected_rows.empty  :
-            # Create a DataFrame from the list of dictionaries.
-            selected_df = pd.DataFrame(selected_rows)
-            
-            # The selected rows include an internal Ag-Grid column, let's drop it.
-            # The column is named '_selectedRowNodeInfo'
-            selected_df.drop(columns=['_selectedRowNodeInfo'], inplace=True, errors='ignore')
-            
-            
-            st.write("Télécharger en format Excel la sélection:")
-            
-            buffer = create_excel_buffer(selected_df)
-            st.download_button(
-            label="📥 Télécharger en Excel",
-            data=buffer,
-            file_name=f'Selected_{st.session_state.start_date}_to_{st.session_state.end_date}.xlsx',
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    if selected_rows is not None and not selected_rows.empty:
+        selected_df = pd.DataFrame(selected_rows)
+        selected_df.drop(columns=['_selectedRowNodeInfo'], inplace=True, errors='ignore')
+        
+        st.write("Télécharger la sélection en format Excel :")
+        
+        buffer_selected = create_excel_buffer(selected_df)
+        st.download_button(
+            label="📥 Télécharger la sélection",
+            data=buffer_selected,
+            file_name=f'Selection_{file_prefix}_{st.session_state.start_date}_to_{st.session_state.end_date}.xlsx',
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key='download_selected' # Clé unique pour éviter les conflits
         )
-        else:
-            st.info("Veuillez sélectionner une ou plusieurs lignes dans le tableau pour activer le téléchargement.")
+    else:
+        st.info("Sélectionnez une ou plusieurs lignes dans le tableau pour télécharger une sélection.")
+
+else:
+    # Message si le DataFrame sélectionné est vide
+    st.warning(f"Aucune donnée disponible pour la vue : '{selected_view_name}'.")
