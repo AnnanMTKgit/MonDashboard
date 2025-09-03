@@ -11,11 +11,11 @@ if not st.session_state.get('logged_in'):
     st.stop()
 
 create_sidebar_filters()
-conn = get_connection()
-df = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
-df_all = df[df['UserName'].notna()].reset_index(drop=True)
-df_queue=df.copy()
 
+# Utiliser les données partagées au lieu de recharger
+df = st.session_state.df_main
+df_all = df[df['UserName'].notna()].reset_index(drop=True)
+df_queue = df.copy()
 
 df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)]
 df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)]

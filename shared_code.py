@@ -207,9 +207,9 @@ def get_connection():
         """)
         st.stop()
 
-@st.cache_data(hash_funcs={pyodbc.Connection: id}, show_spinner=False,ttl=None)
+@st.cache_data(hash_funcs={pyodbc.Connection: id}, ttl=3600, show_spinner=False)  # Cache 1h
 def run_query_cached(_connection, sql, params):
-
+    """Cache intelligent pour les requêtes lourdes avec TTL de 1h"""
     try:
         # Exécuter la requête et retourner le résultat
         df = pd.read_sql_query(sql, _connection, params=params)
@@ -222,145 +222,153 @@ def run_query_cached(_connection, sql, params):
 
 def run_query(_connection, sql, params=None):
     """
-    Exécute une requête SQL en utilisant une connexion existante 
-    et retourne un DataFrame Pandas.
-    NE FERME PAS LA CONNEXION.
+    Exécute une requête SQL avec cache intelligent pour optimiser les performances.
+    Cache automatiquement les requêtes lourdes (>1 jour de données).
     """
     current_date = datetime.now().date()
-    current_hour=datetime.now().hour
-
-
-
-
-    if params==None or (params[1] == current_date and current_hour<18 and current_hour>7):
+    current_hour = datetime.now().hour
+    
+    # Déterminer si on doit utiliser le cache
+    use_cache = False
+    if params and len(params) >= 2:
         try:
+            start_date = pd.to_datetime(params[0]).date()
+            end_date = pd.to_datetime(params[1]).date()
+            date_range_days = (end_date - start_date).days
             
-            # Exécuter la requête et retourner le résultat
+            # Utiliser le cache pour les requêtes sur plus d'1 jour OU en dehors des heures de bureau
+            use_cache = (date_range_days > 1) or (current_hour < 7 or current_hour >= 18)
+        except:
+            use_cache = False
+    
+    if use_cache:
+        return run_query_cached(_connection, sql, params)
+    else:
+        try:
             df = pd.read_sql_query(sql, _connection, params=params)
             return df
         except Exception as e:
             st.error(f"Erreur lors de l'exécution de la requête : {e}")
-            return pd.DataFrame() # Retourner un DataFrame vide en cas d'erreur
-    else:
-        
-        return run_query_cached(_connection, sql, params)
+            return pd.DataFrame()
 # --- Fonctions de Traitement de Données (depuis functions.py) ---
 
 def AgenceTable(df_all, df_queue):
+    """Version optimisée de AgenceTable pour de gros volumes de données"""
     
-    # Créer des copies pour ne pas modifier les dataframes originaux
-    df1 = df_all.copy()
-    df2 = df_queue.copy()
+    try:
+        # Créer des copies pour ne pas modifier les dataframes originaux
+        df1 = df_all.copy()
+        df2 = df_queue.copy()
 
-    # S'assurer que les colonnes de date sont bien au format datetime
-    df1['Date_Reservation'] = pd.to_datetime(df1['Date_Reservation'])
-    df2['Date_Reservation'] = pd.to_datetime(df2['Date_Reservation'])
-    
-    ########## Journalier ##################
-    df1['Période'] = df1['Date_Reservation'].dt.date
-    
-    # Étape 1: Agréger sans forcer la conversion en int. Les résultats seront des floats.
-    agg1 = df1.groupby(['Période', 'NomAgence', "Region", 'Capacites']).agg(
-        Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60),
-        Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60),
-        NombreTraites=('Nom', lambda x: (x == 'Traitée').sum()),
-        NombreRejetee=('Nom', lambda x: (x == 'Rejetée').sum()),
-        NombrePassee=('Nom', lambda x: (x == 'Passée').sum())
-    ).reset_index()
+        # Vérification des données d'entrée
+        if df1.empty and df2.empty:
+            return pd.DataFrame(), pd.DataFrame()
 
-    df2['Période'] = df2['Date_Reservation'].dt.date
-    
-    agg2 = df2.groupby(['Période', 'NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(
-        NombreTickets=('Date_Reservation', 'count'), # 'count' est plus direct que np.count_nonzero
-        AttenteActuel=("NomAgence", lambda x: current_attente(df2, agence=x.iloc[0], HeureFermeture=df2[df2['NomAgence']==x.iloc[0]]['HeureFermeture'].values[0])),
-        TotalMobile=('IsMobile', 'sum')
-    ).reset_index()
-    
-    # La fusion outer peut créer des NaN, c'est normal
-    detail = pd.merge(agg2, agg1, on=['Période', 'NomAgence', "Region", 'Capacites'], how='outer')
-    
-    # Étape 2: Remplacer les NaN créés par 0. C'est ici la clé.
-    # On cible les colonnes numériques qui peuvent avoir des valeurs manquantes.
-    cols_to_fill = [
-        'Temps_Moyen_Operation', 'Temps_Moyen_Attente', 'NombreTraites', 
-        'NombreRejetee', 'NombrePassee', 'NombreTickets', 'TotalMobile'
-    ]
-    for col in cols_to_fill:
-        if col in detail.columns:
-            detail[col] = detail[col].fillna(0)
+        # S'assurer que les colonnes de date sont bien au format datetime
+        df1['Date_Reservation'] = pd.to_datetime(df1['Date_Reservation'])
+        df2['Date_Reservation'] = pd.to_datetime(df2['Date_Reservation'])
+        
+        # Pour de gros volumes, on travaille directement sur l'agrégation globale
+        # sans passer par l'agrégation journalière qui peut être très lourde
+        
+        ##### Agrégation Globale Directe ############
+        # Agrégation des données de performance (df1)
+        agg1_global = df1.groupby(['NomAgence', "Region", 'Capacites']).agg(
+            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60),
+            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60),
+            NombreTraites=('Nom', lambda x: (x == 'Traitée').sum()),
+            NombreRejetee=('Nom', lambda x: (x == 'Rejetée').sum()),
+            NombrePassee=('Nom', lambda x: (x == 'Passée').sum())
+        ).reset_index()
 
-    # Calculer le temps de passage après avoir rempli les NaN
-    detail["Temps Moyen de Passage(MIN)"] = detail['Temps_Moyen_Attente'] + detail['Temps_Moyen_Operation']
+        # Agrégation des données de queue (df2)
+        agg2_global = df2.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(
+            NombreTickets=('Date_Reservation', 'count'),
+            TotalMobile=('IsMobile', 'sum')
+        ).reset_index()
+        
+        # Calculer l'attente actuelle pour chaque agence
+        attente_actuelle = []
+        for agence in df2['NomAgence'].unique():
+            df_agence = df2[df2['NomAgence'] == agence]
+            if not df_agence.empty:
+                heure_fermeture = df_agence['HeureFermeture'].iloc[0]
+                attente = current_attente(df2, agence, heure_fermeture)
+                attente_actuelle.append({'NomAgence': agence, 'AttenteActuel': attente})
+        
+        attente_df = pd.DataFrame(attente_actuelle)
+        
+        # Fusionner les données d'attente
+        if not attente_df.empty:
+            agg2_global = pd.merge(agg2_global, attente_df, on='NomAgence', how='left')
+        else:
+            agg2_global['AttenteActuel'] = 0
+        
+        # Fusion finale
+        globale = pd.merge(agg2_global, agg1_global, on=['NomAgence', "Region", 'Capacites'], how='outer')
+        
+        # Remplacer les NaN par 0
+        cols_to_fill = [
+            'Temps_Moyen_Operation', 'Temps_Moyen_Attente', 'NombreTraites', 
+            'NombreRejetee', 'NombrePassee', 'NombreTickets', 'TotalMobile', 'AttenteActuel'
+        ]
+        for col in cols_to_fill:
+            if col in globale.columns:
+                globale[col] = globale[col].fillna(0)
 
-    ##### Global ############
-    # Agrégation globale à partir du dataframe 'detail' déjà nettoyé
-    globale = detail.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(
-        Temps_Moyen_Operation=('Temps_Moyen_Operation', 'mean'),
-        Temps_Moyen_Attente=('Temps_Moyen_Attente', 'mean'),
-        NombreTraites=('NombreTraites', 'sum'),
-        NombreRejetee=('NombreRejetee', 'sum'),
-        NombrePassee=('NombrePassee', 'sum'),
-        NombreTickets=('NombreTickets', 'sum'),
-        AttenteActuel=('AttenteActuel', 'last'), # 'last' ou 'mean' selon la logique désirée
-        TotalMobile=('TotalMobile', 'sum')
-    ).reset_index()
+        # Calculer le temps de passage
+        globale["Temps Moyen de Passage(MIN)"] = globale['Temps_Moyen_Attente'] + globale['Temps_Moyen_Operation']
+        
+        # Définir la période
+        if not df_queue.empty:
+            globale["Période"] = f"{df_queue['Date_Reservation'].min().strftime('%Y-%m-%d')} - {df_queue['Date_Reservation'].max().strftime('%Y-%m-%d')}"
+        else:
+            globale["Période"] = "N/A"
 
-    # Recalculer le temps de passage pour la vue globale
-    globale["Temps Moyen de Passage(MIN)"] = globale['Temps_Moyen_Attente'] + globale['Temps_Moyen_Operation']
-    
-    # Définir la période pour la vue globale
-    if not df_queue.empty:
-        globale["Période"] = f"{df_queue['Date_Reservation'].min().strftime('%Y-%m-%d')} - {df_queue['Date_Reservation'].max().strftime('%Y-%m-%d')}"
-    else:
-        globale["Période"] = "N/A"
+        # Conversion en entiers
+        cols_to_int = [
+            'Temps_Moyen_Operation', 'Temps_Moyen_Attente', 'Temps Moyen de Passage(MIN)',
+            'NombreTraites', 'NombreRejetee', 'NombrePassee', 'NombreTickets', 'TotalMobile', 'AttenteActuel'
+        ]
 
-    ########### Conversion finale et renommage ###########
-    
-    # Liste des colonnes à arrondir et convertir en entier
-    cols_to_int = [
-        'Temps_Moyen_Operation', 'Temps_Moyen_Attente', 'Temps Moyen de Passage(MIN)',
-        'NombreTraites', 'NombreRejetee', 'NombrePassee', 'NombreTickets', 'TotalMobile'
-    ]
+        for col in cols_to_int:
+            if col in globale.columns:
+                globale[col] = np.round(globale[col]).astype(int)
 
-    for col in cols_to_int:
-        if col in detail.columns:
-            detail[col] = np.round(detail[col]).astype(int)
-        if col in globale.columns:
-            globale[col] = np.round(globale[col]).astype(int)
+        # Renommage des colonnes
+        new_name = {
+            'NomAgence': "Nom d'Agence",
+            'Capacites': 'Capacité',
+            'Temps_Moyen_Operation': "Temps Moyen d'Operation (MIN)",
+            'Temps_Moyen_Attente': "Temps Moyen d'Attente (MIN)",
+            'NombreTraites': 'Total Traités',
+            'NombreRejetee': 'Total Rejetées',
+            'NombrePassee': 'Total Passées',
+            'NombreTickets': 'Total Tickets',
+            'AttenteActuel': 'Nbs de Clients en Attente',
+            'TotalMobile': 'TotalMobile'
+        }
 
-    new_name = {
-        'NomAgence': "Nom d'Agence",
-        'Capacites': 'Capacité',
-        'Temps_Moyen_Operation': "Temps Moyen d'Operation (MIN)",
-        'Temps_Moyen_Attente': "Temps Moyen d'Attente (MIN)",
-        'NombreTraites': 'Total Traités',
-        'NombreRejetee': 'Total Rejetées',
-        'NombrePassee': 'Total Passées',
-        'NombreTickets': 'Total Tickets',
-        'AttenteActuel': 'Nbs de Clients en Attente',
-        'TotalMobile': 'TotalMobile' # Renommage suggéré
-    }
+        globale = globale.rename(columns=new_name)
 
-    detail = detail.rename(columns=new_name)
-    globale = globale.rename(columns=new_name)
-
-    # Mettre les colonnes dans l'ordre souhaité
-    order = [
-        'Période', "Nom d'Agence", 'Region', "Temps Moyen d'Operation (MIN)", 
-        "Temps Moyen d'Attente (MIN)", "Temps Moyen de Passage(MIN)", 
-        'Capacité', 'Total Tickets', 'Total Traités', 'Total Rejetées', 
-        'Total Passées', 'TotalMobile', 'Nbs de Clients en Attente', 
-        'Longitude', 'Latitude'
-    ]
-    
-    # Filtrer les colonnes pour ne garder que celles qui existent dans les dataframes
-    detail_order = [col for col in order if col in detail.columns]
-    globale_order = [col for col in order if col in globale.columns]
-
-    detail = detail[detail_order]
-    globale = globale[globale_order]
-   
-    return detail, globale
+        # Ordre des colonnes
+        order = [
+            'Période', "Nom d'Agence", 'Region', "Temps Moyen d'Operation (MIN)", 
+            "Temps Moyen d'Attente (MIN)", "Temps Moyen de Passage(MIN)", 
+            'Capacité', 'Total Tickets', 'Total Traités', 'Total Rejetées', 
+            'Total Passées', 'TotalMobile', 'Nbs de Clients en Attente', 
+            'Longitude', 'Latitude'
+        ]
+        
+        globale_order = [col for col in order if col in globale.columns]
+        globale = globale[globale_order]
+       
+        # Pour les gros volumes, on retourne seulement la vue globale
+        return pd.DataFrame(), globale
+        
+    except Exception as e:
+        st.error(f"Erreur dans AgenceTable: {e}")
+        return pd.DataFrame(), pd.DataFrame()
 
 
 
@@ -531,6 +539,13 @@ def filter1(df_all):
     df_selection = filtering(df, UserName, NomService)
     return df_selection
 
+@st.cache_data(ttl=1800, show_spinner=False)  # Cache 30min pour les données principales
+def load_main_data(start_date, end_date):
+    """Charge les données principales une seule fois et les met en cache"""
+    conn = get_connection()
+    df = run_query(conn, SQLQueries().AllQueueQueries, params=(start_date, end_date))
+    return df
+
 def create_sidebar_filters():
     
     
@@ -549,6 +564,12 @@ def create_sidebar_filters():
     if st.session_state.start_date > st.session_state.end_date:
         st.sidebar.error("La date de début ne peut pas être après la date de fin.")
         st.stop()
+
+    # Charger les données principales une seule fois
+    if "df_main" not in st.session_state or st.session_state.get("last_date_range") != (start_date, end_date):
+        with st.spinner("Chargement des données..."):
+            st.session_state.df_main = load_main_data(start_date, end_date)
+            st.session_state.last_date_range = (start_date, end_date)
 
     # Initialiser dans st.session_state si la clé n'existe pas
     if "selected_agencies" not in st.session_state:
@@ -1438,18 +1459,8 @@ def GraphsGlob2(df_all,titre="",color=blue_color):
             # CORRECTED: Removed '{d}%' which is for pie charts
             "formatter": '{b}: {c} min' 
         },
-        "toolbox": {
-            "show": True,
-            "orient": "vertical",
-            "left": "right",
-            "top": "center",
-            "feature": {
-                "mark": {"show": True},
-                "dataView": {"show": True, "readOnly": False},
-                "restore": {"show": True},
-                "saveAsImage": {"show": True}
-            }
-        },
+        # Toolbox désactivée car problématique dans Streamlit
+        "toolbox": {"show": False},
         # ADDED: Bar charts require an xAxis and yAxis
         "xAxis": {
             "type": 'value', # The axis with numbers
@@ -1720,18 +1731,8 @@ def Top10_Type(df_queue,title=""):
             # CORRECTED: Removed '{d}%' which is for pie charts
             "formatter": '{b}: {c} ' 
         },
-        "toolbox": {
-            "show": True,
-            "orient": "vertical",
-            "left": "right",
-            "top": "center",
-            "feature": {
-                "mark": {"show": True},
-                "dataView": {"show": True, "readOnly": False},
-                "restore": {"show": True},
-                "saveAsImage": {"show": True}
-            }
-        },
+        # Toolbox désactivée car problématique dans Streamlit
+        "toolbox": {"show": False},
         # ADDED: Bar charts require an xAxis and yAxis
         "xAxis": {
             "type": 'value', # The axis with numbers
@@ -1913,18 +1914,8 @@ def create_bar_chart2(df, status,color=blue_color):
             # CORRECTED: Removed '{d}%' which is for pie charts
             "formatter": '{b}: {c} min' 
         },
-        "toolbox": {
-            "show": True,
-            "orient": "vertical",
-            "left": "right",
-            "top": "center",
-            "feature": {
-                "mark": {"show": True},
-                "dataView": {"show": True, "readOnly": False},
-                "restore": {"show": True},
-                "saveAsImage": {"show": True}
-            }
-        },
+        # Toolbox désactivée car problématique dans Streamlit
+        "toolbox": {"show": False},
         # ADDED: Bar charts require an xAxis and yAxis
         "xAxis": {
             "type": 'value', # The axis with numbers
@@ -1991,15 +1982,8 @@ def create_pie_chart2(df, title='Traitée'):
     },
     
 
-  "toolbox": {
-            "show": True,
-            "feature": {
-                "mark": {"show": True},
-                "dataView": {"show": True, "readOnly": False},
-                "restore": {"show": True},
-                "saveAsImage": {"show": True}
-            }
-        },
+  # Toolbox désactivée car problématique dans Streamlit
+  "toolbox": {"show": False},
   
   
   "tooltip": {"left": "10%", 

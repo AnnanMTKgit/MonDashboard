@@ -10,11 +10,11 @@ if not st.session_state.get('logged_in'):
     st.stop()
 
 create_sidebar_filters()
-conn = get_connection()
-df = run_query(conn, SQLQueries().AllQueueQueries, params=(st.session_state.start_date, st.session_state.end_date))
-df_all = df[df['UserName'].notna()].reset_index(drop=True)
-df_queue=df.copy()
 
+# Utiliser les données partagées au lieu de recharger
+df = st.session_state.df_main
+df_all = df[df['UserName'].notna()].reset_index(drop=True)
+df_queue = df.copy()
 
 df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agencies)]
 df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)]
@@ -83,7 +83,7 @@ with tab1:
     # st.altair_chart(chart3, use_container_width=True)
 
 with tab2:
-    
+    st.write('ici')
     option1=area_graph2(df_all_filtered, concern='NomAgence', time='TempsAttenteReel', date_to_bin='Date_Appel', seuil=15, title="Top 5 des Agences les Plus Lentes en Temps d'Attente")     
     option2=area_graph2(df_all_filtered, concern='NomAgence', time='TempOperation', date_to_bin='Date_Fin', seuil=5, title="Top 5 des Agences les Plus Lentes en Temps d'Opération")
     
