@@ -54,8 +54,8 @@ st.markdown("## Visualisation des Données de Performance")
 view_options = {
     "Statistiques Globales par Agence": (agence_global, "Global_Agence"),
     "Statistiques Mensuelles par Agence": (agence_mensuel, "Mensuel_Agence"),
-    "Statistiques Globales du Réseau": (reseau_global, "Global_Reseau"),
-    "Statistiques Mensuelles du Réseau": (reseau_mensuel, "Mensuel_Reseau"),
+    "Statistiques Globales du Réseau Global": (reseau_global, "Global_Reseau"),
+    "Statistiques Mensuelles du Réseau Global": (reseau_mensuel, "Mensuel_Reseau"),
 }
 
 # Créez le selectbox pour que l'utilisateur choisisse la vue
