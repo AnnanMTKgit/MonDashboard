@@ -32,7 +32,7 @@ if df_all_filtered.empty:
 def render_activity_page():
     
     
-    rapport_pd = run_analysis_pipeline(df_queue_filtered)
+    rapport_pd = run_analysis_pipeline(df_queue_filtered,filtrer_semaine=False)
     if rapport_pd.empty: return
     rapport_pd = rapport_pd[rapport_pd['Heure'] <= pd.Timestamp.now()].copy()
     

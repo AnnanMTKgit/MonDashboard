@@ -114,26 +114,30 @@ class SQLQueries:
   FROM [dbo].[ReservationParHeure] RPH LEFT JOIN Etat e ON e.Id = RPH.EtatId
   WHERE HeureReservation is not NULL and CAST(HeureReservation AS DATE) BETWEEN CAST(? AS datetime) AND CAST(? AS datetime) 
   """ 
+        self.AllReseau=f"""SELECT [Id]
+      [Label] as Reseau
+  FROM [dbo].[Region]"""
         
-        self.AllAgences = f"""SELECT [Id]
-      ,[NomAgence]
-      ,[Adresse]
-      ,[codeAgence]
-      ,[Pays]
-      ,[RegionId]
-      ,[Longitude]
-      ,[Latitude]
-      ,[StructureID]
-      ,[NbClientByDay]
-      ,[Status]
-      ,[Capacites]
-      ,[Telephone]
-      ,[HeureDemarrage]
-      ,[HeureFermeture]
-      ,[SuspensionActivite]
-      ,[ActivationReservation]
-      ,[nombreLimitReservation]
-  FROM [dbo].[Agence]"""
+
+        self.All_Reseau_Agences = f"""SELECT
+      R.[Label] as Reseau
+      ,A.[NomAgence]
+      ,A.[Adresse]
+      ,A.[codeAgence]
+      ,A.[Pays]
+      ,A.[Longitude]
+      ,A.[Latitude]
+      ,A.[StructureID]
+      ,A.[NbClientByDay]
+      ,A.[Status]
+      ,A.[Capacites]
+      ,A.[Telephone]
+      ,A.[HeureDemarrage]
+      ,A.[HeureFermeture]
+      ,A.[SuspensionActivite]
+      ,A.[ActivationReservation]
+      ,A.[nombreLimitReservation]
+  FROM [dbo].[Region] R LEFT JOIN Agence A ON R.Id=A.RegionId"""
 
 def create_excel_buffer(df, sheet_name="Sheet1"):
     buffer = io.BytesIO()
@@ -705,7 +709,7 @@ def filter1(df_all):
         default=df_all['NomService'].unique()
     )
     
-        st.write(f"✅ {len(NomService)} disponible(s)")
+        #st.write(f"✅ {len(NomService)} disponible(s)")
     
     # Filter df_all based on the selected NomService
     df = df_all[df_all['NomService'].isin(NomService)]
@@ -724,13 +728,99 @@ def filter1(df_all):
         default=df['UserName'].unique()
     )
        
-        st.write(f"✅ {len(UserName)} Agent(s) en ligne")
+        #st.write(f"✅ {len(UserName)} Agent(s) en ligne")
     
 
     
     
     df_selection = filtering(df, UserName, NomService)
     return df_selection
+
+
+
+
+
+def filter2(df_agence_reseau):
+    
+    # --- Filtre Réseau ---
+    with st.sidebar:
+        with st.popover("Réseau", use_container_width=True):
+            selected_reseau = st.multiselect(
+                'Réseau', 
+                options=st.session_state.all_reseau,
+                default=st.session_state.selected_reseau,
+                key="selected_reseau_input"
+            )
+        st.write(f"✅ {len(selected_reseau)} Réseau(x) sélectionnés")
+    
+    # Si la sélection de réseau a changé, on met à jour le state et on rerun
+    # pour que la liste des agences soit recalculée immédiatement.
+    if set(selected_reseau) != set(st.session_state.selected_reseau):
+        st.session_state.selected_reseau = selected_reseau
+        # On réinitialise les agences pour tout sélectionner par défaut pour les nouveaux réseaux
+        df_filtered_for_agencies = df_agence_reseau[df_agence_reseau['Reseau'].isin(st.session_state.selected_reseau)]
+        st.session_state.selected_agencies = df_filtered_for_agencies['NomAgence'].unique().tolist()
+        st.rerun()
+
+    # Empêcher la désélection totale des réseaux
+    if len(st.session_state.selected_reseau) == 0:
+        st.sidebar.warning("Vous devez sélectionner au moins un réseau.")
+        st.stop()
+
+    # --- Préparation du filtre Agence (basé sur la sélection de réseau) ---
+    df = df_agence_reseau[df_agence_reseau['Reseau'].isin(st.session_state.selected_reseau)]
+    df = df[df['NomAgence'].notna()]
+    all_available_agencies = df['NomAgence'].unique().tolist()
+    st.session_state.all_agencies = all_available_agencies
+    
+    # S'assurer que les agences sélectionnées sont bien dans la liste des agences possibles
+    # (utile si un réseau a été déselectionné)
+    current_selected_agencies = [
+        agency for agency in st.session_state.selected_agencies 
+        if agency in all_available_agencies
+    ]
+
+    # --- Filtre Agence ---
+    st.sidebar.write(' ')
+    with st.sidebar:
+        with st.popover("Agence", use_container_width=True):
+            selected_agencies = st.multiselect(
+                'Agences', 
+                options=st.session_state.all_agencies,
+                default=current_selected_agencies,
+                key="selected_agencies_input"
+            )
+        st.write(f"✅ {len(selected_agencies)} Agence(s) sélectionnées")
+    
+    
+    # #################################################################### #
+    # #############    NOUVELLE LOGIQUE : MISE À JOUR INVERSÉE   ########### #
+    # #################################################################### #
+    
+    # 1. Déterminer les réseaux correspondant aux agences actuellement sélectionnées
+    if len(selected_agencies) > 0:
+        reseaux_from_agencies = df_agence_reseau[
+            df_agence_reseau['NomAgence'].isin(selected_agencies)
+        ]['Reseau'].unique().tolist()
+    else:
+        reseaux_from_agencies = []
+
+    # 2. Si la liste des réseaux déduite des agences est différente de la liste actuelle,
+    #    on met à jour la sélection des réseaux et on redémarre le script.
+    if set(reseaux_from_agencies) != set(st.session_state.selected_reseau):
+        st.session_state.selected_reseau = reseaux_from_agencies
+        # On met aussi à jour la sélection d'agences pour être cohérent
+        st.session_state.selected_agencies = selected_agencies
+        st.rerun() # Force l'actualisation pour voir le réseau se décocher
+
+    # #################################################################### #
+    
+    # Mise à jour finale et validation pour les agences
+    st.session_state.selected_agencies = selected_agencies
+    
+    if len(st.session_state.selected_agencies) == 0:
+        st.sidebar.warning("Vous devez sélectionner au moins une agence.")
+        st.stop()
 
 @st.cache_data(ttl=1800, show_spinner=False)  # Cache 30min pour les données principales
 def load_main_data(start_date, end_date):
@@ -755,7 +845,7 @@ def create_sidebar_filters():
 
 
     if st.session_state.start_date > st.session_state.end_date:
-        st.sidebar.error("La date de début ne peut pas être après la date de fin.")
+        st.error("La date de début ne peut pas être après la date de fin.")
         st.stop()
 
     # Charger les données principales une seule fois
@@ -763,14 +853,29 @@ def create_sidebar_filters():
         with st.spinner("Chargement des données..."):
             st.session_state.df_main = load_main_data(start_date, end_date)
             st.session_state.last_date_range = (start_date, end_date)
-
+    
     # Initialiser dans st.session_state si la clé n'existe pas
-    if "selected_agencies" not in st.session_state:
+    if "selected_reseau" not in st.session_state :
         conn = get_connection()
-        df_agences = run_query(conn, SQLQueries().AllAgences,params=None)
-        available_agencies = df_agences['NomAgence'].unique()
-        st.session_state.all_agencies = available_agencies
-        st.session_state.selected_agencies = available_agencies  # valeur par défaut
+        df_Agence_Reseaux = run_query(conn, SQLQueries().All_Reseau_Agences,params=None)
+        st.session_state.selected_agence_reseau=df_Agence_Reseaux
+        AllReseau = df_Agence_Reseaux['Reseau'].unique()
+        st.session_state.all_reseau = AllReseau
+        st.session_state.selected_reseau = AllReseau  # valeur par défaut
+        ### AJOUTS ICI POUR CORRIGER L'ERREUR ###
+        # On initialise aussi la liste de toutes les agences et les agences sélectionnées par défaut
+        AllAgences = df_Agence_Reseaux['NomAgence'].unique()
+        st.session_state.selected_agencies = AllAgences # Valeur par défaut
+        #########################################
+
+    filter2(st.session_state.selected_agence_reseau)
+    # Initialiser dans st.session_state si la clé n'existe pas
+    # if "selected_agencies" not in st.session_state:
+    #     conn = get_connection()
+    #     df_agences = run_query(conn, SQLQueries().AllAgences,params=None)
+    #     available_agencies = df_agences['NomAgence'].unique()
+    #     st.session_state.all_agencies = available_agencies
+    #     st.session_state.selected_agencies = available_agencies  # valeur par défaut
     
 
 #     st.sidebar.markdown("""
@@ -781,27 +886,7 @@ def create_sidebar_filters():
 #     }
 #     </style>
 # """, unsafe_allow_html=True)
-    st.sidebar.write(' ')
     
-    with st.sidebar:
-        with st.popover("Agences",use_container_width=True):
-
-            show_multiselect = True
-            if show_multiselect:
-                
-                selected_agencies =st.multiselect('Agences', options=st.session_state.all_agencies,default=st.session_state.selected_agencies ,key="selected_agencies_input")
-        st.write(f"✅ {len(selected_agencies)} agences sélectionnées")
-    
-    
-    
-    # Empêcher la désélection totale
-    if len(selected_agencies) == 0:
-        st.sidebar.warning("Vous devez sélectionner au moins une agence.")
-        st.session_state.selected_agencies = selected_agencies
-        st.stop() # st.rerun() est la version moderne de st.experimental_rerun()
-    else:
-        # Mise à jour de la sélection
-        st.session_state.selected_agencies = selected_agencies
     
     
     

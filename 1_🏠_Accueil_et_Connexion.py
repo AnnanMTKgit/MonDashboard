@@ -24,11 +24,11 @@ if 'logged_in' not in st.session_state:
     st.session_state.user_profile = None
     st.session_state.df_RH=None
     st.session_state.all_agencies=None
-    
+    st.session_state.all_reseau =None
 
 def initialize_filters():
     conn = get_connection()
-    all_agencies_df = run_query(conn, SQLQueries().AllAgences)
+    all_agencies_df = run_query(conn, SQLQueries().All_Reseau_Agences)
     st.session_state.start_date = datetime.now().date()
     st.session_state.end_date = datetime.now().date()
 
