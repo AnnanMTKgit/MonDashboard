@@ -50,11 +50,13 @@ def show_login_page():
 
         if submitted:
             if users_dict.get(username) == password:
+                st.stop()
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.session_state.user_profile = profiles_dict.get(username)
                 initialize_filters()
                 st.rerun()
+                
             else:
                 st.error("Nom d'utilisateur ou mot de passe incorrect.")
 
@@ -97,3 +99,4 @@ else:
         #st.sidebar.info(f"{st.session_state.username}")
         st.title(f"Bienvenue sur le Dashboard de Marlodj, {st.session_state.username}!")
         st.info("Utilisez le menu sur votre gauche pour naviguer entre les différentes sections d'analyse.")
+        
