@@ -120,7 +120,7 @@ class SQLQueries:
         
 
         self.All_Reseau_Agences = f"""SELECT
-      R.[Label] as Reseau
+      R.[Label] as Region
       ,A.[NomAgence]
       ,A.[Adresse]
       ,A.[codeAgence]
@@ -739,86 +739,126 @@ def filter1(df_all):
 
 
 
-
-def filter2(df_agence_reseau):
+def filter2(df_agence_Region):
+    """
+    Génère des filtres robustes en intégrant les fonctionnalités demandées :
+    - Boutons "Tout sélectionner" / "Tout désélectionner".
+    - Affichage du réseau entre parenthèses pour les agences.
+    - Gestion des cas de listes vides.
+    """
+    # Vos sécurités initiales (conservées)
+    st.session_state.selected_Region = [r for r in st.session_state.selected_Region if pd.notna(r)]
+    st.session_state.selected_agencies = [a for a in st.session_state.selected_agencies if pd.notna(a)]
     
-    # --- Filtre Réseau ---
+    # --- FILTRE RÉSEAU ---
     with st.sidebar:
-        with st.popover("Réseau", use_container_width=True):
-            selected_reseau = st.multiselect(
-                'Réseau', 
-                options=st.session_state.all_reseau,
-                default=st.session_state.selected_reseau,
-                key="selected_reseau_input"
-            )
-        st.write(f"✅ {len(selected_reseau)} Réseau(x) sélectionnés")
-    
-    # Si la sélection de réseau a changé, on met à jour le state et on rerun
-    # pour que la liste des agences soit recalculée immédiatement.
-    if set(selected_reseau) != set(st.session_state.selected_reseau):
-        st.session_state.selected_reseau = selected_reseau
-        # On réinitialise les agences pour tout sélectionner par défaut pour les nouveaux réseaux
-        df_filtered_for_agencies = df_agence_reseau[df_agence_reseau['Reseau'].isin(st.session_state.selected_reseau)]
-        st.session_state.selected_agencies = df_filtered_for_agencies['NomAgence'].unique().tolist()
-        st.rerun()
+        with st.popover("Régions", use_container_width=True):
+            
+            # AMÉLIORATION : Boutons d'action pour les réseaux
+            all_Regionx_list = st.session_state.all_Region # Utilise votre variable de session
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Tout cocher", key="select_all_Region", use_container_width=True):
+                    st.session_state.selected_Region = all_Regionx_list
+                    st.session_state.selected_agencies = df_agence_Region['NomAgence'].unique().tolist()
+                    st.rerun()
+            with col2:
+                if st.button("Tout décocher", key="deselect_all_Region", use_container_width=True):
+                    st.session_state.selected_Region = []
+                    st.session_state.selected_agencies = []
+                    st.rerun()
+            #st.divider()
 
-    # Empêcher la désélection totale des réseaux
-    if len(st.session_state.selected_reseau) == 0:
-        st.sidebar.warning("Vous devez sélectionner au moins un réseau.")
+            with st.container(height=300):
+                # 1. Réseaux déjà connectés (votre logique est conservée)
+                st.write("**Régions connectées**")
+                for Region in st.session_state.selected_Region[:]:
+                    if not st.checkbox(Region, value=True, key=f"cb_Region_sel_{Region}"):
+                        st.session_state.selected_Region.remove(Region)
+                        agencies_to_remove = df_agence_Region[df_agence_Region['Region'] == Region]['NomAgence'].unique().tolist()
+                        st.session_state.selected_agencies = [a for a in st.session_state.selected_agencies if a not in agencies_to_remove]
+                        st.rerun()
+
+                st.divider()
+
+                # 2. Réseaux disponibles (votre logique est conservée)
+                st.write("**Régions disponibles**")
+                available_Regionx = [r for r in st.session_state.all_Region if r not in st.session_state.selected_Region and pd.notna(r)]
+                if available_Regionx:
+                    for Region in available_Regionx:
+                        if st.checkbox(Region, value=False, key=f"cb_Region_avail_{Region}"):
+                            st.session_state.selected_Region.append(Region)
+                            agencies_to_add = [a for a in df_agence_Region[df_agence_Region['Region'] == Region]['NomAgence'].unique().tolist() if pd.notna(a)]
+                            st.session_state.selected_agencies.extend(agencies_to_add)
+                            st.rerun()
+                else:
+                    st.info("Toutes les régions sont déjà sélectionnées.")
+
+        st.write(f"✅ {len(st.session_state.selected_Region)} Région(s) sélectionnés")
+    
+    # Votre validation (conservée)
+    if not st.session_state.selected_Region:
+        st.sidebar.warning("Vous devez sélectionner au moins une région.")
         st.stop()
 
-    # --- Préparation du filtre Agence (basé sur la sélection de réseau) ---
-    df = df_agence_reseau[df_agence_reseau['Reseau'].isin(st.session_state.selected_reseau)]
-    df = df[df['NomAgence'].notna()]
-    all_available_agencies = df['NomAgence'].unique().tolist()
-    st.session_state.all_agencies = all_available_agencies
-    
-    # S'assurer que les agences sélectionnées sont bien dans la liste des agences possibles
-    # (utile si un réseau a été déselectionné)
-    current_selected_agencies = [
-        agency for agency in st.session_state.selected_agencies 
-        if agency in all_available_agencies
-    ]
+    # --- FILTRE AGENCE ---
+    df_filtered = df_agence_Region[df_agence_Region['Region'].isin(st.session_state.selected_Region)]
+    all_available_agencies = df_filtered['NomAgence'].unique().tolist()
 
-    # --- Filtre Agence ---
+    # AMÉLIORATION : Création du dictionnaire pour l'affichage des agences
+    agency_display_map = {
+        row['NomAgence']: f"{row['NomAgence']} ({row['Region']})"
+        for _, row in df_agence_Region[['NomAgence', 'Region']].drop_duplicates().iterrows()
+    }
+
     st.sidebar.write(' ')
     with st.sidebar:
-        with st.popover("Agence", use_container_width=True):
-            selected_agencies = st.multiselect(
-                'Agences', 
-                options=st.session_state.all_agencies,
-                default=current_selected_agencies,
-                key="selected_agencies_input"
-            )
-        st.write(f"✅ {len(selected_agencies)} Agence(s) sélectionnées")
-    
-    
-    # #################################################################### #
-    # #############    NOUVELLE LOGIQUE : MISE À JOUR INVERSÉE   ########### #
-    # #################################################################### #
-    
-    # 1. Déterminer les réseaux correspondant aux agences actuellement sélectionnées
-    if len(selected_agencies) > 0:
-        reseaux_from_agencies = df_agence_reseau[
-            df_agence_reseau['NomAgence'].isin(selected_agencies)
-        ]['Reseau'].unique().tolist()
-    else:
-        reseaux_from_agencies = []
+        with st.popover("Agences", use_container_width=True):
+            # AMÉLIORATION : Boutons d'action pour les agences
+            col3, col4 = st.columns(2)
+            with col3:
+                if st.button("Tout cocher", key="select_all_agences" ,use_container_width=True):
+                    st.session_state.selected_agencies = all_available_agencies
+                    st.rerun()
+            with col4:
+                if st.button("Tout décocher", key="deselect_all_agences", use_container_width=True):
+                    st.session_state.selected_agencies = []
+                    st.rerun()
+            #st.divider()
 
-    # 2. Si la liste des réseaux déduite des agences est différente de la liste actuelle,
-    #    on met à jour la sélection des réseaux et on redémarre le script.
-    if set(reseaux_from_agencies) != set(st.session_state.selected_reseau):
-        st.session_state.selected_reseau = reseaux_from_agencies
-        # On met aussi à jour la sélection d'agences pour être cohérent
-        st.session_state.selected_agencies = selected_agencies
-        st.rerun() # Force l'actualisation pour voir le réseau se décocher
+            with st.container(height=300):
+                # 1. Agences déjà connectées (votre logique + amélioration d'affichage)
+                st.write("**Agences connectées**")
+                valid_selected_agencies = [a for a in st.session_state.selected_agencies if a in all_available_agencies and pd.notna(a)]
+                for agence in valid_selected_agencies[:]:
+                    display_label = agency_display_map.get(agence, agence) # Utilise le nom formaté
+                    if not st.checkbox(display_label, value=True, key=f"cb_agence_sel_{agence}"):
+                        st.session_state.selected_agencies.remove(agence) # Manipule le nom original
+                        parent_Region = df_agence_Region[df_agence_Region['NomAgence'] == agence]['Region'].iloc[0]
+                        agences_du_parent = df_agence_Region[df_agence_Region['Region'] == parent_Region]['NomAgence'].unique()
+                        remaining_agencies = [a for a in st.session_state.selected_agencies if a in agences_du_parent]
+                        if not remaining_agencies:
+                            st.session_state.selected_Region.remove(parent_Region)
+                        st.rerun()
 
-    # #################################################################### #
-    
-    # Mise à jour finale et validation pour les agences
-    st.session_state.selected_agencies = selected_agencies
-    
-    if len(st.session_state.selected_agencies) == 0:
+                st.divider()
+
+                # 2. Agences disponibles (votre logique + amélioration d'affichag)
+                st.write("**Agences disponibles**")
+                available_agencies = [a for a in all_available_agencies if a not in valid_selected_agencies and pd.notna(a)]
+                if available_agencies:
+                    for agence in available_agencies:
+                        display_label = agency_display_map.get(agence, agence) # Utilise le nom formaté
+                        if st.checkbox(display_label, value=False, key=f"cb_agence_avail_{agence}"):
+                            st.session_state.selected_agencies.append(agence) # Manipule le nom original
+                            st.rerun()
+                else:
+                    st.info("Toutes les agences des régions sélectionnées sont déjà connectées.")
+
+        st.write(f"✅ {len(st.session_state.selected_agencies)} Agence(s) sélectionnée(s)")
+
+    # Votre validation (conservée)
+    if not st.session_state.selected_agencies:
         st.warning("Vous devez sélectionner au moins une agence.")
         st.stop()
 
@@ -850,25 +890,27 @@ def create_sidebar_filters():
 
     # Charger les données principales une seule fois
     if "df_main" not in st.session_state or st.session_state.get("last_date_range") != (start_date, end_date):
+        
         with st.spinner("Chargement des données..."):
             st.session_state.df_main = load_main_data(start_date, end_date)
             st.session_state.last_date_range = (start_date, end_date)
-    
+            st.session_state.selected_Region =st.session_state.df_main['Region'].unique().tolist()
+            st.session_state.selected_agencies = st.session_state.df_main['NomAgence'].unique().tolist()
     # Initialiser dans st.session_state si la clé n'existe pas
-    if "selected_reseau" not in st.session_state :
+    if "all_agence_Region" not in st.session_state :
+        
         conn = get_connection()
-        df_Agence_Reseaux = run_query(conn, SQLQueries().All_Reseau_Agences,params=None)
-        st.session_state.selected_agence_reseau=df_Agence_Reseaux
-        AllReseau = df_Agence_Reseaux['Reseau'].unique()
-        st.session_state.all_reseau = AllReseau
-        st.session_state.selected_reseau = AllReseau  # valeur par défaut
+        df_Agence_Regionx = run_query(conn, SQLQueries().All_Region_Agences,params=None)
+        st.session_state.all_agence_Region=df_Agence_Regionx
+        AllRegion = df_Agence_Regionx['Region'].unique().tolist()
+        st.session_state.all_Region = AllRegion
+       
         ### AJOUTS ICI POUR CORRIGER L'ERREUR ###
         # On initialise aussi la liste de toutes les agences et les agences sélectionnées par défaut
-        AllAgences = df_Agence_Reseaux['NomAgence'].unique()
-        st.session_state.selected_agencies = AllAgences # Valeur par défaut
-        #########################################
-
-    filter2(st.session_state.selected_agence_reseau)
+        AllAgences = df_Agence_Regionx['NomAgence'].unique().tolist()
+        st.session_state.all_agencies = AllAgences
+     
+    filter2(st.session_state.all_agence_Region)
     # Initialiser dans st.session_state si la clé n'existe pas
     # if "selected_agencies" not in st.session_state:
     #     conn = get_connection()
@@ -894,6 +936,8 @@ def create_sidebar_filters():
 
     #st.sidebar.markdown("<div style='position: fixed; bottom: 0; left: 0; width: 17rem; padding: 10px; text-align: center;'>Copyright Obertys 2025</div>", unsafe_allow_html=True)
 # --- Fonctions de Visualisation Partagées ---
+
+
 
 
 def create_folium_map(agg):

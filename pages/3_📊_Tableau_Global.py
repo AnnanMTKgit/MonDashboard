@@ -24,9 +24,9 @@ if df_all_filtered.empty:
     st.error("Aucune donnée disponible pour la sélection.")
     st.stop()
 
-st.markdown("<h1 style='text-align: center;'>Tableau de Bord Global</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;font-size:1.5em;'>Tableau Global</h1>", unsafe_allow_html=True)
 
-st.markdown("<br/><br/>", unsafe_allow_html=True)
+st.markdown("<br/>", unsafe_allow_html=True)
 
 Kpi=df_all_filtered.groupby("NomService")["UserName"].nunique().reset_index()
 Kpi = Kpi.rename(columns={"UserName": "Nombre_Agents"})
@@ -49,13 +49,12 @@ st.markdown("<br/>", unsafe_allow_html=True)
 ) = AgenceTable2(df_all_filtered, df_queue_filtered)
 
 # --- 2. Création du sélecteur de vue dans l'interface Streamlit ---
-st.markdown("## Visualisation des Données de Performance")
 
 view_options = {
     "Statistiques Globales par Agence": (agence_global, "Global_Agence"),
     "Statistiques Mensuelles par Agence": (agence_mensuel, "Mensuel_Agence"),
-    "Statistiques Globales du Réseau Global": (reseau_global, "Global_Reseau"),
-    "Statistiques Mensuelles du Réseau Global": (reseau_mensuel, "Mensuel_Reseau"),
+    "Statistiques Globales du Réseau ": (reseau_global, "Global_Reseau"),
+    "Statistiques Mensuelles du Réseau ": (reseau_mensuel, "Mensuel_Reseau"),
 }
 
 # Créez le selectbox pour que l'utilisateur choisisse la vue
