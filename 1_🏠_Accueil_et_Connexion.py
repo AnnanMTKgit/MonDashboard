@@ -50,7 +50,7 @@ def show_login_page():
 
         if submitted:
             if users_dict.get(username) == password:
-                st.stop()
+                #st.stop()
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.session_state.user_profile = profiles_dict.get(username)
