@@ -948,7 +948,7 @@ def create_folium_map(agg):
             fill=True,
             fill_color="gray",
             fill_opacity=0.2,
-            popup=f"Zone: {ville}"
+            popup=f"Région: {ville}"
         ).add_to(m)
 
         # Ajouter les marqueurs avec popups
