@@ -133,7 +133,7 @@ def render_activity_page():
     # --- SECTION DES VISUALISATIONS (inchangée) ---
     if diff_jours > 0:
         
-        st.markdown(f"<h1 style='text-align: center;font-size:1em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité pendant cette période pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
+        #st.markdown(f"<h1 style='text-align: center;font-size:1em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité pendant cette période pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
        
         
         
@@ -258,7 +258,7 @@ def render_activity_page():
 
     else:
         # Vue journalière (inchangée)
-        st.markdown(f"<h1 style='text-align: center;font-size:1em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité ( Journée du {min_date.strftime('%Y-%m-%d')}) pendant cette période pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
+        #st.markdown(f"<h1 style='text-align: center;font-size:1em;'>Les données s'étalent sur {nb_jours_activite} jour(s) d'activité ( Journée du {min_date.strftime('%Y-%m-%d')}) pendant cette période pour {agence_selectionnee.upper()}</h1>", unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         

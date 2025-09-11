@@ -819,7 +819,7 @@ def filter2(df_agence_reseau):
     st.session_state.selected_agencies = selected_agencies
     
     if len(st.session_state.selected_agencies) == 0:
-        st.sidebar.warning("Vous devez sélectionner au moins une agence.")
+        st.warning("Vous devez sélectionner au moins une agence.")
         st.stop()
 
 @st.cache_data(ttl=1800, show_spinner=False)  # Cache 30min pour les données principales
