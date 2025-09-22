@@ -26,14 +26,20 @@ if 'logged_in' not in st.session_state:
     st.session_state.all_agencies=None
     st.session_state.all_reseau =None
 
-def initialize_filters():
+def initialize_session_state():
+    """Initialise tous les états nécessaires après une connexion réussie."""
+    st.cache_data.clear()
     conn = get_connection()
-    all_agencies_df = run_query(conn, SQLQueries().All_Reseau_Agences)
+    all_agencies_df = run_query(conn, SQLQueries().All_Region_Agences)
+    
+    # Initialiser les filtres
     st.session_state.start_date = datetime.now().date()
     st.session_state.end_date = datetime.now().date()
-
-
-
+    st.session_state.selected_agencies = list(all_agencies_df['NomAgence'].unique())
+    
+    # Initialiser les conteneurs de données et la clé de "cache manuel"
+    st.session_state.df_main = pd.DataFrame()
+    st.session_state.last_filter_key = None # Pour forcer le premier chargement
 
 
 def show_login_page():
@@ -54,7 +60,7 @@ def show_login_page():
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.session_state.user_profile = profiles_dict.get(username)
-                initialize_filters()
+                initialize_session_state()
                 st.rerun()
                 
             else:
@@ -82,21 +88,39 @@ def show_agent_dashboard():
         st.session_state.logged_in = False
         st.rerun()
 
-# Logique principale
+# ==============================================================================
+# VUE POUR LE PROFIL ADMIN / SUPERVISEUR (CORRIGÉE)
+# ==============================================================================
+def show_admin_dashboard():
+    """Prépare l'environnement pour les admins et affiche la page d'accueil."""
+    
+    # CORRECTION : On doit appeler ces fonctions pour que les autres pages fonctionnent
+    create_sidebar_filters()
+
+
+    # Affichage de la page d'accueil pour l'admin
+    st.title(f"🏠 Bienvenue, {st.session_state.username}!")
+    st.info("Utilisez le menu sur la gauche pour naviguer entre les différentes sections d'analyse.")
+    
+# ==============================================================================
+# FONCTION DE DECONNEXION
+# ==============================================================================
+def logout():
+    """Vide la session et force un rerun pour retourner à la page de login."""
+    for key in st.session_state.keys():
+        del st.session_state[key]
+
+# ==============================================================================
+# ROUTEUR PRINCIPAL (CORRIGÉ ET ROBUSTE)
+# ==============================================================================
 if not st.session_state.logged_in:
     show_login_page()
 else:
-
+    load_and_display_css()
     
-                
     if st.session_state.user_profile in ['Caissier', 'Clientele']:
-        # Masquer la navigation multi-page pour les agents
-        create_sidebar_filters()
-        st.set_page_config(page_title=f"Dashboard Agent - {st.session_state.username}")
+        # Si agent, on exécute sa vue et c'est tout. Pas de navigation multi-pages.
         show_agent_dashboard()
     else:
-        
-        #st.sidebar.info(f"{st.session_state.username}")
-        st.title(f"Bienvenue sur le Dashboard de Marlodj, {st.session_state.username}!")
-        st.info("Utilisez le menu sur votre gauche pour naviguer entre les différentes sections d'analyse.")
-        
+        # Si admin, on prépare l'environnement multi-pages.
+        show_admin_dashboard()
