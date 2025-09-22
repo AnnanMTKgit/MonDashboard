@@ -739,27 +739,29 @@ def filter1(df_all):
 
 
 
-
-
 def filter2(df_agence_Region):
     """
-    Génère des filtres à trois niveaux basés sur la différence entre
-    le DataFrame total (df_agence_Region) et le DataFrame des données connectées (st.session_state.df_main).
+    Génère des filtres hiérarchiques liés mais indépendants en affichage.
+    - 'selected_agencies' est la seule source de vérité pour la sélection.
+    - L'état des régions est dérivé de la sélection des agences.
+    - Le filtre agence montre toujours toutes les agences connectées disponibles.
     """
-    # Vos sécurités initiales
-    st.session_state.selected_Region = [r for r in st.session_state.get('selected_Region', []) if pd.notna(r)]
+    # Initialisation et nettoyage de la source de vérité
+    if 'selected_agencies' not in st.session_state:
+        # Par défaut, tout est sélectionné au premier lancement
+        st.session_state.selected_agencies = st.session_state.df_main['NomAgence'].unique().tolist()
     st.session_state.selected_agencies = [a for a in st.session_state.get('selected_agencies', []) if pd.notna(a)]
 
-    # --- Préparation des listes ---
+    # --- Préparation des données ---
     df_main = st.session_state.df_main
+    online_regions = sorted(df_main['Region'].unique().tolist())
+    all_online_agencies = sorted(df_main['NomAgence'].unique().tolist())
     
-    # 1. Régions "En ligne" (sélectionnables) = celles présentes dans df_main
-    online_regions = df_main['Region'].unique().tolist()
-    
-    # 2. Régions "Hors ligne" = celles dans le DF total mais pas dans df_main
     all_regions_total = df_agence_Region['Region'].unique().tolist()
-    offline_regions = [r for r in all_regions_total if r not in online_regions]
+    offline_regions = sorted([r for r in all_regions_total if r not in online_regions])
     
+    agency_display_map = {row['NomAgence']: f"{row['NomAgence']} ({row['Region']})" for _, row in df_agence_Region.iterrows()}
+
     # --- FILTRE RÉGION ---
     with st.sidebar:
         with st.popover("Régions", use_container_width=True):
@@ -767,66 +769,43 @@ def filter2(df_agence_Region):
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("Tout cocher", key="select_all_regions", use_container_width=True):
-                        st.session_state.selected_Region = online_regions
-                        st.session_state.selected_agencies = df_main['NomAgence'].unique().tolist()
+                        st.session_state.selected_agencies = all_online_agencies
                         st.rerun()
                 with col2:
                     if st.button("Tout décocher", key="deselect_all_regions", use_container_width=True):
-                        st.session_state.selected_Region = []
                         st.session_state.selected_agencies = []
                         st.rerun()
-                # --- SECTION 1: RÉGIONS CONNECTÉES (INTERACTIF) ---
-                st.write("**Régions connectées**")
-                
 
-                for Region in st.session_state.selected_Region[:]:
-                    if not st.checkbox(Region, value=True, key=f"cb_Region_sel_{Region}"):
-                        st.session_state.selected_Region.remove(Region)
-                        agencies_to_remove = df_main[df_main['Region'] == Region]['NomAgence'].unique().tolist()
-                        st.session_state.selected_agencies = [a for a in st.session_state.selected_agencies if a not in agencies_to_remove]
+                st.write("**Régions en lignes**")
+                
+                for region in online_regions:
+                    agencies_in_region = df_main[df_main['Region'] == region]['NomAgence'].unique()
+                    is_region_selected = any(agency in st.session_state.selected_agencies for agency in agencies_in_region)
+
+                    if st.checkbox(region, value=is_region_selected, key=f"cb_region_{region}") != is_region_selected:
+                        if is_region_selected: # Si on décoche, on retire toutes ses agences
+                            st.session_state.selected_agencies = [a for a in st.session_state.selected_agencies if a not in agencies_in_region]
+                        else: # Si on coche, on ajoute toutes ses agences
+                            st.session_state.selected_agencies.extend([a for a in agencies_in_region if a not in st.session_state.selected_agencies])
                         st.rerun()
                 
-
-                # --- SECTION 2: RÉGIONS DISPONIBLES (INTERACTIF) ---
-                st.write("**Régions déconnectées**")
-                available_Regionx = [r for r in online_regions if r not in st.session_state.selected_Region]
-                if available_Regionx:
-                    for Region in available_Regionx:
-                        if st.checkbox(Region, value=False, key=f"cb_Region_avail_{Region}"):
-                            st.session_state.selected_Region.append(Region)
-                            agencies_to_add = df_main[df_main['Region'] == Region]['NomAgence'].unique().tolist()
-                            st.session_state.selected_agencies.extend(agencies_to_add)
-                            st.rerun()
-                else:
-                    st.info("Toutes les régions disponibles sont sélectionnées.")
                 st.divider()
-
-                # --- SECTION 3: RÉGIONS HORS LIGNE (LECTURE SEULE) ---
-                st.write("**Régions hors ligne**")
+                st.write("**Régions hors lignes**")
                 if offline_regions:
                     for region in offline_regions:
                         st.markdown(f"• _{region}_")
                 else:
                     st.markdown("_Aucune région hors ligne._")
 
-        st.write(f"✅ {len(st.session_state.selected_Region)} Région(s) sélectionnées")
+        # L'état des régions sélectionnées est toujours DÉRIVÉ des agences
+        selected_regions = df_main[df_main['NomAgence'].isin(st.session_state.selected_agencies)]['Region'].unique().tolist()
+        st.write(f"✅ {len(selected_regions)}/{len(online_regions)} Région(s) sélectionnée(s)")
     
-    # Validation
-    if not st.session_state.selected_Region:
-        st.sidebar.warning("Vous devez sélectionner au moins une région.")
+    if not st.session_state.selected_agencies:
+        st.sidebar.warning("Vous devez sélectionner au moins une agence.")
         st.stop()
 
     # --- FILTRE AGENCE ---
-    # Lister les agences "En ligne" dans les régions sélectionnées
-    online_agencies_in_scope = df_main[df_main['Region'].isin(st.session_state.selected_Region)]['NomAgence'].unique().tolist()
-    
-    # Lister les agences "Hors ligne" dans les régions sélectionnées
-    all_agencies_in_scope = df_agence_Region[df_agence_Region['Region'].isin(st.session_state.selected_Region)]['NomAgence'].unique().tolist()
-    offline_agencies_in_scope = [a for a in all_agencies_in_scope if a not in online_agencies_in_scope]
-    
-    # Dictionnaire d'affichage (utilise le DF total pour avoir toutes les correspondances)
-    agency_display_map = { row['NomAgence']: f"{row['NomAgence']} ({row['Region']})" for _, row in df_agence_Region.iterrows() }
-
     st.sidebar.write(' ')
     with st.sidebar:
         with st.popover("Agences", use_container_width=True):
@@ -834,60 +813,44 @@ def filter2(df_agence_Region):
                 col3, col4 = st.columns(2)
                 with col3:
                     if st.button("Tout cocher", key="select_all_agences", use_container_width=True):
-                        st.session_state.selected_agencies = online_agencies_in_scope
-                        st.session_state.selected_Region =online_regions
+                        st.session_state.selected_agencies = all_online_agencies
                         st.rerun()
                 with col4:
                     if st.button("Tout décocher", key="deselect_all_agencies", use_container_width=True):
                         st.session_state.selected_agencies = []
-                        st.session_state.selected_Region = []
                         st.rerun()
+                
                 # --- SECTION 1: AGENCES CONNECTÉES (INTERACTIF) ---
-                st.write("**Agences connectées**")
-                
-
-                valid_selected_agencies = [a for a in st.session_state.selected_agencies if a in online_agencies_in_scope]
-                for agence in valid_selected_agencies[:]:
+                st.write("**Agences en lignes**")
+                # On itère sur TOUTES les agences en ligne, sans filtre de région
+                for agence in all_online_agencies:
+                    is_selected = agence in st.session_state.selected_agencies
                     display_label = agency_display_map.get(agence, agence)
-                    if not st.checkbox(display_label, value=True, key=f"cb_agence_sel_{agence}"):
-                        st.session_state.selected_agencies.remove(agence)
-                        # La logique de désélection du parent doit aussi utiliser df_main
-                        parent_Region = df_main[df_main['NomAgence'] == agence]['Region'].iloc[0]
-                        agences_du_parent = df_main[df_main['Region'] == parent_Region]['NomAgence'].unique()
-                        remaining_agencies = [a for a in st.session_state.selected_agencies if a in agences_du_parent]
-                        if not remaining_agencies:
-                            st.session_state.selected_Region.remove(parent_Region)
+                    
+                    if st.checkbox(display_label, value=is_selected, key=f"cb_agence_{agence}") != is_selected:
+                        if is_selected:
+                            st.session_state.selected_agencies.remove(agence)
+                        else:
+                            st.session_state.selected_agencies.append(agence)
                         st.rerun()
                 
                 st.divider()
-                # --- SECTION 2: AGENCES DISPONIBLES (INTERACTIF) ---
-                st.write("**Agences déconnectées**")
-                available_agencies = [a for a in online_agencies_in_scope if a not in valid_selected_agencies]
-                if available_agencies:
-                    for agence in available_agencies:
-                        display_label = agency_display_map.get(agence, agence)
-                        if st.checkbox(display_label, value=False, key=f"cb_agence_avail_{agence}"):
-                            st.session_state.selected_agencies.append(agence)
-                            st.rerun()
-                else:
-                    st.write("")
-                st.divider()
 
-                # --- SECTION 3: AGENCES HORS LIGNE (LECTURE SEULE) ---
-                st.write("**Agences hors ligne**")
+                # --- SECTION 2: AGENCES HORS LIGNE (LECTURE SEULE) ---
+                # Affiche les agences hors ligne des régions actuellement sélectionnées
+                st.write("**Agences hors lignes**")
+                online_agencies_in_scope = df_main[df_main['Region'].isin(selected_regions)]['NomAgence'].unique().tolist()
+                all_agencies_in_scope = df_agence_Region[df_agence_Region['Region'].isin(selected_regions)]['NomAgence'].unique().tolist()
+                offline_agencies_in_scope = sorted([a for a in all_agencies_in_scope if a not in online_agencies_in_scope])
+                
                 if offline_agencies_in_scope:
                     for agence in offline_agencies_in_scope:
                         display_label = agency_display_map.get(agence, agence)
                         st.markdown(f"• _{display_label}_")
                 else:
                     st.markdown("_Aucune agence hors ligne dans les régions sélectionnées._")
-
         
-        st.write(f"✅ {len(valid_selected_agencies)} Agence(s) sélectionnée(s)")
-                # Validation
-    if not valid_selected_agencies:
-        st.warning("Vous devez sélectionner au moins une agence.")
-        st.stop()
+        st.write(f"✅ {len(st.session_state.selected_agencies)}/{len(all_online_agencies)} Agence(s) sélectionnée(s)") 
         
 @st.cache_data(ttl=1800, show_spinner=False)  # Cache 30min pour les données principales
 def load_main_data(start_date, end_date):
