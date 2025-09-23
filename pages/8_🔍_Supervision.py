@@ -190,7 +190,7 @@ for i, nom_agence in enumerate(agences_a_afficher):
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
+st.divider()
 # --- TITRE DE LA SECTION ---
 # Affichez le titre ici, en pleine largeur, entre les deux grilles.
 if st.session_state.offline_agencies_in_scope:
