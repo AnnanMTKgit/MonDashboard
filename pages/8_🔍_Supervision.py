@@ -41,7 +41,7 @@ tab1, tab2, tab3 = st.tabs([
 
 with tab1:
  
-    st.markdown("<h1 style='text-align: center;'>État des Files d'Attente en Temps Réel</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;font-size:2em;'>État des Files d'Attente en Temps Réel</h1>", unsafe_allow_html=True)
     _, agg_global = AgenceTable(df_all_filtered, df_queue_filtered)
     agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
     
@@ -90,11 +90,6 @@ with tab1:
 
                 row['Status'] = get_status_info(row["Clients en Attente"], capacite=max_cap)
 
-            
-
-            
-            
-
                 services_dynamic_html = ""
                 if row['Services']:
                     for service_name, client_count in row['Services'].items():
@@ -107,7 +102,7 @@ with tab1:
                 else:
                     services_dynamic_html = "<div>Aucun service spécifié.</div>"
                 
-                with columns[i % num_cols]:
+                with columns[col_index]:
                     st.markdown(f"""
                         <div style="
                             background-color: {BackgroundGraphicColor}; 
@@ -132,6 +127,31 @@ with tab1:
                         </div>
                         """, unsafe_allow_html=True)   
                         
+    # st.divider()  
+    st.markdown("<h1 style='text-align: center;font-size:2em;'>Agences non Connectées</h1>", unsafe_allow_html=True)
+    columns = st.columns(num_cols)
+    for i, nom_agence in enumerate(st.session_state.offline_agencies_in_scope):
+            max_cap=st.session_state.all_agence_Region.loc[st.session_state.all_agence_Region['NomAgence']==nom_agence,'Capacites'].values[0]
+            max_cap = int(max_cap) 
+            col_index = i % num_cols
+            with columns[col_index]:
+                st.markdown(f"""
+                        <div style="
+                            background-color: #FFE4E1; 
+                            border: 1px solid #444; 
+                            border-radius: 10px; 
+                            padding: 12px 16px; 
+                            margin-bottom: 10px;
+                            color: black;
+                            min-height: 150px; /* Adjust this value as needed */
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="font-size: 16px;">{nom_agence}</strong>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 14px;">
+                                Capacité Maximale : <strong>{max_cap}</strong><br>
+                        </div>
+                        """, unsafe_allow_html=True) 
 
 
         

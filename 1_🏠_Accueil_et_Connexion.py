@@ -36,7 +36,7 @@ def initialize_session_state():
     st.session_state.start_date = datetime.now().date()
     st.session_state.end_date = datetime.now().date()
     st.session_state.selected_agencies = list(all_agencies_df['NomAgence'].unique())
-    
+    st.session_state.offline_agencies_in_scope = []
     # Initialiser les conteneurs de données et la clé de "cache manuel"
     st.session_state.df_main = pd.DataFrame()
     st.session_state.last_filter_key = None # Pour forcer le premier chargement
