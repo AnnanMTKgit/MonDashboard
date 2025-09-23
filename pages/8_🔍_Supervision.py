@@ -153,44 +153,44 @@ with tab1:
             services_dynamic_html = "<div>Aucun service spécifié.</div>"
         
         with columns_online[col_index]:
-            # st.markdown(f"""
-            #                 <div style="
-            #                     background-color: {BackgroundGraphicColor}; 
-            #                     border: 1px solid #444; 
-            #                     border-radius: 10px; 
-            #                     padding: 12px 16px; 
-            #                     margin-bottom: 10px;
-            #                     color: black;
-            #                     min-height: 150px; /* Adjust this value as needed */
-            #                 ">
-            #                     <div style="display: flex; justify-content: space-between; align-items: center;">
-            #                         <strong style="font-size: 16px;">{row['NomAgence']}</strong>
-            #                         <div style="display: flex; align-items: center;">
-            #                             <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
-            #                         </div>
-            #                     </div>
-            #                     <div style="margin-top: 10px; font-size: 14px;">
-            #                         Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
-            #                         Capacité Maximale : <strong>{max_cap}</strong><br>
-            #                         <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
-            #                             {services_dynamic_html}
-            #                 </div>
-            #                 """, unsafe_allow_html=True)
             st.markdown(f"""
-                <div style="{online_card_style}">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="font-size: 16px;">{row['NomAgence']}</strong>
-                        <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
-                    </div>
-                    <div style="margin-top: 10px; font-size: 14px;">
-                        Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
-                        Capacité Maximale : <strong>{max_cap}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
-                        {services_dynamic_html}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                            <div style="
+                                background-color: {BackgroundGraphicColor}; 
+                                border: 1px solid #D5D8DC; 
+                                border-radius: 10px; 
+                                padding: 12px 16px; 
+                                margin-bottom: 10px;
+                                color: black;
+                                min-height: 170px;
+                            ">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <strong style="font-size: 16px;">{row['NomAgence']}</strong>
+                                    <div style="display: flex; align-items: center;">
+                                        <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px; font-size: 14px;">
+                                    Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
+                                    Capacité Maximale : <strong>{max_cap}</strong><br>
+                                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
+                                        {services_dynamic_html}
+                            </div>
+                            """, unsafe_allow_html=True)
+            # st.markdown(f"""
+            #     <div style="{online_card_style}">
+            #         <div style="display: flex; justify-content: space-between; align-items: center;">
+            #             <strong style="font-size: 16px;">{row['NomAgence']}</strong>
+            #             <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
+            #         </div>
+            #         <div style="margin-top: 10px; font-size: 14px;">
+            #             Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
+            #             Capacité Maximale : <strong>{max_cap}</strong>
+            #         </div>
+            #         <div style="display: flex; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
+            #             {services_dynamic_html}
+            #         </div>
+            #     </div>
+            #     """, unsafe_allow_html=True)
     st.divider()
     # --- TITRE DE LA SECTION ---
     # Affichez le titre ici, en pleine largeur, entre les deux grilles.
