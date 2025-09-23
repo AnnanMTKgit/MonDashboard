@@ -841,7 +841,7 @@ def filter2(df_agence_Region):
                 st.write("**Agences hors lignes**")
                 online_agencies_in_scope = df_main[df_main['Region'].isin(selected_regions)]['NomAgence'].unique().tolist()
                 all_agencies_in_scope = df_agence_Region[df_agence_Region['Region'].isin(all_regions_total)]['NomAgence'].unique().tolist()
-                offline_agencies_in_scope = [a for a in all_agencies_in_scope if a not in online_agencies_in_scope]
+                offline_agencies_in_scope = [a for a in all_agencies_in_scope if a not in online_agencies_in_scope and pd.notna(a)]
                 st.session_state.offline_agencies_in_scope = offline_agencies_in_scope  # Pour tests éventuels
                 if offline_agencies_in_scope:
                     for agence in offline_agencies_in_scope:
