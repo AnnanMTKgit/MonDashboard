@@ -40,6 +40,7 @@ tab1, tab2, tab3 = st.tabs([
 
 
 with tab1:
+
     # --- Définir les styles au début pour la lisibilité ---
     online_card_style = """
         background-color: #F8F9F9; 
@@ -104,123 +105,123 @@ with tab1:
     
 
 
-# Chargez les styles UNE SEULE FOIS au début, avant toute boucle.
-try:
-    with open("led.css") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-except FileNotFoundError:
-    st.error("Le fichier 'led.css' est manquant.")
-# --- SECTION 1 : AGENCES CONNECTÉES ---
-# Créez des colonnes spécifiquement pour cette section
-columns_online = st.columns(num_cols)
+    # Chargez les styles UNE SEULE FOIS au début, avant toute boucle.
+    try:
+        with open("led.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.error("Le fichier 'led.css' est manquant.")
+    # --- SECTION 1 : AGENCES CONNECTÉES ---
+    # Créez des colonnes spécifiquement pour cette section
+    columns_online = st.columns(num_cols)
 
-# Boucle uniquement sur les agences en ligne
-for i, nom_agence in enumerate(agences_a_afficher):
-    col_index = i % num_cols
-    
-    agence_data = agg_global[agg_global["Nom d'Agence"] == nom_agence]
-    
-    # Votre logique de récupération de données reste la même
-    max_cap = agence_data['Capacité'].values[0]
-    queue_now = agence_data['Nbs de Clients en Attente'].values[0]
-    df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
-    services_agence = df_agence_queue['NomService'].unique()
-    
-    service_dict = {}
-    for service in services_agence:
-        df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
-        attente_service = current_attente(df_service_queue, nom_agence)
-        service_dict[service]=attente_service
+    # Boucle uniquement sur les agences en ligne
+    for i, nom_agence in enumerate(agences_a_afficher):
+        col_index = i % num_cols
         
-    row = {
-        "NomAgence": nom_agence,
-        "Clients en Attente": queue_now,
-        "Services": service_dict,
-        "Status": get_status_info(queue_now, capacite=max_cap)
-    }
-    
-    # with open("led.css") as f:
-    #     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+        agence_data = agg_global[agg_global["Nom d'Agence"] == nom_agence]
+        
+        # Votre logique de récupération de données reste la même
+        max_cap = agence_data['Capacité'].values[0]
+        queue_now = agence_data['Nbs de Clients en Attente'].values[0]
+        df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
+        services_agence = df_agence_queue['NomService'].unique()
+        
+        service_dict = {}
+        for service in services_agence:
+            df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
+            attente_service = current_attente(df_service_queue, nom_agence)
+            service_dict[service]=attente_service
+            
+        row = {
+            "NomAgence": nom_agence,
+            "Clients en Attente": queue_now,
+            "Services": service_dict,
+            "Status": get_status_info(queue_now, capacite=max_cap)
+        }
+        
+        # with open("led.css") as f:
+        #     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-    services_dynamic_html = ""
-    if row['Services']:
-        for service_name, client_count in row['Services'].items():
-            services_dynamic_html += f"""<div style="text-align: center; margin: 0 5px;">
-                    {service_name}<br><strong>{client_count}</strong>
-                </div>"""
-    else:
-        services_dynamic_html = "<div>Aucun service spécifié.</div>"
-    
-    with columns_online[col_index]:
-        # st.markdown(f"""
-        #                 <div style="
-        #                     background-color: {BackgroundGraphicColor}; 
-        #                     border: 1px solid #444; 
-        #                     border-radius: 10px; 
-        #                     padding: 12px 16px; 
-        #                     margin-bottom: 10px;
-        #                     color: black;
-        #                     min-height: 150px; /* Adjust this value as needed */
-        #                 ">
-        #                     <div style="display: flex; justify-content: space-between; align-items: center;">
-        #                         <strong style="font-size: 16px;">{row['NomAgence']}</strong>
-        #                         <div style="display: flex; align-items: center;">
-        #                             <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
-        #                         </div>
-        #                     </div>
-        #                     <div style="margin-top: 10px; font-size: 14px;">
-        #                         Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
-        #                         Capacité Maximale : <strong>{max_cap}</strong><br>
-        #                         <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
-        #                             {services_dynamic_html}
-        #                 </div>
-        #                 """, unsafe_allow_html=True)
-        st.markdown(f"""
-            <div style="{online_card_style}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="font-size: 16px;">{row['NomAgence']}</strong>
-                    <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
+        services_dynamic_html = ""
+        if row['Services']:
+            for service_name, client_count in row['Services'].items():
+                services_dynamic_html += f"""<div style="text-align: center; margin: 0 5px;">
+                        {service_name}<br><strong>{client_count}</strong>
+                    </div>"""
+        else:
+            services_dynamic_html = "<div>Aucun service spécifié.</div>"
+        
+        with columns_online[col_index]:
+            # st.markdown(f"""
+            #                 <div style="
+            #                     background-color: {BackgroundGraphicColor}; 
+            #                     border: 1px solid #444; 
+            #                     border-radius: 10px; 
+            #                     padding: 12px 16px; 
+            #                     margin-bottom: 10px;
+            #                     color: black;
+            #                     min-height: 150px; /* Adjust this value as needed */
+            #                 ">
+            #                     <div style="display: flex; justify-content: space-between; align-items: center;">
+            #                         <strong style="font-size: 16px;">{row['NomAgence']}</strong>
+            #                         <div style="display: flex; align-items: center;">
+            #                             <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
+            #                         </div>
+            #                     </div>
+            #                     <div style="margin-top: 10px; font-size: 14px;">
+            #                         Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
+            #                         Capacité Maximale : <strong>{max_cap}</strong><br>
+            #                         <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
+            #                             {services_dynamic_html}
+            #                 </div>
+            #                 """, unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style="{online_card_style}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="font-size: 16px;">{row['NomAgence']}</strong>
+                        <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 14px;">
+                        Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
+                        Capacité Maximale : <strong>{max_cap}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
+                        {services_dynamic_html}
+                    </div>
                 </div>
-                <div style="margin-top: 10px; font-size: 14px;">
-                    Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
-                    Capacité Maximale : <strong>{max_cap}</strong>
-                </div>
-                <div style="display: flex; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
-                    {services_dynamic_html}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-st.divider()
-# --- TITRE DE LA SECTION ---
-# Affichez le titre ici, en pleine largeur, entre les deux grilles.
-if st.session_state.offline_agencies_in_scope:
-    st.markdown(f"<h3 style='{section_title_style}'>Agences Hors Lignes</h3>", unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+    st.divider()
+    # --- TITRE DE LA SECTION ---
+    # Affichez le titre ici, en pleine largeur, entre les deux grilles.
+    if st.session_state.offline_agencies_in_scope:
+        st.markdown(f"<h3 style='{section_title_style}'>Agences Hors Lignes</h3>", unsafe_allow_html=True)
 
-# --- SECTION 2 : AGENCES HORS LIGNE ---
-# Créez un NOUVEL ensemble de colonnes pour garantir un alignement parfait
-columns_offline = st.columns(num_cols)
+    # --- SECTION 2 : AGENCES HORS LIGNE ---
+    # Créez un NOUVEL ensemble de colonnes pour garantir un alignement parfait
+    columns_offline = st.columns(num_cols)
 
-# Boucle uniquement sur les agences hors ligne
-for i, nom_agence in enumerate(st.session_state.offline_agencies_in_scope):
-    col_index = i % num_cols
-    
-    with columns_offline[col_index]:
-        try:
-            max_cap = st.session_state.all_agence_Region.loc[st.session_state.all_agence_Region['NomAgence']==nom_agence, 'Capacites'].values[0]
-            max_cap = int(max_cap)
-        except (IndexError, ValueError):
-            max_cap = "N/A"
+    # Boucle uniquement sur les agences hors ligne
+    for i, nom_agence in enumerate(st.session_state.offline_agencies_in_scope):
+        col_index = i % num_cols
+        
+        with columns_offline[col_index]:
+            try:
+                max_cap = st.session_state.all_agence_Region.loc[st.session_state.all_agence_Region['NomAgence']==nom_agence, 'Capacites'].values[0]
+                max_cap = int(max_cap)
+            except (IndexError, ValueError):
+                max_cap = "N/A"
 
-        st.markdown(f"""
-            <div style="{offline_card_style}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="font-size: 16px;">{nom_agence}</strong>
+            st.markdown(f"""
+                <div style="{offline_card_style}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="font-size: 16px;">{nom_agence}</strong>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 14px;">
+                        Capacité Maximale : <strong>{max_cap}</strong>
+                    </div>
                 </div>
-                <div style="margin-top: 10px; font-size: 14px;">
-                    Capacité Maximale : <strong>{max_cap}</strong>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
     # columns = st.columns(num_cols)
     # for i,nom_agence in enumerate(agences_a_afficher):
             
