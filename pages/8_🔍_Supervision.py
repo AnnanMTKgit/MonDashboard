@@ -32,10 +32,11 @@ if df_all_filtered.empty:
 
 
 # --- Navigation par onglets pour la page de supervision ---
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3,tab4 = st.tabs([
     "Monitoring de la Congestion en Grille",
     "Opérations sur Rendez-vous",
-    "Évolution des Temps sur la Période"
+    "Évolution des Temps sur la Période",
+    "Prédiction de l'Affluence future Par Agence"
 ])
 
 
@@ -176,21 +177,7 @@ with tab1:
                                         {services_dynamic_html}
                             </div>
                             """, unsafe_allow_html=True)
-            # st.markdown(f"""
-            #     <div style="{online_card_style}">
-            #         <div style="display: flex; justify-content: space-between; align-items: center;">
-            #             <strong style="font-size: 16px;">{row['NomAgence']}</strong>
-            #             <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
-            #         </div>
-            #         <div style="margin-top: 10px; font-size: 14px;">
-            #             Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
-            #             Capacité Maximale : <strong>{max_cap}</strong>
-            #         </div>
-            #         <div style="display: flex; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
-            #             {services_dynamic_html}
-            #         </div>
-            #     </div>
-            #     """, unsafe_allow_html=True)
+            
     st.divider()
     # --- TITRE DE LA SECTION ---
     # Affichez le titre ici, en pleine largeur, entre les deux grilles.
@@ -222,173 +209,7 @@ with tab1:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-    # columns = st.columns(num_cols)
-    # for i,nom_agence in enumerate(agences_a_afficher):
-            
-    #         col_index = i % num_cols
-            
-    #         agence_data = agg_global[agg_global["Nom d'Agence"] == nom_agence]
-    #         if not agence_data.empty and  i<num_agences:
-
-    #             max_cap = agence_data['Capacité'].values[0]
-    #             queue_now = agence_data['Nbs de Clients en Attente'].values[0]
-                
-                
-                
-    #             # Récupérer les services pour cette agence spécifique
-    #             df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
-    #             services_agence = df_agence_queue['NomService'].unique()
-                
-    #             # On ne peut pas mettre des colonnes dans des colonnes facilement en Streamlit
-    #             # On va donc les afficher verticalement.
-    #             service_dict = {}
-    #             for service in services_agence:
-                    
-    #                 df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
-    #                 attente_service = current_attente(df_service_queue, nom_agence)
-    #                 service_dict[service]=attente_service
-    #             row = {
-    #                 "NomAgence": nom_agence,
-    #                 "Clients en Attente": queue_now,
-    #                 "Services": service_dict,
-    #                 "Status":None
-    #             }
-                
-    #                         # --- 2. Load the external CSS file ---
-    #             with open("led.css") as f:
-    #                 st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-    #             row['Status'] = get_status_info(row["Clients en Attente"], capacite=max_cap)
-
-    #             services_dynamic_html = ""
-    #             if row['Services']:
-    #                 for service_name, client_count in row['Services'].items():
-                        
-    #                     services_dynamic_html += f""" <div style="text-align: center;">
-    #                             {service_name}<br>
-    #                             <strong>{client_count}</strong>
-    #                         </div>
-    #                     """
-    #             else:
-    #                 services_dynamic_html = "<div>Aucun service spécifié.</div>"
-                
-                
-    #             with columns[col_index]:
-
-                    
-    #                 st.markdown(f"""
-    #                     <div style="
-    #                         background-color: {BackgroundGraphicColor}; 
-    #                         border: 1px solid #444; 
-    #                         border-radius: 10px; 
-    #                         padding: 12px 16px; 
-    #                         margin-bottom: 10px;
-    #                         color: black;
-    #                         min-height: 150px; /* Adjust this value as needed */
-    #                     ">
-    #                         <div style="display: flex; justify-content: space-between; align-items: center;">
-    #                             <strong style="font-size: 16px;">{row['NomAgence']}</strong>
-    #                             <div style="display: flex; align-items: center;">
-    #                                 <span class="status-led {row['Status']}"><span class="tooltiptext"></span></span> <span style="font-size: 14px;"></span>
-    #                             </div>
-    #                         </div>
-    #                         <div style="margin-top: 10px; font-size: 14px;">
-    #                             Clients en attente : <strong>{row['Clients en Attente']}</strong><br>
-    #                             Capacité Maximale : <strong>{max_cap}</strong><br>
-    #                             <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 10px;">
-    #                                 {services_dynamic_html}
-    #                     </div>
-    #                     """, unsafe_allow_html=True)
-            
-    #         else:
-
-                
-                        
-                
-                
-                
-                
-    #             with columns[col_index]:
-                    
-    #                 if  j<3:
-                        
-                            
-    #                     if j==0:
-    #                         st.divider()
-    #                         st.markdown("</div></div>", unsafe_allow_html=True)
-                               
-    #                     elif j==1:
-    #                         st.divider()
-    #                         st.text("Agence Hors Ligne")
-                            
-    #                     else:
-    #                         st.divider()
-    #                         st.markdown("</div></div>", unsafe_allow_html=True)
-    #                 max_cap=st.session_state.all_agence_Region.loc[st.session_state.all_agence_Region['NomAgence']==nom_agence,'Capacites'].values[0]
-    #                 max_cap = int(max_cap) 
-                
-                    
-    #                 st.markdown(f"""
-    #                             <div style="
-    #                                 background-color: #FFE4E1; 
-    #                                 border: 1px solid #444; 
-    #                                 border-radius: 10px; 
-    #                                 padding: 12px 16px; 
-    #                                 margin-bottom: 10px;
-    #                                 color: black;
-    #                                 min-height: 150px; /* Adjust this value as needed */
-    #                             ">
-    #                                 <div style="display: flex; justify-content: space-between; align-items: center;">
-    #                                     <strong style="font-size: 16px;">{nom_agence}</strong>
-    #                                 </div>
-    #                                 <div style="margin-top: 10px; font-size: 14px;">
-    #                                     Capacité Maximale : <strong>{max_cap}</strong><br>
-    #                             </div>
-    #                             """, unsafe_allow_html=True)
-    #             j+=1
-            
-            
-                   
     
-    # columns = st.columns(num_cols)
-    # columns = st.columns(3)
-    # cpt=0
-    # for agence in st.session_state.offline_agencies_in_scope:
-    #         max_cap=st.session_state.all_agence_Region.loc[st.session_state.all_agence_Region['NomAgence']==agence,'Capacites'].values[0]
-    #         max_cap = int(max_cap) 
-    #         col_index = cpt % num_cols
-    #         with columns[col_index]:
-    #             st.markdown(f"""
-    #                     <div style="
-    #                         background-color: #FFE4E1; 
-    #                         border: 1px solid #444; 
-    #                         border-radius: 10px; 
-    #                         padding: 12px 16px; 
-    #                         margin-bottom: 10px;
-    #                         color: black;
-    #                         min-height: 150px; /* Adjust this value as needed */
-    #                     ">
-    #                         <div style="display: flex; justify-content: space-between; align-items: center;">
-    #                             <strong style="font-size: 16px;">{agence}</strong>
-    #                         </div>
-    #                         <div style="margin-top: 10px; font-size: 14px;">
-    #                             Capacité Maximale : <strong>{max_cap}</strong><br>
-    #                     </div>
-    #                     """, unsafe_allow_html=True)
-    #         cpt+=1   
-
-# services_dynamic_html = ""
-#                 if row['Services']:
-#                     for service_name, client_count in row['Services'].items():
-                        
-#                         services_dynamic_html += f""" <div style="text-align: center;">
-#                                 {service_name}<br>
-#                                 <strong>{client_count}</strong>
-#                             </div>
-#                         """
-#                 else:
-#                     services_dynamic_html = "<div>Aucun service spécifié.</div>"
-                
         
 
 with tab2:
@@ -461,3 +282,131 @@ with tab3:
         if st.button("Suivant ▶️", use_container_width=True, disabled=(area_index >= total_figures - 1),key='area_next'):
             st.session_state.current_area += 1
             st.rerun()
+
+with tab4:
+    # st.title("📈 Prédiction de l'Affluence des Agences")
+    # --- Exécution du pipeline ---
+    model, scaler = load_model_and_scaler() 
+    
+
+    df_actual=df_queue_filtered[["Date_Reservation","Date_Appel","Date_Fin","NomAgence"]]
+    
+    yesterday = st.session_state.end_date - timedelta(days=1)
+    
+    is_today = (st.session_state.end_date == datetime.now().date())
+    
+    if is_today:
+
+
+        df_past = run_query(conn, SQLQueries().AllQueueQueries, params=(yesterday,yesterday))
+
+        df_past = df_past[df_past['NomAgence'].isin(st.session_state.selected_agencies)]
+        df_past = df_past[["Date_Reservation","Date_Appel","Date_Fin","NomAgence"]]
+        # --- Exécution du pipeline ---
+        df_observed, df_predictions, current_time = run_prediction_pipeline(df_actual, df_past)
+
+        
+        if df_observed is not None and df_predictions is not None:
+
+            #st.info(f"Prédictions générées à partir du {current_time.strftime('%Y-%m-%d %H:%M')}")
+            
+            agencies = df_observed.index.get_level_values(0).unique().tolist()
+            
+            # --- Barre latérale pour la sélection ---
+            selected_agency = st.selectbox("Sélectionnez une agence", agencies)
+            
+            # --- Filtrage des données pour l'agence sélectionnée ---
+            observed_agency_data = df_observed.loc[selected_agency]
+            predicted_agency_data = df_predictions.loc[selected_agency]
+            
+            # --- Préparation des données pour le graphique ---
+            # On affiche les 24h avant la prédiction + les 24h de prédiction
+            display_start_time = current_time - pd.Timedelta(hours=23)
+            
+            past_data = observed_agency_data.loc[display_start_time:current_time]['nb_attente']
+            future_data = predicted_agency_data['prediction']
+            
+            dates_list = past_data.index.strftime('%Y-%m-%d %Hh').tolist() + future_data.index.strftime('%Y-%m-%d %Hh').tolist()
+            past_values = np.round(past_data.values, 2).tolist()
+            future_values = np.round(future_data.values, 2).tolist()
+
+            # --- Configuration du graphique st_echarts ---
+            options = {'title': {'text': f"Affluence Observée et Prédite pour {selected_agency}", 'left': 'center'},
+                "tooltip": {"trigger": "axis"},
+                "legend": {"data": ["Affluence observée", "Prédictions"], "top": 30, "left": "center"},
+                "xAxis": {
+                    "type": "category", 
+                    "data": dates_list,
+                    "axisLabel": {"rotate": 45}
+                },
+                "yAxis": {"type": "value", "name": "Affluence Moyenne"},
+                "series": [
+                    {
+                        "name": "Affluence observée", "type": "line", "data": past_values,
+                        "lineStyle": {"color": "#3398DB", "width": 3}, "itemStyle": {"color": "#3398DB"},
+                    },
+                    {
+                        "name": "Prédictions", "type": "line", 
+                        "data": [None] * len(past_values) + future_values,
+                        "lineStyle": {"color": "#FF5733", "type": "dashed", "width": 3}, 
+                        "itemStyle": {"color": "#FF5733"},
+                    },
+                ],
+                "visualMap": {
+                    "top": 50, "right": 10, "show": False,
+                    "pieces": [{"gt": 0, "lte": len(past_values) -1, "color": "#3398DB"},
+                            {"gte": len(past_values), "color": "#FF5733"}],
+                    "outOfRange": {"color": "#999"}
+                },
+                "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+                "grid": {"left": "5%", "right": "5%", "bottom": "15%"}
+            }
+            
+            
+            st_echarts(options=options, height="500px")
+            
+            # st.subheader("Détail des Prédictions")
+            # st.dataframe(future_data)
+
+        else:
+            st.error("Impossible de générer les prédictions. Veuillez vérifier les fichiers de données ou le modèle.")
+
+    else:
+        st.info(f"Pas de Prédictions Futures")
+        st.markdown(f"<h1 style='text-align: center;font-size:2em;'>Affluence observées lors de la dernière journée ouvrable ({df_actual['Date_Reservation'].max().date()})</h1>", unsafe_allow_html=True)
+        
+        
+        # Pour la vue historique, on ne veut que les données de la journée sélectionnée.
+        df_to_process = df_queue_filtered[df_queue_filtered['Date_Reservation'].dt.date == df_actual['Date_Reservation'].max().date()]
+        
+        if df_to_process.empty:
+            st.warning(f"Aucune donnée disponible")
+        else:
+            # On utilise une fonction simple, cachée, juste pour le prétraitement.
+            
+            df_historical = get_historical_data(df_to_process)
+            
+            if df_historical is not None:
+                agencies = df_historical.index.get_level_values(0).unique().tolist()
+                # MODIFICATION : On place aussi ce multiselect dans une colonne
+                col1, col2 = st.columns([20, 80])
+                with col1:
+                    selected_agency = st.selectbox("Sélectionnez une agence", agencies)
+            
+            
+            
+                with col2:
+                    
+                    
+                    agency_data = df_historical.loc[selected_agency]
+                    
+                    options = { "title": {"text": f"{selected_agency}", "left": "center"},
+                        "tooltip": {"trigger": "axis"},
+                        "xAxis": {"type": "category", "data": agency_data.index.strftime('%Hh').tolist()},
+                        "yAxis": {"type": "value", "name": "Affluence Moyenne"},
+                        "series": [{"name": "Affluence observée", "type": "line", "data": np.round(agency_data['nb_attente'].values, 0).tolist(), "color": "#3398DB"}],
+                        "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+                    }
+                        
+                    st_echarts(options=options, height="500px")
+                

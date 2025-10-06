@@ -2766,3 +2766,188 @@ def run_analysis_pipeline(_df_source, filtrer_semaine=True):
     
     df_rapport = creer_rapport_horaire_pandas_simple(df_evenements)
     return df_rapport
+
+
+############################ Afluence ##########################
+
+
+import holidays
+from tensorflow.keras.models import load_model
+from joblib import load
+\
+
+# ==============================================================================
+# PARTIE 1 : VOS FONCTIONS DE PRÉTRAITEMENT (INCHANGÉES)
+# ==============================================================================
+# Ces fonctions sont nécessaires pour préparer les données avant la prédiction.
+
+COUNTRY_CODE = 'SN' 
+HOLIDAYS_OBJ = holidays.CountryHoliday(COUNTRY_CODE)
+
+def _apply_common_processing_steps_base(df_raw, all_known_agencies, fixed_min_date=None, fixed_max_date=None, is_actual_data_processing=False, current_time_for_processing=None):
+    if not df_raw.empty:
+        df_raw.drop_duplicates(subset=['Date_Reservation', 'NomAgence'], inplace=True)
+        df_raw.dropna(subset=['Date_Reservation'], inplace=True)
+    agencies_in_raw_data = df_raw['NomAgence'].unique().tolist() if not df_raw.empty else []
+    agencies_to_process = sorted(list(set(all_known_agencies or []) | set(agencies_in_raw_data)))
+    if not agencies_to_process: return None
+    df_events_by_agency = pd.DataFrame(columns=['NomAgence', 'nb_attente'], index=pd.to_datetime([]))
+    if not df_raw.empty:
+        def _calculate_nb_attente_for_group(group_df):
+            starts = group_df[['Date_Reservation']].copy(); starts.rename(columns={'Date_Reservation': 'time'}, inplace=True); starts['change'] = 1
+            ends = group_df[['Date_Fin']].dropna().copy(); ends.rename(columns={'Date_Fin': 'time'}, inplace=True); ends['change'] = -1
+            events = pd.concat([starts, ends]).sort_values('time').reset_index(drop=True)
+            events['active_clients'] = events['change'].cumsum()
+            events['nb_attente'] = events['active_clients'].shift(1).fillna(0)
+            df_events_with_wait = events[events['change'] == 1][['time', 'nb_attente']].rename(columns={'time': 'Date_Reservation'})
+            df_events_with_wait['nb_attente'] = df_events_with_wait['nb_attente'].clip(lower=0).astype(int)
+            return df_events_with_wait
+        temp_df_events_by_agency = df_raw.groupby('NomAgence').apply(_calculate_nb_attente_for_group)
+        if not temp_df_events_by_agency.empty:
+            df_events_by_agency = temp_df_events_by_agency.reset_index(level='NomAgence')
+            df_events_by_agency.set_index('Date_Reservation', inplace=True)
+    final_hourly_dfs = []
+    system_current_max_date = current_time_for_processing.ceil('H') if is_actual_data_processing else None
+    if df_raw.empty:
+        default_min_date = fixed_min_date if fixed_min_date else (pd.Timestamp.now().floor('D') + pd.Timedelta(hours=7))
+        default_max_date = fixed_max_date if fixed_max_date else system_current_max_date if is_actual_data_processing else (pd.Timestamp.now().ceil('D') - pd.Timedelta(minutes=1))
+    else:
+        default_min_date = fixed_min_date if fixed_min_date else df_raw['Date_Reservation'].min().floor('D')
+        default_max_date_from_raw = fixed_max_date if fixed_max_date else df_raw['Date_Reservation'].max().ceil('D') - pd.Timedelta(minutes=1)
+        if is_actual_data_processing: default_max_date = min(system_current_max_date, default_max_date_from_raw)
+        else: default_max_date = default_max_date_from_raw
+    for agency in agencies_to_process:
+        df_agency_events = df_events_by_agency[df_events_by_agency['NomAgence'] == agency]
+        if not df_agency_events.empty:
+            min_date = df_agency_events.index.min().floor('D')
+            max_date_candidate = df_agency_events.index.max().ceil('H')
+            if is_actual_data_processing: max_date = min(system_current_max_date, max_date_candidate)
+            else: max_date = max_date_candidate
+        else: min_date = default_min_date; max_date = default_max_date
+        if min_date > max_date: continue
+        full_time_index = pd.date_range(start=min_date, end=max_date, freq="T")
+        if full_time_index.empty: continue
+        df_base = pd.DataFrame(index=full_time_index)
+        df_minute = pd.merge_asof(left=df_base, right=df_agency_events.sort_index(), left_index=True, right_index=True)
+        df_minute['nb_attente'].fillna(0, inplace=True)
+        df_hourly = df_minute['nb_attente'].resample('H').mean().to_frame()
+        df_hourly['nb_attente'].fillna(0, inplace=True)
+        df_hourly['jour_semaine'] = df_hourly.index.dayofweek
+        df_hourly['est_ferie'] = df_hourly.index.to_series().dt.date.isin(HOLIDAYS_OBJ).astype(int)
+        df_hourly.loc[~df_hourly.index.hour.isin(range(7, 19)), 'nb_attente'] = 0
+        df_hourly.loc[df_hourly.index.dayofweek >= 5, 'nb_attente'] = 0
+        df_hourly.loc[df_hourly['est_ferie'] == 1, 'nb_attente'] = 0
+        df_hourly['NomAgence'] = agency
+        final_hourly_dfs.append(df_hourly)
+    if not final_hourly_dfs: return None
+    df_global_processed = pd.concat(final_hourly_dfs).set_index('NomAgence', append=True).swaplevel(0, 1).sort_index()
+    return df_global_processed
+
+# ==============================================================================
+# PARTIE 2 : PIPELINE DE PRÉDICTION (MISE EN CACHE)
+# ==============================================================================
+# Étape A : Charger les ressources lourdes UNE SEULE FOIS
+@st.cache_resource
+def load_model_and_scaler():
+    """Charge le modèle et le scaler depuis le disque. Mis en cache pour toute la session."""
+    
+    try:
+        model = load_model('final_lstm_model.h5')
+        scaler = load('final_scaler.gz')
+        return model, scaler
+    except Exception as e:
+        st.error(f"Erreur critique lors du chargement des fichiers modèle/scaler : {e}")
+        return None, None
+@st.cache_data
+def run_prediction_pipeline(df_raw_actual, df_raw_past):
+    """Fonction principale qui exécute tout le pipeline et met en cache les résultats."""
+    # On récupère les ressources lourdes depuis leur propre fonction cachée
+    model, scaler = load_model_and_scaler()
+    if not model or not scaler:
+        return None, None, None
+    # --- 1. Paramètres ---
+    LOOK_BACK = 24
+    HOURS_TO_PREDICT = 24
+    FEATURES = ['nb_attente', 'jour_semaine', 'est_ferie']
+    N_FEATURES = len(FEATURES)
+    
+    CURRENT_TIME = df_raw_actual['Date_Reservation'].max().ceil('H')
+    
+    # --- 2. Chargement des artefacts ---
+    try:
+        model = load_model('final_lstm_model.h5')
+        scaler = load('final_scaler.gz')
+    except Exception as e:
+        st.error(f"Erreur lors du chargement du modèle ou du scaler : {e}")
+        return None, None, None
+
+    # --- 3. Prétraitement des données ---
+    all_agencies = df_raw_actual['NomAgence'].unique().tolist()
+    date_for_history = CURRENT_TIME.floor('D') - pd.Timedelta(days=1)
+    
+    
+
+    df_past_processed = _apply_common_processing_steps_base(df_raw_past, all_agencies, date_for_history.floor('D'), date_for_history.ceil('D') - pd.Timedelta(minutes=1), current_time_for_processing=CURRENT_TIME)
+    df_actual_processed = _apply_common_processing_steps_base(df_raw_actual, all_agencies, CURRENT_TIME.floor('D'), is_actual_data_processing=True, current_time_for_processing=CURRENT_TIME)
+    
+    df_observed = pd.concat([df_past_processed, df_actual_processed])
+    df_observed = df_observed[~df_observed.index.duplicated(keep='last')].sort_index()
+    
+    final_predictions_all_agencies = []
+    
+    for agency in all_agencies:
+        agency_data = df_observed.loc[agency]
+        
+        # --- 4. Préparation de la séquence d'entrée ---
+        last_known_hour = agency_data.index.max()
+        start_time_sequence = last_known_hour - pd.Timedelta(hours=LOOK_BACK - 1)
+        last_sequence = agency_data.loc[start_time_sequence : last_known_hour]
+        
+        if len(last_sequence) < LOOK_BACK:
+            missing_hours = LOOK_BACK - len(last_sequence)
+            pad_index = pd.date_range(start=start_time_sequence - pd.Timedelta(hours=missing_hours), periods=missing_hours, freq='H')
+            pad_df = pd.DataFrame(0, index=pad_index, columns=FEATURES)
+            pad_df['jour_semaine'] = pad_df.index.dayofweek
+            pad_df['est_ferie'] = pad_df.index.to_series().dt.date.isin(HOLIDAYS_OBJ).astype(int)
+            last_sequence = pd.concat([pad_df, last_sequence[FEATURES]])
+        
+        input_features = last_sequence[FEATURES]
+        scaled_input = scaler.transform(input_features)
+        current_batch = scaled_input.reshape((1, LOOK_BACK, N_FEATURES))
+        
+        # --- 5. Boucle de prédiction ---
+        future_predictions_scaled = []
+        for i in range(HOURS_TO_PREDICT):
+            pred_scaled = model.predict(current_batch, verbose=0)[0]
+            future_predictions_scaled.append(pred_scaled)
+            next_hour = last_known_hour + pd.Timedelta(hours=i + 1)
+            temp_scaler_input = np.array([[0, next_hour.dayofweek, 1 if next_hour.date() in HOLIDAYS_OBJ else 0]])
+            scaled_features = scaler.transform(temp_scaler_input)[0]
+            next_step_features = np.array([pred_scaled[0], scaled_features[1], scaled_features[2]])
+            next_batch_reshaped = next_step_features.reshape((1, 1, N_FEATURES))
+            current_batch = np.append(current_batch[:, 1:, :], next_batch_reshaped, axis=1)
+
+        # --- 6. Post-traitement ---
+        future_predictions_scaled_array = np.array(future_predictions_scaled)
+        to_inverse = np.zeros((len(future_predictions_scaled_array), N_FEATURES))
+        to_inverse[:, 0] = future_predictions_scaled_array.ravel()
+        future_predictions_raw = scaler.inverse_transform(to_inverse)[:, 0]
+        future_predictions_processed = np.round(future_predictions_raw).clip(0)
+        future_dates = pd.date_range(start=last_known_hour + pd.Timedelta(hours=1), periods=HOURS_TO_PREDICT, freq='H')
+        df_predictions = pd.DataFrame(future_predictions_processed, index=future_dates, columns=['prediction'])
+        df_predictions.loc[~df_predictions.index.hour.isin(range(7, 19)), 'prediction'] = 0
+        df_predictions.loc[df_predictions.index.dayofweek >= 5, 'prediction'] = 0
+        df_predictions.loc[df_predictions.index.to_series().dt.date.isin(HOLIDAYS_OBJ), 'prediction'] = 0
+        df_predictions['NomAgence'] = agency
+        final_predictions_all_agencies.append(df_predictions)
+        
+    if not final_predictions_all_agencies:
+        return None, None, None
+
+    df_final_predictions = pd.concat(final_predictions_all_agencies).set_index('NomAgence', append=True).swaplevel(0, 1).sort_index()
+    return df_observed, df_final_predictions, CURRENT_TIME
+
+#@st.cache_data
+def get_historical_data(_df):
+    all_agencies = _df['NomAgence'].unique().tolist()
+    return _apply_common_processing_steps_base(_df, all_agencies, is_actual_data_processing=True, current_time_for_processing=_df['Date_Reservation'].max())
