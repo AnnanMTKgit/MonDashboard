@@ -33,10 +33,10 @@ if df_all_filtered.empty:
 
 # --- Navigation par onglets pour la page de supervision ---
 tab1, tab2, tab3,tab4 = st.tabs([
-    "Monitoring de la Congestion en Grille",
+    "Monitoring de la Congestion",
     "Opérations sur Rendez-vous",
     "Évolution des Temps sur la Période",
-    "Prédiction de l'Affluence future Par Agence"
+    "Prédiction de l'Affluence future"
 ])
 
 
@@ -305,42 +305,33 @@ with tab4:
         # --- Exécution du pipeline ---
         df_observed, df_predictions, current_time = run_prediction_pipeline(df_actual, df_past)
 
-        
         if df_observed is not None and df_predictions is not None:
+            
+            # --- ÉTAPE 1 : Préparer TOUTES les configurations de graphiques (inchangé) ---
+            all_agencies = df_predictions.index.get_level_values('NomAgence').unique().tolist()
+            figures_options = [] # Liste pour stocker les options de chaque graphique
 
-            #st.info(f"Prédictions générées à partir du {current_time.strftime('%Y-%m-%d %H:%M')}")
-            
-            agencies = df_observed.index.get_level_values(0).unique().tolist()
-            
-            # --- Barre latérale pour la sélection ---
-            selected_agency = st.selectbox("Sélectionnez une agence", agencies)
-            
-            # --- Filtrage des données pour l'agence sélectionnée ---
-            observed_agency_data = df_observed.loc[selected_agency]
-            predicted_agency_data = df_predictions.loc[selected_agency]
-            
-            # --- Préparation des données pour le graphique ---
-            # On affiche les 24h avant la prédiction + les 24h de prédiction
-            display_start_time = current_time - pd.Timedelta(hours=23)
-            
-            past_data = observed_agency_data.loc[display_start_time:current_time]['nb_attente']
-            future_data = predicted_agency_data['prediction']
-            
-            dates_list = past_data.index.strftime('%Y-%m-%d %Hh').tolist() + future_data.index.strftime('%Y-%m-%d %Hh').tolist()
-            past_values = np.round(past_data.values, 2).tolist()
-            future_values = np.round(future_data.values, 2).tolist()
+            for agency in all_agencies:
+                observed_agency_data = df_observed.loc[agency]
+                predicted_agency_data = df_predictions.loc[agency]
+                
+                # ... (votre logique de préparation des données pour le graphique : past_data, future_data, etc.)
+                display_start_time = current_time - pd.Timedelta(hours=23)
+                past_data = observed_agency_data.loc[display_start_time:current_time]['nb_attente']
+                future_data = predicted_agency_data['prediction']
+                dates_list = past_data.index.strftime('%Y-%m-%d %Hh').tolist() + future_data.index.strftime('%Y-%m-%d %Hh').tolist()
+                past_values = np.round(past_data.values, 2).tolist()
+                future_values = np.round(future_data.values, 2).tolist()
 
-            # --- Configuration du graphique st_echarts ---
-            options = {'title': {'text': f"Affluence Observée et Prédite pour {selected_agency}", 'left': 'center'},
-                "tooltip": {"trigger": "axis"},
-                "legend": {"data": ["Affluence observée", "Prédictions"], "top": 30, "left": "center"},
-                "xAxis": {
-                    "type": "category", 
-                    "data": dates_list,
-                    "axisLabel": {"rotate": 45}
-                },
-                "yAxis": {"type": "value", "name": "Affluence Moyenne"},
-                "series": [
+                options = {
+                    # On peut simplifier le titre car le nom de l'agence sera au-dessus du graphique
+                    #'title': {'text': "Observé vs. Prédit", 'left': 'center', 'textStyle': {'fontSize': 14}},
+                    "tooltip": {"trigger": "axis"},
+                    "legend": {"data": ["Affluence observée", "Prédictions"], "left": "center", "top": 30},
+                    "xAxis": {"type": "category", "data": dates_list},
+                    "yAxis": {"type": "value", "name": "Moyenne"},
+                    
+                    "series": [
                     {
                         "name": "Affluence observée", "type": "line", "data": past_values,
                         "lineStyle": {"color": "#3398DB", "width": 3}, "itemStyle": {"color": "#3398DB"},
@@ -352,24 +343,122 @@ with tab4:
                         "itemStyle": {"color": "#FF5733"},
                     },
                 ],
-                "visualMap": {
+                   "visualMap": {
                     "top": 50, "right": 10, "show": False,
                     "pieces": [{"gt": 0, "lte": len(past_values) -1, "color": "#3398DB"},
                             {"gte": len(past_values), "color": "#FF5733"}],
                     "outOfRange": {"color": "#999"}
                 },
-                "dataZoom": [{"type": "inside"}, {"type": "slider"}],
-                "grid": {"left": "5%", "right": "5%", "bottom": "15%"}
-            }
-            
-            
-            st_echarts(options=options, height="500px")
-            
-            # st.subheader("Détail des Prédictions")
-            # st.dataframe(future_data)
+                    "grid": {"left": "10%", "right": "5%", "top": "20%", "bottom": "20%"} # Ajuster pour laisser de la place
+                }
+                figures_options.append(options)
+
+            # --- ÉTAPE 2 : NOUVELLE LOGIQUE D'AFFICHAGE EN GRILLE ---
+            total_figures = len(figures_options)
+
+            if total_figures > 0:
+                st.markdown("---")
+                # Ajouter un contrôle pour que l'utilisateur choisisse la disposition
+                num_columns = 2
+                # st.number_input(
+                #     'Nombre de graphiques par ligne :', 
+                #     min_value=1, 
+                #     max_value=4, 
+                #     value=2, 
+                #     step=1
+                # )
+                
+                # Boucler par "lignes" de graphiques
+                for i in range(0, total_figures, num_columns):
+                    
+                    cols = st.columns(num_columns)
+                    
+                    # Récupérer le sous-ensemble de graphiques pour cette ligne
+                    row_figures_options = figures_options[i : i + num_columns]
+                    row_agencies = all_agencies[i : i + num_columns]
+                    
+                    # Remplir chaque colonne avec un graphique
+                    for j, col in enumerate(cols):
+                        if j < len(row_figures_options): # S'assurer de ne pas dépasser pour la dernière ligne
+                            with col:
+                                # Afficher le nom de l'agence en titre
+                                
+                                st.markdown(f"<h1 style='text-align: center;font-size:1em;'>{row_agencies[j]}</h1>", unsafe_allow_html=True)
+                                # Afficher le graphique
+                                st_echarts(
+                                    options=row_figures_options[j],
+                                    height="500px",
+                                    key=f"grid_chart_{row_agencies[j]}" # Clé unique et stable
+                                )
+            else:
+                st.warning("Aucun graphique à afficher.")
 
         else:
-            st.error("Impossible de générer les prédictions. Veuillez vérifier les fichiers de données ou le modèle.")
+            st.error("Impossible de générer les prédictions.")
+        # if df_observed is not None and df_predictions is not None:
+
+        #     #st.info(f"Prédictions générées à partir du {current_time.strftime('%Y-%m-%d %H:%M')}")
+            
+        #     agencies = df_observed.index.get_level_values(0).unique().tolist()
+            
+        #     # --- Barre latérale pour la sélection ---
+        #     selected_agency = st.selectbox("Sélectionnez une agence", agencies)
+            
+        #     # --- Filtrage des données pour l'agence sélectionnée ---
+        #     observed_agency_data = df_observed.loc[selected_agency]
+        #     predicted_agency_data = df_predictions.loc[selected_agency]
+            
+        #     # --- Préparation des données pour le graphique ---
+        #     # On affiche les 24h avant la prédiction + les 24h de prédiction
+        #     display_start_time = current_time - pd.Timedelta(hours=23)
+            
+        #     past_data = observed_agency_data.loc[display_start_time:current_time]['nb_attente']
+        #     future_data = predicted_agency_data['prediction']
+            
+        #     dates_list = past_data.index.strftime('%Y-%m-%d %Hh').tolist() + future_data.index.strftime('%Y-%m-%d %Hh').tolist()
+        #     past_values = np.round(past_data.values, 2).tolist()
+        #     future_values = np.round(future_data.values, 2).tolist()
+
+        #     # --- Configuration du graphique st_echarts ---
+        #     options = {'title': {'text': f"Affluence Observée et Prédite pour {selected_agency}", 'left': 'center'},
+        #         "tooltip": {"trigger": "axis"},
+        #         "legend": {"data": ["Affluence observée", "Prédictions"], "top": 30, "left": "center"},
+        #         "xAxis": {
+        #             "type": "category", 
+        #             "data": dates_list,
+        #             "axisLabel": {"rotate": 45}
+        #         },
+        #         "yAxis": {"type": "value", "name": "Affluence Moyenne"},
+        #         "series": [
+        #             {
+        #                 "name": "Affluence observée", "type": "line", "data": past_values,
+        #                 "lineStyle": {"color": "#3398DB", "width": 3}, "itemStyle": {"color": "#3398DB"},
+        #             },
+        #             {
+        #                 "name": "Prédictions", "type": "line", 
+        #                 "data": [None] * len(past_values) + future_values,
+        #                 "lineStyle": {"color": "#FF5733", "type": "dashed", "width": 3}, 
+        #                 "itemStyle": {"color": "#FF5733"},
+        #             },
+        #         ],
+        #         "visualMap": {
+        #             "top": 50, "right": 10, "show": False,
+        #             "pieces": [{"gt": 0, "lte": len(past_values) -1, "color": "#3398DB"},
+        #                     {"gte": len(past_values), "color": "#FF5733"}],
+        #             "outOfRange": {"color": "#999"}
+        #         },
+        #         "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+        #         "grid": {"left": "5%", "right": "5%", "bottom": "15%"}
+        #     }
+            
+            
+        #     st_echarts(options=options, height="500px")
+            
+        #     # st.subheader("Détail des Prédictions")
+        #     # st.dataframe(future_data)
+
+        # else:
+        #     st.error("Impossible de générer les prédictions. Veuillez vérifier les fichiers de données ou le modèle.")
 
     else:
         st.info(f"Pas de Prédictions Futures")
