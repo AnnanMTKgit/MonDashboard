@@ -2858,7 +2858,9 @@ def load_model_and_scaler():
     except Exception as e:
         st.error(f"Erreur critique lors du chargement des fichiers modèle/scaler : {e}")
         return None, None
-@st.cache_data
+    
+
+@st.cache_data(show_spinner="Prédiction en cours...")
 def run_prediction_pipeline(df_raw_actual, df_raw_past):
     """Fonction principale qui exécute tout le pipeline et met en cache les résultats."""
     # On récupère les ressources lourdes depuis leur propre fonction cachée
