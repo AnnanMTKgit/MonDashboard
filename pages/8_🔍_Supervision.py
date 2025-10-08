@@ -322,26 +322,58 @@ with tab4:
                 dates_list = past_data.index.strftime('%Y-%m-%d %Hh').tolist() + future_data.index.strftime('%Y-%m-%d %Hh').tolist()
                 past_values = np.round(past_data.values, 2).tolist()
                 future_values = np.round(future_data.values, 2).tolist()
-
+                prediction_start_index = len(past_values)
+                # Le libellé sur l'axe X à cet index
+                # On ajoute une sécurité pour éviter un IndexError si future_data est vide
+                prediction_start_label = dates_list[prediction_start_index] if prediction_start_index < len(dates_list) else None
                 options = {
                     # On peut simplifier le titre car le nom de l'agence sera au-dessus du graphique
                     #'title': {'text': "Observé vs. Prédit", 'left': 'center', 'textStyle': {'fontSize': 14}},
                     "tooltip": {"trigger": "axis"},
-                    "legend": {"data": ["Affluence observée", "Prédictions"], "left": "center", "top": 30},
-                    "xAxis": {"type": "category", "data": dates_list},
+                    "legend": {"data": ["Affluence observée", "Affluence Prédite"], "left": "center", "top": 30},
+                    "xAxis": {"type": "category", "data": dates_list,"name": "Horaire"},
                     "yAxis": {"type": "value", "name": "Moyenne"},
                     
                     "series": [
                     {
                         "name": "Affluence observée", "type": "line", "data": past_values,
                         "lineStyle": {"color": "#3398DB", "width": 3}, "itemStyle": {"color": "#3398DB"},
+                        
                     },
                     {
-                        "name": "Prédictions", "type": "line", 
+                        "name": "Affluence Prédite", "type": "line", 
                         "data": [None] * len(past_values) + future_values,
                         "lineStyle": {"color": "#FF5733", "type": "dashed", "width": 3}, 
                         "itemStyle": {"color": "#FF5733"},
+                        # --- C'EST ICI QUE L'ON AJOUTE LA LIGNE VERTICALE ---
+            'markLine': {
+                'symbol': 'none',  # Pour ne pas avoir de flèches au bout de la ligne
+                'data': [
+                    {
+                        'xAxis': prediction_start_label, # On positionne la ligne sur la bonne date/heure
+                        'lineStyle': {
+                            'color': 'green',      # Une couleur grise discrète
+                            'type': 'dashed',   # En pointillé
+                            'width': 2
+                        },
+                        'label': {
+                            'show': True,
+                            'position': 'end', 
+                            # Le texte à afficher
+                            'formatter': 'Début de Prédiction', 
+                            'color': 'green',
+                            'fontSize': 12,
+                            'fontWeight': 'bold',
+                            'backgroundColor': 'white', 
+                            'padding': [2, 4],            
+                            'borderRadius': 3          
+                        }
+                    }
+                ]
+            } if prediction_start_label else {} # On n'ajoute la ligne que si le label existe
                     },
+                
+                
                 ],
                    "visualMap": {
                     "top": 50, "right": 10, "show": False,
@@ -390,7 +422,8 @@ with tab4:
                                     height="500px",
                                     key=f"grid_chart_{row_agencies[j]}" # Clé unique et stable
                                 )
-            else:
+                                
+            else:               
                 st.warning("Aucun graphique à afficher.")
 
         else:

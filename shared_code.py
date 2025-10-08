@@ -1641,7 +1641,7 @@ def area_graph2(data,concern='UserName',time='TempOperation',date_to_bin='Date_F
         }},
     "tooltip": {"trigger": "axis"},
     "legend": {"data": top_agences,'orient':'vertical',"left": 'right'}, # Use the list of agencies for the legend
-    "grid": {"left": '10%', "right": '10%', "bottom": '5%',"top":"5%", "containLabel": True},
+    "grid": {"left": '5%', "right": '5%', "bottom": '5%',"top":"5%", "containLabel": True},
     "toolbox": {"left": "5%", "feature": {"saveAsImage": {},"magicType": {
                 "show": True,
                 "type": ['line', 'bar', 'stack'], # Types de graphiques interchangeables
@@ -2873,8 +2873,10 @@ def run_prediction_pipeline(df_raw_actual, df_raw_past):
     FEATURES = ['nb_attente', 'jour_semaine', 'est_ferie']
     N_FEATURES = len(FEATURES)
     
-    CURRENT_TIME = df_raw_actual['Date_Reservation'].max().ceil('H')
     
+    CURRENT_TIME = df_raw_actual['Date_Reservation'].max().floor('H')
+    
+
     # --- 2. Chargement des artefacts ---
     try:
         model = load_model('final_lstm_model.h5')
