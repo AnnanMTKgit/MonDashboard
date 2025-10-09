@@ -213,6 +213,7 @@ with tab1:
         
 
 with tab2:
+    st.markdown("---")
     st.header("Pas de données encore disponible")
     
     # if st.session_state.df_RH.empty:
@@ -233,7 +234,7 @@ with tab2:
     #     st.dataframe(agg_rh, use_container_width=True)
 
 with tab3:
-    
+    st.markdown("---")
     
     option1=area_graph2(df_all_filtered, concern='NomAgence', time='TempsAttenteReel', date_to_bin='Date_Appel', seuil=15, title="Top 5 des Agences les Plus Lentes en Temps d'Attente")     
     option2=area_graph2(df_all_filtered, concern='NomAgence', time='TempOperation', date_to_bin='Date_Fin', seuil=5, title="Top 5 des Agences les Plus Lentes en Temps d'Opération")
@@ -296,7 +297,7 @@ with tab4:
     is_today = (st.session_state.end_date == datetime.now().date())
     
     if is_today:
-
+        
 
         df_past = run_query(conn, SQLQueries().AllQueueQueries, params=(yesterday,yesterday))
 
@@ -331,7 +332,7 @@ with tab4:
                     #'title': {'text': "Observé vs. Prédit", 'left': 'center', 'textStyle': {'fontSize': 14}},
                     "tooltip": {"trigger": "axis"},
                     "legend": {"data": ["Affluence observée", "Affluence Prédite"], "left": "center", "top": 30},
-                    "xAxis": {"type": "category", "data": dates_list,"name": "Horaire"},
+                    "xAxis": {"type": "category", "data": dates_list},
                     "yAxis": {"type": "value", "name": "Moyenne"},
                     
                     "series": [
@@ -428,71 +429,9 @@ with tab4:
 
         else:
             st.error("Impossible de générer les prédictions.")
-        # if df_observed is not None and df_predictions is not None:
+        
 
-        #     #st.info(f"Prédictions générées à partir du {current_time.strftime('%Y-%m-%d %H:%M')}")
-            
-        #     agencies = df_observed.index.get_level_values(0).unique().tolist()
-            
-        #     # --- Barre latérale pour la sélection ---
-        #     selected_agency = st.selectbox("Sélectionnez une agence", agencies)
-            
-        #     # --- Filtrage des données pour l'agence sélectionnée ---
-        #     observed_agency_data = df_observed.loc[selected_agency]
-        #     predicted_agency_data = df_predictions.loc[selected_agency]
-            
-        #     # --- Préparation des données pour le graphique ---
-        #     # On affiche les 24h avant la prédiction + les 24h de prédiction
-        #     display_start_time = current_time - pd.Timedelta(hours=23)
-            
-        #     past_data = observed_agency_data.loc[display_start_time:current_time]['nb_attente']
-        #     future_data = predicted_agency_data['prediction']
-            
-        #     dates_list = past_data.index.strftime('%Y-%m-%d %Hh').tolist() + future_data.index.strftime('%Y-%m-%d %Hh').tolist()
-        #     past_values = np.round(past_data.values, 2).tolist()
-        #     future_values = np.round(future_data.values, 2).tolist()
-
-        #     # --- Configuration du graphique st_echarts ---
-        #     options = {'title': {'text': f"Affluence Observée et Prédite pour {selected_agency}", 'left': 'center'},
-        #         "tooltip": {"trigger": "axis"},
-        #         "legend": {"data": ["Affluence observée", "Prédictions"], "top": 30, "left": "center"},
-        #         "xAxis": {
-        #             "type": "category", 
-        #             "data": dates_list,
-        #             "axisLabel": {"rotate": 45}
-        #         },
-        #         "yAxis": {"type": "value", "name": "Affluence Moyenne"},
-        #         "series": [
-        #             {
-        #                 "name": "Affluence observée", "type": "line", "data": past_values,
-        #                 "lineStyle": {"color": "#3398DB", "width": 3}, "itemStyle": {"color": "#3398DB"},
-        #             },
-        #             {
-        #                 "name": "Prédictions", "type": "line", 
-        #                 "data": [None] * len(past_values) + future_values,
-        #                 "lineStyle": {"color": "#FF5733", "type": "dashed", "width": 3}, 
-        #                 "itemStyle": {"color": "#FF5733"},
-        #             },
-        #         ],
-        #         "visualMap": {
-        #             "top": 50, "right": 10, "show": False,
-        #             "pieces": [{"gt": 0, "lte": len(past_values) -1, "color": "#3398DB"},
-        #                     {"gte": len(past_values), "color": "#FF5733"}],
-        #             "outOfRange": {"color": "#999"}
-        #         },
-        #         "dataZoom": [{"type": "inside"}, {"type": "slider"}],
-        #         "grid": {"left": "5%", "right": "5%", "bottom": "15%"}
-        #     }
-            
-            
-        #     st_echarts(options=options, height="500px")
-            
-        #     # st.subheader("Détail des Prédictions")
-        #     # st.dataframe(future_data)
-
-        # else:
-        #     st.error("Impossible de générer les prédictions. Veuillez vérifier les fichiers de données ou le modèle.")
-
+        
     else:
         st.info(f"Pas de Prédictions Futures")
         st.markdown(f"<h1 style='text-align: center;font-size:2em;'>Affluence observées lors de la dernière journée ouvrable ({df_actual['Date_Reservation'].max().date()})</h1>", unsafe_allow_html=True)

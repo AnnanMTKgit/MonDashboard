@@ -2862,6 +2862,8 @@ def load_model_and_scaler():
 
 @st.cache_data(show_spinner="Prédiction en cours...")
 def run_prediction_pipeline(df_raw_actual, df_raw_past):
+
+    
     """Fonction principale qui exécute tout le pipeline et met en cache les résultats."""
     # On récupère les ressources lourdes depuis leur propre fonction cachée
     model, scaler = load_model_and_scaler()
@@ -2875,7 +2877,7 @@ def run_prediction_pipeline(df_raw_actual, df_raw_past):
     
     
     CURRENT_TIME = df_raw_actual['Date_Reservation'].max().floor('H')
-    
+                  
 
     # --- 2. Chargement des artefacts ---
     try:
@@ -2949,6 +2951,10 @@ def run_prediction_pipeline(df_raw_actual, df_raw_past):
         return None, None, None
 
     df_final_predictions = pd.concat(final_predictions_all_agencies).set_index('NomAgence', append=True).swaplevel(0, 1).sort_index()
+    
+    
+    
+     # Affichage des dimensions des DataFrames pour le débogage
     return df_observed, df_final_predictions, CURRENT_TIME
 
 #@st.cache_data
