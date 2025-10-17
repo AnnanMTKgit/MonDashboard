@@ -3,6 +3,8 @@ import streamlit as st
 from shared_code import *
 from st_aggrid.shared import JsCode
 
+# Mettre le minuteur en place dès le début de la page
+setup_auto_refresh(interval_minutes=1)
 
 load_and_display_css()
 

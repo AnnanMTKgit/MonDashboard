@@ -5,12 +5,14 @@ import numpy as np
 import plotly.express as px
 import warnings
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
-from streamlit_folium import st_folium 
 warnings.filterwarnings('ignore')
+from streamlit_folium import st_folium 
 from streamlit_option_menu import option_menu
+from streamlit.components.v1 import html
+from streamlit_echarts import st_echarts,JsCode
+from streamlit_autorefresh import st_autorefresh
 import time
 import plotly.graph_objects as go
-from streamlit.components.v1 import html
 import pydeck as pdk
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -29,8 +31,8 @@ from datetime import datetime, timedelta
 from openpyxl.utils import get_column_letter ##
 from openpyxl.worksheet.table import Table, TableStyleInfo ##
 import base64
-from streamlit_echarts import st_echarts,JsCode
 import math
+
 # import pyspark
 # from pyspark.sql import SparkSession, Window, DataFrame
 # from pyspark.sql.functions import col, lit, sum, countDistinct, monotonically_increasing_id
@@ -75,6 +77,23 @@ data_visualization_colors = [
     green_color,  # Jaune Tournesol
     "#586F7C",  # Gris Ardoise
 ]
+
+
+##### Minuteur pour rafraîchir chaque page #####
+
+
+
+def setup_auto_refresh(interval_minutes=1):
+    
+    # L'intervalle est en millisecondes, donc on convertit
+    interval_ms = interval_minutes * 60 * 1000
+    
+    # Exécute le composant d'actualisation automatique
+    # La clé (key) est importante pour que Streamlit gère correctement le composant
+    st_autorefresh(interval=interval_ms, limit=None, key="auto_refresher")
+    #st.toast(f"Page actualisée", icon='🔄')
+
+
 
 
 # --- Classes et Fonctions de Connexion BDD (depuis query.py et sql.py) ---

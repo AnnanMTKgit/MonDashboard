@@ -2,6 +2,9 @@
 import streamlit as st
 from shared_code import *
 
+# Mettre le minuteur en place dès le début de la page
+setup_auto_refresh(interval_minutes=1)
+
 st.markdown("<h1 style='text-align: center;'>Congestion et Localisation des Agences</h1>", unsafe_allow_html=True)
 
 load_and_display_css()

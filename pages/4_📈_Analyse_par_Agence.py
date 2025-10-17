@@ -1,6 +1,12 @@
 # pages/4_📈_Analyse_par_Agence.py
 import streamlit as st
 from shared_code import *
+
+# Mettre le minuteur en place dès le début de la page
+setup_auto_refresh(interval_minutes=1)
+
+
+
 st.markdown("<h1 style='text-align: center;'>Analyse Détaillée par Agence</h1>", unsafe_allow_html=True)
 st.markdown(""" <style>iframe[title="streamlit_echarts.st_echarts"]{ height: 500px !important } """, unsafe_allow_html=True)
 load_and_display_css()
