@@ -94,9 +94,7 @@ def show_agent_dashboard():
 def show_admin_dashboard():
     """Prépare l'environnement pour les admins et affiche la page d'accueil."""
     
-    # CORRECTION : On doit appeler ces fonctions pour que les autres pages fonctionnent
-    create_sidebar_filters()
-
+   
 
     # Affichage de la page d'accueil pour l'admin
     st.title(f"🏠 Bienvenue, {st.session_state.username}!")

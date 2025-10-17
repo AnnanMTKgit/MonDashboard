@@ -83,7 +83,7 @@ data_visualization_colors = [
 
 
 
-def setup_auto_refresh(interval_minutes=1):
+def setup_auto_refresh(interval_minutes=5):
     
     # L'intervalle est en millisecondes, donc on convertit
     interval_ms = interval_minutes * 60 * 1000
