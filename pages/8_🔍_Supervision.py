@@ -4,7 +4,7 @@ from shared_code import *
 import pandas as pd
 
 # Mettre le minuteur en place dès le début de la page
-setup_auto_refresh(interval_minutes=1)
+setup_auto_refresh(interval_minutes=10)
 
 
 st.markdown(""" <style>iframe[title="streamlit_echarts.st_echarts"]{ height: 500px !important } """, unsafe_allow_html=True)

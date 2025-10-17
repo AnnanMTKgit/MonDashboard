@@ -3,7 +3,7 @@ import streamlit as st
 from shared_code import *
 
 # Mettre le minuteur en place dès le début de la page
-setup_auto_refresh(interval_minutes=1)
+setup_auto_refresh(interval_minutes=10)
 
 
 
