@@ -44,104 +44,81 @@ if df_selection.empty:
     
 #st.divider()
 
-# --- Onglets de visualisation ---
-tab1, tab2, tab3,tab4 = st.tabs(["Performance en Volume", "Performance en Temps","Evolution en Temps par Agent", "Vue par Catégorie"])
+# --- 1. Configuration des onglets et de l'état de session ---
+AGENT_TABS = ["Performance en Volume", "Performance en Temps", "Evolution en Temps par Agent", "Vue par Catégorie"]
 
-with tab1:
-    
-    #pie_charts = Graphs_pie(df_selection)
+if 'active_agent_tab_index' not in st.session_state:
+    st.session_state.active_agent_tab_index = 0
+if 'current_stacked_agent' not in st.session_state: # État pour le carrousel de l'onglet 4
+    st.session_state.current_stacked_agent = 0
+
+# --- 2. Préparation des figures pour chaque onglet ---
+# Onglet 1
+pie_option1 = create_pie_chart2(df_selection, title='Traitée')
+pie_option2 = create_pie_chart2(df_selection, title='Passée')
+pie_option3 = create_pie_chart2(df_selection, title='Rejetée')
+# Onglet 2
+bar_option1 = create_bar_chart2(df_selection, status='Traitée')
+bar_option2 = create_bar_chart2(df_selection, status='Passée', color=green_color)
+bar_option3 = create_bar_chart2(df_selection, status='Rejetée', color=blue_clair_color)
+# Onglet 3
+line_chart_tab3 = plot_line_chart(df_selection)
+# Onglet 4 (Carrousel)
+figures_tab4 = [
+    stacked_chart2(df_selection, 'TempOperation', 'UserName', titre="Total des opérations par Agent et par Catégorie"),
+    stacked_agent2(df_selection, concern='UserName', type='Type_Operation', titre="Top 10 des opérations effectuées par Agent")
+]
+total_figures_tab4 = len(figures_tab4)
+
+# --- 3. Affichage du menu de navigation ---
+selected_tab = option_menu(
+    menu_title=None,
+    options=AGENT_TABS,
+    icons=['pie-chart-fill', 'bar-chart-fill', 'graph-up', 'grid-fill'],
+    orientation="horizontal",
+    default_index=st.session_state.active_agent_tab_index,
+    styles={
+        "container": {"padding": "0!important", "background-color": "#fafafa", "border-bottom": "1px solid #ddd"},
+        "icon": {"color": "#6c757d", "font-size": "18px"},
+        "nav-link": {"font-size": "16px", "text-align": "center", "margin":"0px", "--hover-color": "#eee"},
+        "nav-link-selected": {"background-color": "transparent", "color": "#e74c3c", "border-bottom": "3px solid #e74c3c"},
+    }
+)
+
+# --- 4. Affichage du contenu de l'onglet sélectionné ---
+if selected_tab == AGENT_TABS[0]:
     c1, c2, c3 = st.columns(3)
     with c1:
-       
-        option1=create_pie_chart2(df_selection,title='Traitée')
-        st_echarts( options=option1, height="600px",key='pie_1')
-        
-        # st.plotly_chart(pie_charts[0], use_container_width=True)
+        st_echarts(options=pie_option1, height="600px", key='pie_1')
     with c2:
-        
-        option2=create_pie_chart2(df_selection,title='Passée')
-        st_echarts( options=option2, height="600px",key="pie_2")
-        #st.plotly_chart(pie_charts[1], use_container_width=True)
+        st_echarts(options=pie_option2, height="600px", key="pie_2")
     with c3:
-        
-        option3=create_pie_chart2(df_selection,title='Rejetée')
-        st_echarts( options=option3, height="600px",key="pie_3")
-        #st.plotly_chart(pie_charts[2], use_container_width=True)
-    
-    
+        st_echarts(options=pie_option3, height="600px", key="pie_3")
 
-with tab2:
-    #bar_charts=Graphs_bar(df_selection)
-    #st.plotly_chart(bar_charts[1], use_container_width=True)
+elif selected_tab == AGENT_TABS[1]:
     c1, c2, c3 = st.columns(3)
     with c1:
-       
-        option1=create_bar_chart2(df_selection,status='Traitée')
-    
-        st_echarts( options=option1, height="600px",key="bar_1")
-        
-        # st.plotly_chart(pie_charts[0], use_container_width=True)
+        st_echarts(options=bar_option1, height="600px", key="bar_1")
     with c2:
-        
-        option2=create_bar_chart2(df_selection,status='Passée',color=green_color)
-        st_echarts( options=option2, height="600px",key="bar_2")
-        #st.plotly_chart(pie_charts[1], use_container_width=True)
+        st_echarts(options=bar_option2, height="600px", key="bar_2")
     with c3:
-        
-        option3=create_bar_chart2(df_selection,status='Rejetée',color=blue_clair_color)
-        st_echarts( options=option3, height="600px",key="bar_3")
-        #st.plotly_chart(pie_charts[2], use_container_width=True)
-    
+        st_echarts(options=bar_option3, height="600px", key="bar_3")
 
-with tab3:
-    line_chart = plot_line_chart(df_selection)
-    st.plotly_chart(line_chart, use_container_width=True)
+elif selected_tab == AGENT_TABS[2]:
+    st.plotly_chart(line_chart_tab3, use_container_width=True)
 
-
-with tab4:
-    
-   
-    option1 = stacked_chart2(df_selection, 'TempOperation', 'UserName', titre="Total des opérations par Agent et par Catégorie")
-        
-    option2 = stacked_agent2(df_selection, concern='UserName', type='Type_Operation',titre="Top 10 des opérations effectuées par Agent")
-    
-    figures = [option1, option2]
-    total_figures = len(figures)
-    if 'current_stacked_agent' not in st.session_state:
-        st.session_state.current_stacked_agent = 0
-
-
-  
+elif selected_tab == AGENT_TABS[3]:
     stacked_agent_index = st.session_state.current_stacked_agent
+    st_echarts(options=figures_tab4[stacked_agent_index], height="600px", key=f"area_{stacked_agent_index}")
 
-    
-    st_echarts(
-        options=figures[stacked_agent_index],
-        height="600px",
-        key=f"area_{stacked_agent_index}" 
-    )
-
-    
-    # Étape B : Créer les colonnes pour la navigation EN DESSOUS de la figure.
-    # On utilise 3 colonnes pour un layout équilibré : [Bouton Précédent | Texte Central | Bouton Suivant]
-    col1, col2, col3 = st.columns([2, 1, 2]) # Le ratio donne plus d'espace aux boutons
-
+    col1, col2, col3 = st.columns([2, 1, 2])
     with col1:
-        # Le bouton est désactivé si on est sur la première figure
-        if st.button("◀️ Précédent", use_container_width=True, disabled=(stacked_agent_index == 0),key="stacked_agent_prev"):
+        if st.button("◀️ Précédent", use_container_width=True, disabled=(stacked_agent_index == 0), key="stacked_agent_prev"):
             st.session_state.current_stacked_agent -= 1
-            st.rerun() # On force le rafraîchissement pour voir le changement
-
+            st.rerun()
     with col2:
-        # Affiche le statut "page / total" au centre.
-        # On utilise du Markdown pour centrer le texte.
-        st.markdown(
-            f"<p style='text-align: center; font-weight: bold;'>Figure {stacked_agent_index + 1} / {total_figures}</p>", 
-            unsafe_allow_html=True
-        )
-
+        st.markdown(f"<p style='text-align: center; font-weight: bold;'>Figure {stacked_agent_index + 1} / {total_figures_tab4}</p>", unsafe_allow_html=True)
     with col3:
-        # Le bouton est désactivé si on est sur la dernière figure
-        if st.button("Suivant ▶️", use_container_width=True, disabled=(stacked_agent_index>= total_figures - 1),key='area_next'):
+        if st.button("Suivant ▶️", use_container_width=True, disabled=(stacked_agent_index >= total_figures_tab4 - 1), key='stacked_agent_next'):
             st.session_state.current_stacked_agent += 1
             st.rerun()

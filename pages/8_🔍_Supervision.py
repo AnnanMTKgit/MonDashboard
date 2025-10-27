@@ -35,17 +35,47 @@ if df_all_filtered.empty:
 
 
 
-
-# --- Navigation par onglets pour la page de supervision ---
-tab1, tab2, tab3,tab4 = st.tabs([
+# --- 1. Configuration des onglets et de l'état de session ---
+SUPERVISION_TABS = [
     "Monitoring de la Congestion",
     "Opérations sur Rendez-vous",
     "Évolution des Temps sur la Période",
     "Prédiction de l'Affluence future"
-])
+]
+
+if 'active_supervision_tab_index' not in st.session_state:
+    st.session_state.active_supervision_tab_index = 0
+if 'current_area' not in st.session_state: # Pour le carrousel de l'onglet 3
+    st.session_state.current_area = 0
+
+# --- 2. Préparation des figures pour les onglets ---
+# Seul l'onglet 3 a un carrousel, nous préparons donc ses figures à l'avance.
+figures_tab3 = [
+    area_graph2(df_all_filtered, concern='NomAgence', time='TempsAttenteReel', date_to_bin='Date_Appel', seuil=15, title="Top 5 des Agences les Plus Lentes en Temps d'Attente"),
+    area_graph2(df_all_filtered, concern='NomAgence', time='TempOperation', date_to_bin='Date_Fin', seuil=5, title="Top 5 des Agences les Plus Lentes en Temps d'Opération")
+]
+total_figures_tab3 = len(figures_tab3)
+
+# --- 3. Affichage du menu de navigation ---
+selected_tab = option_menu(
+    menu_title=None,
+    options=SUPERVISION_TABS,
+    icons=['binoculars-fill', 'calendar-check', 'graph-up-arrow', 'magic'],
+    orientation="horizontal",
+    default_index=st.session_state.active_supervision_tab_index,
+    styles={
+        "container": {"padding": "0!important", "background-color": "#fafafa", "border-bottom": "1px solid #ddd"},
+        "icon": {"color": "#6c757d", "font-size": "18px"},
+        "nav-link": {"font-size": "16px", "text-align": "center", "margin":"0px", "--hover-color": "#eee"},
+        "nav-link-selected": {"background-color": "transparent", "color": "#e74c3c", "border-bottom": "3px solid #e74c3c"},
+    }
+)
+
+# --- 4. Affichage du contenu de l'onglet sélectionné ---
+# L'ensemble de votre code original est copié ici, dans la structure if/elif.
 
 
-with tab1:
+if selected_tab == SUPERVISION_TABS[0]:
 
     # --- Définir les styles au début pour la lisibilité ---
     online_card_style = """
@@ -217,7 +247,7 @@ with tab1:
     
         
 
-with tab2:
+elif selected_tab == SUPERVISION_TABS[1]:
     st.markdown("---")
     st.header("Pas de données encore disponible")
     
@@ -238,7 +268,7 @@ with tab2:
 
     #     st.dataframe(agg_rh, use_container_width=True)
 
-with tab3:
+elif selected_tab == SUPERVISION_TABS[2]:
     st.markdown("---")
     
     option1=area_graph2(df_all_filtered, concern='NomAgence', time='TempsAttenteReel', date_to_bin='Date_Appel', seuil=15, title="Top 5 des Agences les Plus Lentes en Temps d'Attente")     
@@ -289,7 +319,7 @@ with tab3:
             st.session_state.current_area += 1
             st.rerun()
 
-with tab4:
+elif selected_tab == SUPERVISION_TABS[3]:
     # st.title("📈 Prédiction de l'Affluence des Agences")
     # --- Exécution du pipeline ---
     model, scaler = load_model_and_scaler() 

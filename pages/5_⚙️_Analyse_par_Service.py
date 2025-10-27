@@ -27,63 +27,65 @@ df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selecte
 if df_all_filtered.empty: 
     st.error("Aucune donnée disponible pour la sélection.")
     st.stop()
+# --- 1. Configuration des onglets et de l'état de session ---
+# Noms des onglets pour une gestion plus facile
+SERVICE_TABS = [
+    "Temps de traitement moyen par type de service",
+    "Types de transactions les plus courantes",
+    "Top 10 Types de transactions en nombre de clients"
+]
 
-tabs=st.tabs(["Temps de traitement moyen par type de service","Types de transactions les plus courantes","Top 10 Types de transactions en nombre de clients"])
+# Initialisation des états pour contrôler les onglets et le carrousel
+if 'active_service_tab_index' not in st.session_state:
+    st.session_state.active_service_tab_index = 0
+if 'carousel_tab3_index' not in st.session_state: # État pour le carrousel de l'onglet 3
+    st.session_state.carousel_tab3_index = 0
 
-with tabs[0]:
-    
-        
-    option1 = GraphsGlob2(df_all_filtered,"Temps Moyen d'opération par Service")
-    st_echarts(option1,height="600px",key="fig_temps_op")
-    
-with tabs[1]:
-    option2 = Top10_Type(df_queue_filtered,title="Top10 des Opérations le plus courantes")
-    st_echarts(option2,height="600px",key='fig_top10')
-        
-with tabs[2]:
-    figures=analyse_activity(df_all_filtered, type='Type_Operation', concern='NomService')
-    
-    
+# --- 2. Préparation des figures pour chaque onglet ---
+# Pré-générer les figures permet à la logique finale de connaître leur nombre.
+option_tab1 = GraphsGlob2(df_all_filtered, "Temps Moyen d'opération par Service")
+option_tab2 = Top10_Type(df_queue_filtered, title="Top10 des Opérations le plus courantes")
+figures_tab3 = analyse_activity(df_all_filtered, type='Type_Operation', concern='NomService')
+total_figures_tab3 = len(figures_tab3)
 
-    total_figures = len(figures)
+# --- 3. Affichage du menu de navigation ---
+selected_tab = option_menu(
+    menu_title=None,
+    options=SERVICE_TABS,
+    icons=['hourglass-split', 'list-task', 'people'],
+    orientation="horizontal",
+    default_index=st.session_state.active_service_tab_index,
+    styles={
+        "container": {"padding": "0!important", "background-color": "#fafafa", "border-bottom": "1px solid #ddd"},
+        "icon": {"color": "#6c757d", "font-size": "18px"},
+        "nav-link": {"font-size": "16px", "text-align": "center", "margin":"0px", "--hover-color": "#eee"},
+        "nav-link-selected": {"background-color": "transparent", "color": "#e74c3c", "border-bottom": "3px solid #e74c3c"},
+    }
+)
 
-    # Initialiser l'état de la session pour cet onglet spécifique
-    if 'carousel_tab3_index' not in st.session_state:
-        st.session_state.carousel_tab3_index = 0
+# --- 4. Affichage du contenu de l'onglet sélectionné ---
+if selected_tab == SERVICE_TABS[0]:
+    st_echarts(option_tab1, height="600px", key="fig_temps_op")
 
-    # Récupérer l'index courant
+elif selected_tab == SERVICE_TABS[1]:
+    st_echarts(option_tab2, height="600px", key='fig_top10')
+
+elif selected_tab == SERVICE_TABS[2]:
     current_index = st.session_state.carousel_tab3_index
-
-    # S'assurer que l'index ne dépasse pas les limites (sécurité)
-    if current_index >= total_figures:
-        st.session_state.carousel_tab3_index = 0
-        current_index = 0
-
-    # Afficher le titre du graphique courant
     
     st.markdown("<h1 style='text-align: center;font-size:1em;'>Analyse détaillée par Service</h1>", unsafe_allow_html=True)
-    # Afficher la figure courante
-    st_echarts(
-        options=figures[current_index],
-        height="500px",
-        key=f"carousel_chart_{current_index}" 
-    )
-
-    # Créer les colonnes pour la navigation
+    st_echarts(options=figures_tab3[current_index], height="500px", key=f"carousel_chart_{current_index}")
+    
+    # Navigation manuelle (conservée de votre code original)
     col1, col2, col3 = st.columns([2, 1, 2])
-
     with col1:
         if st.button("◀️ Précédent", use_container_width=True, disabled=(current_index == 0), key="carousel_prev"):
             st.session_state.carousel_tab3_index -= 1
             st.rerun()
-
     with col2:
-        st.markdown(
-            f"<p style='text-align: center; font-weight: bold;'>Service {current_index + 1} / {total_figures}</p>", 
-            unsafe_allow_html=True
-        )
-
+        st.markdown(f"<p style='text-align: center; font-weight: bold;'>Service {current_index + 1} / {total_figures_tab3}</p>", unsafe_allow_html=True)
     with col3:
-        if st.button("Suivant ▶️", use_container_width=True, disabled=(current_index >= total_figures - 1), key='carousel_next'):
+        if st.button("Suivant ▶️", use_container_width=True, disabled=(current_index >= total_figures_tab3 - 1), key='carousel_next'):
             st.session_state.carousel_tab3_index += 1
             st.rerun()
+
