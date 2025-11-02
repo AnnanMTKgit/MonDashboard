@@ -56,10 +56,10 @@ selected_tab = option_menu(
     orientation="horizontal",
     default_index=st.session_state.active_service_tab_index,
     styles={
-        "container": {"padding": "0!important", "background-color": "#fafafa", "border-bottom": "1px solid #ddd"},
-        "icon": {"color": "#6c757d", "font-size": "18px"},
-        "nav-link": {"font-size": "16px", "text-align": "center", "margin":"0px", "--hover-color": "#eee"},
-        "nav-link-selected": {"background-color": "transparent", "color": "#e74c3c", "border-bottom": "3px solid #e74c3c"},
+        "container": {"padding": "0!important", "background-color": "white", "border-bottom": "1px solid #333"},
+        "icon": {"color": "black", "font-size": "18px"},
+        "nav-link": {"font-size": "16px", "text-align": "center", "margin": "0px", "color": "black"},
+        "nav-link-selected": {"background-color": "#013447", "color": "white", "border-bottom": "3px solid #013447"},
     }
 )
 

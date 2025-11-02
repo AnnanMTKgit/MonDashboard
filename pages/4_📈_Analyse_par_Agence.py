@@ -79,7 +79,12 @@ st.markdown('<div id="page_top_anchor"></div>', unsafe_allow_html=True)
 selected_tab = option_menu(
     menu_title=None, options=TABS, icons=['bar-chart-line', 'speedometer2', 'people-fill'],
     orientation="horizontal", default_index=st.session_state.active_tab_index,
-    styles={"nav-link-selected": {"background-color": "transparent", "color": "#e74c3c", "border-bottom": "3px solid #e74c3c"}}
+    styles={
+        "container": {"padding": "0!important", "background-color": "white", "border-bottom": "1px solid #333"},
+        "icon": {"color": "black", "font-size": "18px"},
+        "nav-link": {"font-size": "16px", "text-align": "center", "margin": "0px", "color": "black"},
+        "nav-link-selected": {"background-color": "#013447", "color": "white", "border-bottom": "3px solid #013447"},
+    }
 )
 
 # --- AFFICHAGE DU CONTENU DES ONGLETS (INCHANGÉ) ---
