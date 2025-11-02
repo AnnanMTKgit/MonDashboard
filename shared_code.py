@@ -1724,37 +1724,69 @@ def area_graph2(data,concern='UserName',time='TempOperation',date_to_bin='Date_F
 
 
 #################################################
-def top_agence_freq(df_all,df_queue,title,color=[green_color,blue_clair_color],height=500): 
-    _,agg=AgenceTable(df_all,df_queue)
-    agg=agg[["Nom d'Agence",title[0],title[1]]]
-    
+def top_agence_freq_echarts(df_all, df_queue, title, color=['#2ECC71', '#3498DB']):
+    """
+    Génère les options pour un graphique en barres "miroir" avec ECharts.
+    VERSION FINALE : Corrige le problème d'affichage du code JS en
+    utilisant des chaînes de caractères littérales pour les formatters.
+    """
+    # 1. & 2. Préparation des données (inchangée)
+    _, agg = AgenceTable(df_all, df_queue)
+    top_5_df = agg.sort_values(by=title[0], ascending=False).head(5)
+    top_5_df = top_5_df.iloc[::-1]
+    agences = top_5_df["Nom d'Agence"].tolist()
+    data1 = top_5_df[title[0]].tolist()
+    data2 = (top_5_df[title[1]]).tolist()
 
-    top_counts0=agg[["Nom d'Agence",title[0]]]
-    top_counts0=top_counts0.sort_values(by=title[0], ascending=False)
-    top_counts0=top_counts0.head(5)
-    top_counts0=top_counts0.rename(columns={title[0]:'Total'})
-    top_counts0['Statut']=title[0].split(' ')[1]
-    
+    series_name_1 = title[0]
+    series_name_2 = title[1]
 
-    top_counts1=agg[["Nom d'Agence",title[1]]]
-    top_counts1=top_counts1.sort_values(by=title[1], ascending=False)
-    top_counts1=top_counts1.head(5)
-    top_counts1=top_counts1.rename(columns={title[1]:'Total'})
-    top_counts1['Statut']=title[1].split(' ')[1]
-    
-    
-    top_counts = pd.concat([top_counts0, top_counts1], axis=0)
-    
-    fig = px.funnel(top_counts, x='Total', y="Nom d'Agence",color='Statut',color_discrete_sequence=color,height=height)
-    fig.update_layout(title={
-        'text': f'{title[0]} vs {title[1]}',
-        'x': 0.5,  # Center the title
-        'xanchor': 'center' # Set your desired color
-        
-        },plot_bgcolor=GraphicPlotColor,paper_bgcolor=BackgroundGraphicColor,
-                  xaxis=dict(title='tt',tickfont=dict(size=10)),
-                  yaxis=dict(title="Nom d'Agence"))
-    return fig
+    # Construction du formatter pour le tooltip (cette méthode reste la plus sûre)
+    tooltip_formatter = JsCode(f"{{function(params){{return params[0].axisValueLabel+'<br/>'+params[0].marker+' {series_name_1}: '+params[0].value+'<br/>'+params[1].marker+' {series_name_2}: '+Math.abs(params[1].value);}}}}").js_code
+
+
+    # 3. Construire le dictionnaire d'options ECharts
+    options = {
+        "title": {"text": f'{series_name_1} vs {series_name_2}', "left": "center"},
+        "tooltip": {
+            "trigger": "axis", "axisPointer": {"type": "shadow"},
+            #"formatter": tooltip_formatter
+        },
+        "legend": {"data": title, "bottom": 5},
+        "grid": {"left": "3%", "right": "4%", "bottom": "10%", "containLabel": True},
+        "xAxis": {
+            "type": "value",
+            # On place la chaîne littérale directement ici.
+            #"axisLabel": {"formatter": "{function(value){return Math.abs(value);}}"}
+        },
+        "yAxis": {"type": "category", "data": agences, "axisTick": {"show": False}},
+        "series": [
+            {
+                "name": series_name_1, "type": "bar", "stack": "total",
+                "label": {
+                    "show": True, 
+                    "position": "inside",
+                    "color": "#000000" # Texte noir pour une meilleure lisibilité sur le vert clair
+                },
+                "emphasis": {"focus": "series"},
+                "data": data1, "color": color[0]
+            },
+            {
+                "name": series_name_2, "type": "bar", "stack": "total",
+                "label": {
+                    "show": True, 
+                    "position": "inside",
+                    "color": "#FFFFFF", # Texte blanc pour une meilleure lisibilité sur le bleu foncé
+                    # --- LA CORRECTION DÉFINITIVE ---
+                    # On place la chaîne de caractères JS directement ici, sans variable intermédiaire.
+                    #"formatter": "{function(params){return Math.abs(params.value);}}"
+                },
+                "emphasis": {"focus": "series"},
+                "data": data2, "color": color[1]
+            }
+        ]
+    }
+    return options
 def top_agence_freq(df_all,df_queue,title,color=[green_color,blue_clair_color]): 
     _,agg=AgenceTable(df_all,df_queue)
     agg=agg[["Nom d'Agence",title[0],title[1]]]
