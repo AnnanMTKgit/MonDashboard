@@ -1189,7 +1189,7 @@ def stacked_chart2(data,type:str,concern:str,titre):
         "grid": {
             "left": "3%",
             "right": "6%",
-            "bottom": "15%", # Increase bottom margin for rotated labels
+            "bottom": "30%", # Increase bottom margin for rotated labels
             "containLabel": True
         },
         # X-axis uses categories from the pivoted DataFrame's index
@@ -1660,7 +1660,7 @@ def area_graph2(data,concern='UserName',time='TempOperation',date_to_bin='Date_F
         }},
     "tooltip": {"trigger": "axis"},
     "legend": {"data": top_agences,'orient':'vertical',"left": 'right'}, # Use the list of agencies for the legend
-    "grid": {"left": '5%', "right": '5%', "bottom": '5%',"top":"5%", "containLabel": True},
+    "grid": {"left": '5%', "right": '5%', "bottom": '25%',"top":"5%", "containLabel": True},
     "toolbox": {"left": "5%", "feature": {"saveAsImage": {},"magicType": {
                 "show": True,
                 "type": ['line', 'bar', 'stack'], # Types de graphiques interchangeables
@@ -1892,7 +1892,7 @@ def GraphsGlob2(df_all,titre="",color=blue_color):
         "grid": {
             "left": '0%',
             "right": '0%',
-            "bottom": '3%',
+            "bottom": '25%',
             "containLabel": True
         }
     } 
@@ -2165,7 +2165,7 @@ def Top10_Type(df_queue,title=""):
         "grid": {
             "left": '0%',
             "right": '0%',
-            "bottom": '3%',
+            "bottom": '25%',
             "containLabel": True
         }
     } 
