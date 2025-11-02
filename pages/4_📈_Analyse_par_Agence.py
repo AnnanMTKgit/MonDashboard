@@ -84,13 +84,13 @@ selected_tab = option_menu(
 
 # --- AFFICHAGE DU CONTENU DES ONGLETS (INCHANGÉ) ---
 if selected_tab == TABS[0]:
-    st.info("Cet onglet défile verticalement entre ses sections.")
+    
     st.markdown(f'<div id="{ANCHORS_TAB1[0]}"></div>', unsafe_allow_html=True)
     st_echarts(options=figures_tab1[0], height="700px", key="stack_0")
     st.markdown(f'<div id="{ANCHORS_TAB1[1]}"></div>', unsafe_allow_html=True)
     st_echarts(options=figures_tab1[1], height="700px", key="stack_1")
 elif selected_tab == TABS[1]:
-    st.info("Cet onglet utilise un carrousel horizontal automatique.")
+    
     area_index = st.session_state.current_area
     st_echarts(options=figures_tab2[area_index], height="600px", key=f"area_{area_index}")
     st.markdown(f"<p style='text-align: center; font-weight: bold;'>Figure {area_index + 1} / {total_figures_tab2}</p>", unsafe_allow_html=True)
