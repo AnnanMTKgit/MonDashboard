@@ -176,7 +176,7 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 # Streamlit Secrets file
-secrets.toml
+.streamlit/secrets.toml
 
 __pycache__/
 *.pyc

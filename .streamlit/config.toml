@@ -7,4 +7,17 @@ secondaryBackgroundColor="white" # Fond de la barre latérale (noir très foncé
 primaryColor="#013447" #couleur de selection de multiselect
 font="sans serif"
 
+[server]
+# C'est la ligne la plus importante.
+# Elle dit à Streamlit que l'application n'attend pas d'interaction de l'utilisateur.
+# Cela désactive les timeouts de connexion qui causent la déconnexion.
+headless = true
 
+[client]
+# Masque les détails techniques des erreurs pour les utilisateurs finaux.
+showErrorDetails = false
+
+[runner]
+# Streamlit vérifie périodiquement si le script a été modifié sur le disque.
+# Pour un dashboard en production, on peut désactiver cela.
+# fileWatcherType = "none"
