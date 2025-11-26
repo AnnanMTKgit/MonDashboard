@@ -45,7 +45,7 @@ if 'carousel_tab3_index' not in st.session_state: # État pour le carrousel de l
 # Pré-générer les figures permet à la logique finale de connaître leur nombre.
 option_tab1 = GraphsGlob2(df_all_filtered, "Temps Moyen d'opération par Service")
 option_tab2 = Top10_Type(df_queue_filtered, title="Top10 des Opérations le plus courantes")
-figures_tab3 = analyse_activity(df_all_filtered, type='Type_Operation', concern='NomService')
+figures_tab3 = analyse_activity(df_queue_filtered, type='Type_Operation', concern='NomService')
 total_figures_tab3 = len(figures_tab3)
 
 # --- 3. Affichage du menu de navigation ---
