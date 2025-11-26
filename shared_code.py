@@ -2035,8 +2035,8 @@ def analyse_activity(data, type: str, concern: str, titre="Nombre de type d'opé
     if df_grouped.empty:
         st.info("Aucune donnée à afficher avec les filtres actuels.")
         return
-
-
+    
+    
     def create_rose_chart_options(df: pd.DataFrame, service_name: str, type_col: str, count_col: str):
         data = [{"value": int(row[count_col]), "name": row[type_col]} for _, row in df.iterrows()]
         return {
@@ -2054,8 +2054,14 @@ def analyse_activity(data, type: str, concern: str, titre="Nombre de type d'opé
             "title": {"text": f"{service_name}","left":"center"},"backgroundColor":BackgroundGraphicColor,
             "tooltip": {"trigger": "item", "formatter": "{b}: {c}"},
             
-            "series": [{"name": service_name, "type": 'funnel', "sort": 'descending', "gap": 2,"label": {"show": True, "position": 'inside', "formatter": '{b}\n{c}'},
-                        "label": {"show": True, "position": 'inside'}, "data": data}]
+            "series": [{"name": service_name, "type": 'funnel', "sort": 'descending', "gap": 2,"label": {
+                "show": True, 
+                "position": 'inside', 
+                "formatter": '{b} : {c}',  # Affiche "Nom : Valeur"
+                "color": '#fff',           # Texte en blanc pour être lisible sur la couleur
+                "fontWeight": 'bold'       # (Optionnel) Pour rendre le texte plus lisible
+            },
+                         "data": data}]
         }
 
     def create_treemap_chart_options(df: pd.DataFrame, service_name: str, type_col: str, count_col: str):
