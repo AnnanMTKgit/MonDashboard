@@ -2963,7 +2963,7 @@ def run_prediction_pipeline(df_raw_actual, df_raw_past):
     N_FEATURES = len(FEATURES)
     
     
-    CURRENT_TIME = df_raw_actual['Date_Reservation'].max().floor('H')
+    CURRENT_TIME = df_raw_actual['Date_Reservation'].max().round('H')
                   
 
     # --- 2. Chargement des artefacts ---
