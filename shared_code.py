@@ -1041,9 +1041,15 @@ def load_main_data(start_date, end_date):
     )
 
 def create_sidebar_filters():
-    
-    
-
+    # Initialiser les clés de session manquantes (ex: refresh direct sur une page)
+    today = datetime.now().date()
+    if "start_date"               not in st.session_state: st.session_state.start_date               = today
+    if "end_date"                 not in st.session_state: st.session_state.end_date                 = today
+    if "selected_agencies"        not in st.session_state: st.session_state.selected_agencies        = []
+    if "selected_Region"          not in st.session_state: st.session_state.selected_Region          = []
+    if "offline_agencies_in_scope" not in st.session_state: st.session_state.offline_agencies_in_scope = []
+    if "df_main"                  not in st.session_state: st.session_state.df_main                  = pd.DataFrame()
+    if "last_date_range"          not in st.session_state: st.session_state.last_date_range          = None
 
     # Rendu des date_input avec valeur actuelle
     start_date = st.sidebar.date_input("Date Début", value=st.session_state.start_date, key="start_date_input")
