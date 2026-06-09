@@ -26,36 +26,44 @@ if 'logged_in' not in st.session_state:
     
 
 def initialize_filters():
-    conn = get_connection()
-    all_agencies_df = run_query(conn, SQLQueries().AllAgences)
+    all_agencies_df = load_agencies_from_api()
     st.session_state.start_date = datetime.now().date()
     st.session_state.end_date = datetime.now().date()
-
-
+    st.session_state.selected_agencies = list(all_agencies_df['NomAgence'].unique())
 
 
 
 def show_login_page():
     st.title("Connexion au Dashboard Marlodj")
-    conn = get_connection()
-    df_users = run_query(conn, SQLQueries().ProfilQueries)
-    users_dict = dict(zip(df_users['UserName'], df_users['MotDePasse']))
-    profiles_dict = dict(zip(df_users['UserName'], df_users['Profil']))
 
     with st.form("login_form"):
-        username = st.text_input("Nom d'utilisateur")
+        email    = st.text_input("Email")
         password = st.text_input("Mot de passe", type="password")
         submitted = st.form_submit_button("Se connecter")
 
         if submitted:
-            if users_dict.get(username) == password:
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.user_profile = profiles_dict.get(username)
-                initialize_filters()
-                st.rerun()
-            else:
-                st.error("Nom d'utilisateur ou mot de passe incorrect.")
+            try:
+                resp = requests.post(
+                    _API_LOGIN_URL,
+                    json={"email": email, "password": password},
+                    verify=False, timeout=10,
+                )
+                if resp.status_code == 200:
+                    data  = resp.json()
+                    user  = data.get("user", {})
+                    role  = user.get("role", "").lower()
+                    st.session_state.logged_in    = True
+                    st.session_state.username     = user.get("name", email)
+                    st.session_state.api_token    = data.get("token", "")
+                    st.session_state.user_profile = (
+                        "Admin" if role in ("admin", "super_admin", "superadmin") else "Caissier"
+                    )
+                    initialize_filters()
+                    st.rerun()
+                else:
+                    st.error("Email ou mot de passe incorrect.")
+            except Exception as e:
+                st.error(f"Erreur de connexion à l'API : {e}")
 
 # Main logic
 
