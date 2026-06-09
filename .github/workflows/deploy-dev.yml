@@ -1,0 +1,34 @@
+name: Deploy Streamlit App (DEV)
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to DEV Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          script: |
+            # Cloner le repo si le dossier n'existe pas encore
+            if [ ! -d "/var/www/MonDashboard-dev" ]; then
+              git clone --branch dev $(git -C /var/www/MonDashboard remote get-url origin) /var/www/MonDashboard-dev
+              cd /var/www/MonDashboard-dev
+              python3 -m venv venv
+            fi
+
+            cd /var/www/MonDashboard-dev
+            git fetch origin
+            git checkout dev
+            git pull origin dev
+
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
+
+            sudo systemctl restart streamlit-dev.service

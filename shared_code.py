@@ -19,7 +19,6 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import plotly.io as pio
 import copy
-import pyodbc
 import altair as alt
 import seaborn as sns
 import plotly.figure_factory as ff
@@ -32,6 +31,12 @@ from openpyxl.utils import get_column_letter ##
 from openpyxl.worksheet.table import Table, TableStyleInfo ##
 import base64
 import math
+import requests
+
+try:
+    import pyodbc
+except ImportError:
+    pyodbc = None
 
 # import pyspark
 # from pyspark.sql import SparkSession, Window, DataFrame
@@ -260,7 +265,9 @@ def get_connection():
         """)
         st.stop()
 
-@st.cache_data(hash_funcs={pyodbc.Connection: id}, ttl=3600, show_spinner=False)  # Cache 1h
+_pyodbc_hash_funcs = {pyodbc.Connection: id} if pyodbc else {}
+
+@st.cache_data(hash_funcs=_pyodbc_hash_funcs, ttl=3600, show_spinner=False)  # Cache 1h
 def run_query_cached(_connection, sql, params):
     """Cache intelligent pour les requêtes lourdes avec TTL de 1h"""
     try:
@@ -914,12 +921,118 @@ def filter2(df_agence_Region):
         
         st.write(f"✅ {len(st.session_state.selected_agencies)}/{len(all_online_agencies)} Agence(s) sélectionnée(s)") 
         
-@st.cache_data(ttl=1800, show_spinner=False)  # Cache 30min pour les données principales
-def load_main_data(start_date, end_date):
-    """Charge les données principales une seule fois et les met en cache"""
-    conn = get_connection()
-    df = run_query(conn, SQLQueries().AllQueueQueries, params=(start_date, end_date))
+_API_BASE_URL         = "https://93-127-143-233.nip.io/kpis"
+_API_AGENCIES_URL     = f"{_API_BASE_URL}/api/kpis/unified/reservations"  # extrait agences depuis les réservations
+_API_LOGIN_URL        = f"{_API_BASE_URL}/api/auth/login"
+_API_RESERVATIONS_URL = f"{_API_BASE_URL}/api/kpis/unified/reservations"
+
+
+@st.cache_data(ttl=86400, show_spinner=False)   # Cache 24h — la liste des agences change rarement
+def load_agencies_from_api() -> pd.DataFrame:
+    """Charge la liste des agences/régions via l'API (remplace la requête SQL All_Region_Agences)."""
+    from datetime import date, timedelta
+    token = get_api_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    # On interroge les 30 derniers jours pour récupérer toutes les agences actives
+    date_fin   = date.today().strftime("%Y-%m-%d")
+    date_debut = (date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
+    params = {"date_debut": date_debut, "date_fin": date_fin, "page_size": 1000, "page": 1}
+    resp = requests.get(_API_AGENCIES_URL, headers=headers, params=params, verify=False, timeout=60)
+    resp.raise_for_status()
+    rows = resp.json().get("data", [])
+    if not rows:
+        return pd.DataFrame(columns=["Region", "NomAgence"])
+    df = pd.DataFrame(rows)
+    df = df.rename(columns={"agenceNom": "NomAgence", "regionLabel": "Region"})
+    # Métadonnées non disponibles via l'API → valeurs par défaut
+    for col, default in [("Adresse", ""), ("codeAgence", ""), ("Pays", ""),
+                          ("Longitude", None), ("Latitude", None),
+                          ("Capacites", 0), ("HeureFermeture", "18:00"),
+                          ("HeureDemarrage", "08:00"), ("Status", 1)]:
+        if col not in df.columns:
+            df[col] = default
+    return df[["Region", "NomAgence", "Adresse", "codeAgence", "Pays",
+               "Longitude", "Latitude", "Capacites",
+               "HeureDemarrage", "HeureFermeture", "Status"]].drop_duplicates(subset=["NomAgence"])
+
+
+@st.cache_data(ttl=3000, show_spinner=False)
+def get_api_token() -> str:
+    credentials = {
+        "email":    st.secrets["api"]["email"],
+        "password": st.secrets["api"]["password"],
+    }
+    resp = requests.post(_API_LOGIN_URL, json=credentials, verify=False, timeout=30)
+    resp.raise_for_status()
+    return resp.json()["token"]
+
+
+def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.rename(columns={
+        "agenceNom":          "NomAgence",
+        "regionLabel":        "Region",
+        "serviceNom":         "NomService",
+        "typeOperationLabel": "Type_Operation",
+        "userName":           "UserName",
+        "dateReservation":    "Date_Reservation",
+        "dateAppel":          "Date_Appel",
+        "dateFin":            "Date_Fin",
+        "etatNom":            "Nom",
+    })
+    # Corriger le double encodage UTF-8 sur le champ statut
+    df["Nom"] = df["Nom"].apply(
+        lambda x: x.encode("latin-1").decode("utf-8") if isinstance(x, str) else x
+    )
+    # Minutes → secondes pour rester compatible avec le pipeline existant
+    df["TempsAttenteReel"] = (df["tempsAttenteMin"] * 60).round().astype("Int64")
+    df["TempOperation"]    = (df["tempsOperationMin"] * 60).round().astype("Int64")
+    df["IsMobile"]         = df["isMobile"].astype(int)
+    df["Date_Reservation"] = pd.to_datetime(df["Date_Reservation"])
+    df["Date_Appel"]       = pd.to_datetime(df["Date_Appel"])
+    df["Date_Fin"]         = pd.to_datetime(df["Date_Fin"])
+    # Métadonnées agence non fournies par l'API — valeurs de fallback
+    df["Capacites"]      = 0
+    df["Longitude"]      = None
+    df["Latitude"]       = None
+    df["HeureFermeture"] = "18:00"
     return df
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_from_api(start_date: str, end_date: str) -> pd.DataFrame:
+    token = get_api_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    all_records = []
+    page = 1
+    while True:
+        params = {
+            "date_debut": start_date,
+            "date_fin":   end_date,
+            "page":       page,
+            "page_size":  1000,
+        }
+        resp = requests.get(
+            _API_RESERVATIONS_URL, headers=headers, params=params,
+            verify=False, timeout=60
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        all_records.extend(body["data"])
+        if page >= body["pages"]:
+            break
+        page += 1
+    if not all_records:
+        return pd.DataFrame()
+    return _map_api_to_df(pd.DataFrame(all_records))
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_main_data(start_date, end_date):
+    """Charge les données principales via l'API REST (paginée)."""
+    return load_from_api(
+        start_date.strftime("%Y-%m-%d"),
+        end_date.strftime("%Y-%m-%d"),
+    )
 
 def create_sidebar_filters():
     
@@ -950,10 +1063,8 @@ def create_sidebar_filters():
             st.session_state.selected_agencies = st.session_state.df_main['NomAgence'].unique().tolist()
     # Initialiser dans st.session_state si la clé n'existe pas
     if "all_agence_Region" not in st.session_state :
-        
-        conn = get_connection()
-        df_Agence_Regionx = run_query(conn, SQLQueries().All_Region_Agences,params=None)
-        st.session_state.all_agence_Region=df_Agence_Regionx
+        df_Agence_Regionx = load_agencies_from_api()
+        st.session_state.all_agence_Region = df_Agence_Regionx
         AllRegion = df_Agence_Regionx['Region'].unique().tolist()
         st.session_state.all_Region = AllRegion
        

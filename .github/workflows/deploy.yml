@@ -1,4 +1,4 @@
-name: Deploy Streamlit App
+name: Deploy Streamlit App (PROD)
 
 on:
   push:
