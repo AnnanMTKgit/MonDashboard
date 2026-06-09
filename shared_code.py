@@ -921,10 +921,10 @@ def filter2(df_agence_Region):
         
         st.write(f"✅ {len(st.session_state.selected_agencies)}/{len(all_online_agencies)} Agence(s) sélectionnée(s)") 
         
-_API_BASE_URL         = "https://93-127-143-233.nip.io/kpis"
-_API_AGENCIES_URL     = f"{_API_BASE_URL}/api/kpis/unified/reservations"  # extrait agences depuis les réservations
-_API_LOGIN_URL        = f"{_API_BASE_URL}/api/auth/login"
-_API_RESERVATIONS_URL = f"{_API_BASE_URL}/api/kpis/unified/reservations"
+API_BASE_URL         = "https://93-127-143-233.nip.io/kpis"
+API_AGENCIES_URL     = f"{API_BASE_URL}/api/kpis/unified/reservations"  # extrait agences depuis les réservations
+API_LOGIN_URL        = f"{API_BASE_URL}/api/auth/login"
+API_RESERVATIONS_URL = f"{API_BASE_URL}/api/kpis/unified/reservations"
 
 
 @st.cache_data(ttl=86400, show_spinner=False)   # Cache 24h — la liste des agences change rarement
@@ -937,7 +937,7 @@ def load_agencies_from_api() -> pd.DataFrame:
     date_fin   = date.today().strftime("%Y-%m-%d")
     date_debut = (date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
     params = {"date_debut": date_debut, "date_fin": date_fin, "page_size": 1000, "page": 1}
-    resp = requests.get(_API_AGENCIES_URL, headers=headers, params=params, verify=False, timeout=60)
+    resp = requests.get(API_AGENCIES_URL, headers=headers, params=params, verify=False, timeout=60)
     resp.raise_for_status()
     rows = resp.json().get("data", [])
     if not rows:
@@ -962,7 +962,7 @@ def get_api_token() -> str:
         "email":    st.secrets["api"]["email"],
         "password": st.secrets["api"]["password"],
     }
-    resp = requests.post(_API_LOGIN_URL, json=credentials, verify=False, timeout=30)
+    resp = requests.post(API_LOGIN_URL, json=credentials, verify=False, timeout=30)
     resp.raise_for_status()
     return resp.json()["token"]
 
@@ -1012,7 +1012,7 @@ def load_from_api(start_date: str, end_date: str) -> pd.DataFrame:
             "page_size":  1000,
         }
         resp = requests.get(
-            _API_RESERVATIONS_URL, headers=headers, params=params,
+            API_RESERVATIONS_URL, headers=headers, params=params,
             verify=False, timeout=60
         )
         resp.raise_for_status()

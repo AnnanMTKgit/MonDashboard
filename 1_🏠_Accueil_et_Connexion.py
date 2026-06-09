@@ -51,7 +51,7 @@ def show_login_page():
         if submitted:
             try:
                 resp = requests.post(
-                    _API_LOGIN_URL,
+                    API_LOGIN_URL,
                     json={"email": email, "password": password},
                     verify=False,
                     timeout=10,
