@@ -1022,7 +1022,13 @@ def load_from_api(start_date: str, end_date: str) -> pd.DataFrame:
             break
         page += 1
     if not all_records:
-        return pd.DataFrame()
+        # Retourner un DataFrame vide avec les colonnes attendues par le pipeline
+        return pd.DataFrame(columns=[
+            "NomAgence", "Region", "NomService", "Type_Operation", "UserName",
+            "Date_Reservation", "Date_Appel", "Date_Fin", "Nom",
+            "TempsAttenteReel", "TempOperation", "IsMobile",
+            "Capacites", "Longitude", "Latitude", "HeureFermeture",
+        ])
     return _map_api_to_df(pd.DataFrame(all_records))
 
 
@@ -1059,8 +1065,15 @@ def create_sidebar_filters():
         with st.spinner("Chargement des données..."):
             st.session_state.df_main = load_main_data(start_date, end_date)
             st.session_state.last_date_range = (start_date, end_date)
-            st.session_state.selected_Region =st.session_state.df_main['Region'].unique().tolist()
-            st.session_state.selected_agencies = st.session_state.df_main['NomAgence'].unique().tolist()
+            _df = st.session_state.df_main
+            if not _df.empty and 'Region' in _df.columns:
+                st.session_state.selected_Region   = _df['Region'].unique().tolist()
+                st.session_state.selected_agencies = _df['NomAgence'].unique().tolist()
+            else:
+                # Aucune donnée pour la période → fallback sur les métadonnées agences
+                _meta = st.session_state.get('all_agence_Region', pd.DataFrame())
+                st.session_state.selected_Region   = _meta['Region'].unique().tolist()   if not _meta.empty else []
+                st.session_state.selected_agencies = _meta['NomAgence'].unique().tolist() if not _meta.empty else []
     # Initialiser dans st.session_state si la clé n'existe pas
     if "all_agence_Region" not in st.session_state :
         df_Agence_Regionx = load_agencies_from_api()
