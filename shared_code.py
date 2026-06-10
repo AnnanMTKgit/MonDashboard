@@ -2535,10 +2535,10 @@ def create_bar_chart2(df, status,color=blue_color):
     if df_filtered.empty:
         return {"title": {"text": f"(Pas de données)", "left": 'center'}}
 
-    # Your data processing is correct
     top = df_filtered.groupby(by=['UserName']).agg(
-        TempOperation=('TempOperation', lambda x: np.round(np.mean(x) / 60))
+        TempOperation=('TempOperation', lambda x: float(np.round(np.nanmean(x) / 60)))
     ).reset_index()
+    top['TempOperation'] = top['TempOperation'].fillna(0)  # nanmean sur groupe 100% NaN → 0
     top = top.sort_values(by='TempOperation', ascending=True)
 
     # Renaming is also correct for ECharts
@@ -2706,8 +2706,10 @@ def ServiceTable(df,status="Traitée"):
     df1=df.copy()
     df1=df1[df1["Nom"]==status]
     agg = df1.groupby(['UserName']).agg(
-    TMO=('TempOperation', lambda x: np.round(np.mean(x)/60).astype(int)),NombreTickets=('Nom','size'),
-TotalMobile=('IsMobile',lambda x: (x==1).sum())).reset_index()
+        TMO=('TempOperation', lambda x: int(np.round(np.nanmean(x) / 60)) if not np.isnan(np.nanmean(x)) else 0),
+        NombreTickets=('Nom', 'size'),
+        TotalMobile=('IsMobile', lambda x: (x == 1).sum()),
+    ).reset_index()
     
     
     return agg
