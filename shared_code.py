@@ -1044,14 +1044,14 @@ def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
     df["Date_Appel"]       = pd.to_datetime(df["Date_Appel"],       errors="coerce")
     df["Date_Fin"]         = pd.to_datetime(df["Date_Fin"],         errors="coerce")
     # Recalcul depuis les timestamps — identique au DATEDIFF SQL (secondes)
-    # tempsAttenteMin peut être 0 ou null côté API ; le diff de dates est toujours fiable
+    # tempsAttenteMin peut être 0 ou null côté API ; le diff de dates est toujours fiable.
+    # On garde float (pas Int64) : NaN float est compatible avec np.mean/np.round ;
+    # pd.NA (Int64 nullable) ne l'est pas.
     df["TempsAttenteReel"] = (
-        (df["Date_Appel"] - df["Date_Reservation"]).dt.total_seconds()
-        .clip(lower=0).round().astype("Int64")
+        (df["Date_Appel"] - df["Date_Reservation"]).dt.total_seconds().clip(lower=0)
     )
     df["TempOperation"] = (
-        (df["Date_Fin"] - df["Date_Appel"]).dt.total_seconds()
-        .clip(lower=0).round().astype("Int64")
+        (df["Date_Fin"] - df["Date_Appel"]).dt.total_seconds().clip(lower=0)
     )
     df["IsMobile"] = df["isMobile"].astype(int)
     # Métadonnées agence non fournies par l'API — valeurs de fallback
