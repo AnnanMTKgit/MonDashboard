@@ -1212,7 +1212,7 @@ def echarts_satisfaction_gauge(queue_length, title="Client(s) en Attente",max_le
    
     
     # --- Determine Pointer Color based on Gauge Progress ---
-    current_percentage = value / max_value
+    current_percentage = value / max_value if max_value > 0 else 0
     
     pointer_color = '#FF0000' if value >= max_value else ('black' if current_percentage ==0 else
         green_color if current_percentage < 0.5 else blue_clair_color if current_percentage < 0.8 else blue_color
