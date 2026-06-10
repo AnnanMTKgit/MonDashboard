@@ -921,39 +921,57 @@ def filter2(df_agence_Region):
         
         st.write(f"✅ {len(st.session_state.selected_agencies)}/{len(all_online_agencies)} Agence(s) sélectionnée(s)") 
         
-API_BASE_URL         = "https://93-127-143-233.nip.io/kpis"
-API_AGENCIES_URL     = f"{API_BASE_URL}/api/kpis/unified/reservations"  # extrait agences depuis les réservations
-API_LOGIN_URL        = f"{API_BASE_URL}/api/auth/login"
-API_RESERVATIONS_URL = f"{API_BASE_URL}/api/kpis/unified/reservations"
+API_BASE_URL                   = "https://93-127-143-233.nip.io/kpis"
+API_AGENCIES_URL               = f"{API_BASE_URL}/api/kpis/unified/reservations"
+API_LOGIN_URL                  = f"{API_BASE_URL}/api/auth/login"
+API_RESERVATIONS_URL           = f"{API_BASE_URL}/api/kpis/unified/reservations"
+API_AGENCIES_DISPONIBILITE_URL = f"{API_BASE_URL}/api/agences/disponibilite"
 
 
-@st.cache_data(ttl=86400, show_spinner=False)   # Cache 24h — la liste des agences change rarement
+@st.cache_data(ttl=86400, show_spinner=False)
 def load_agencies_from_api() -> pd.DataFrame:
-    """Charge la liste des agences/régions via l'API (remplace la requête SQL All_Region_Agences)."""
-    from datetime import date, timedelta
-    token = get_api_token()
-    headers = {"Authorization": f"Bearer {token}"}
-    # On interroge les 30 derniers jours pour récupérer toutes les agences actives
-    date_fin   = date.today().strftime("%Y-%m-%d")
-    date_debut = (date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
-    params = {"date_debut": date_debut, "date_fin": date_fin, "page_size": 1000, "page": 1}
-    resp = requests.get(API_AGENCIES_URL, headers=headers, params=params, verify=False, timeout=60)
+    """Charge la liste des agences via /api/agences/disponibilite (sans authentification, Capacites réelles)."""
+    resp = requests.get(API_AGENCIES_DISPONIBILITE_URL, verify=False, timeout=15)
     resp.raise_for_status()
-    rows = resp.json().get("data", [])
-    if not rows:
-        return pd.DataFrame(columns=["Region", "NomAgence"])
-    df = pd.DataFrame(rows)
-    df = df.rename(columns={"agenceNom": "NomAgence", "regionLabel": "Region"})
-    # Métadonnées non disponibles via l'API → valeurs par défaut
-    for col, default in [("Adresse", ""), ("codeAgence", ""), ("Pays", ""),
-                          ("Longitude", None), ("Latitude", None),
-                          ("Capacites", 0), ("HeureFermeture", "18:00"),
-                          ("HeureDemarrage", "08:00"), ("Status", 1)]:
-        if col not in df.columns:
-            df[col] = default
-    return df[["Region", "NomAgence", "Adresse", "codeAgence", "Pays",
+    df = pd.DataFrame(resp.json())
+    if df.empty:
+        return pd.DataFrame(columns=["Region", "NomAgence", "Capacites"])
+    df = df.rename(columns={
+        "nomAgence":  "NomAgence",
+        "regionName": "Region",
+        "capacites":  "Capacites",
+    })
+    df["Adresse"]        = ""
+    df["Pays"]           = ""
+    df["Longitude"]      = None
+    df["Latitude"]       = None
+    df["HeureFermeture"] = "18:00"
+    df["HeureDemarrage"] = "08:00"
+    df["Status"]         = (~df["suspensionActivite"].astype(bool)).astype(int)
+    return df[["Region", "NomAgence", "Adresse", "Pays",
                "Longitude", "Latitude", "Capacites",
                "HeureDemarrage", "HeureFermeture", "Status"]].drop_duplicates(subset=["NomAgence"])
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_agencies_realtime() -> pd.DataFrame:
+    """Données temps réel par agence : ClientsEnAttente + Capacites (Firebase sync, cache 60 s, sans auth)."""
+    try:
+        resp = requests.get(API_AGENCIES_DISPONIBILITE_URL, verify=False, timeout=15)
+        resp.raise_for_status()
+        df = pd.DataFrame(resp.json())
+        return df.rename(columns={
+            "nomAgence":             "NomAgence",
+            "regionName":            "Region",
+            "capacites":             "Capacites",
+            "clientsEnAttente":      "ClientsEnAttente",
+            "suspensionActivite":    "SuspensionActivite",
+            "activationReservation": "ActivationReservation",
+        })[["NomAgence", "Region", "Capacites", "ClientsEnAttente",
+            "SuspensionActivite", "ActivationReservation"]]
+    except Exception:
+        return pd.DataFrame(columns=["NomAgence", "Region", "Capacites", "ClientsEnAttente",
+                                     "SuspensionActivite", "ActivationReservation"])
 
 
 @st.cache_data(ttl=3000, show_spinner=False)
@@ -1070,12 +1088,25 @@ def create_sidebar_filters():
         st.error("La date de début ne peut pas être après la date de fin.")
         st.stop()
 
-    # Charger les données principales une seule fois
+    # Données temps réel — toujours rechargées (cache TTL=60 s gère le débit)
+    st.session_state.agencies_realtime = load_agencies_realtime()
+
+    # Charger les données principales une seule fois (re-chargement si plage de dates change)
     if "df_main" not in st.session_state or st.session_state.get("last_date_range") != (start_date, end_date):
-        
+
         with st.spinner("Chargement des données..."):
             st.session_state.df_main = load_main_data(start_date, end_date)
             st.session_state.last_date_range = (start_date, end_date)
+            # Enrichir df_main avec les Capacites réelles (remplacement du fallback 0)
+            _rt = st.session_state.agencies_realtime
+            if not _rt.empty and not st.session_state.df_main.empty:
+                st.session_state.df_main = st.session_state.df_main.drop(columns=["Capacites"], errors="ignore")
+                st.session_state.df_main = st.session_state.df_main.merge(
+                    _rt[["NomAgence", "Capacites"]], on="NomAgence", how="left"
+                )
+                st.session_state.df_main["Capacites"] = (
+                    st.session_state.df_main["Capacites"].fillna(0).astype(int)
+                )
             _df = st.session_state.df_main
             if not _df.empty and 'Region' in _df.columns:
                 st.session_state.selected_Region   = _df['Region'].unique().tolist()

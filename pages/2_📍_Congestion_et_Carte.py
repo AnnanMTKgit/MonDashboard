@@ -77,8 +77,15 @@ with c1:
         
         agence_data = agg_map[agg_map['NomAgence'] == selected_agence_gauge]
         if not agence_data.empty:
-            queue_length = agence_data['AttenteActuel'].values[0]
-            max_length = agence_data['Capacites'].values[0]
+            # Privilégier les données temps réel (Firebase) pour la jauge
+            _rt = st.session_state.get('agencies_realtime', pd.DataFrame())
+            _rt_row = _rt[_rt['NomAgence'] == selected_agence_gauge] if not _rt.empty else pd.DataFrame()
+            if not _rt_row.empty:
+                queue_length = int(_rt_row['ClientsEnAttente'].values[0])
+                max_length   = int(_rt_row['Capacites'].values[0])
+            else:
+                queue_length = agence_data['AttenteActuel'].values[0]
+                max_length   = agence_data['Capacites'].values[0]
             echarts_satisfaction_gauge(queue_length, max_length=max_length, title="Clients en Attente")
             nomService=list(df_queue_filtered['NomService'].unique())
             HeureFermeture=df_queue['HeureFermeture'].iloc[0]

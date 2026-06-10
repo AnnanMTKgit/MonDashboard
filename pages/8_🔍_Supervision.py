@@ -155,10 +155,16 @@ if selected_tab == SUPERVISION_TABS[0]:
         col_index = i % num_cols
         
         agence_data = agg_global[agg_global["Nom d'Agence"] == nom_agence]
-        
-        # Votre logique de récupération de données reste la même
-        max_cap = agence_data['Capacité'].values[0]
-        queue_now = agence_data['Nbs de Clients en Attente'].values[0]
+
+        # Capacité et file d'attente : données temps réel Firebase en priorité
+        _rt = st.session_state.get('agencies_realtime', pd.DataFrame())
+        _rt_row = _rt[_rt['NomAgence'] == nom_agence] if not _rt.empty else pd.DataFrame()
+        if not _rt_row.empty:
+            max_cap   = int(_rt_row['Capacites'].values[0])
+            queue_now = int(_rt_row['ClientsEnAttente'].values[0])
+        else:
+            max_cap   = agence_data['Capacité'].values[0]
+            queue_now = agence_data['Nbs de Clients en Attente'].values[0]
         df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
         services_agence = df_agence_queue['NomService'].unique()
         
