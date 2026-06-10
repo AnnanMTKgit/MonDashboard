@@ -925,7 +925,7 @@ API_BASE_URL                   = "https://93-127-143-233.nip.io/kpis"
 API_AGENCIES_URL               = f"{API_BASE_URL}/api/kpis/unified/reservations"
 API_LOGIN_URL                  = f"{API_BASE_URL}/api/auth/login"
 API_RESERVATIONS_URL           = f"{API_BASE_URL}/api/kpis/unified/reservations"
-API_AGENCIES_DISPONIBILITE_URL = f"{API_BASE_URL}/api/agences/disponibilite"
+API_AGENCIES_DISPONIBILITE_URL = "https://93-127-143-233.nip.io/api/agences/disponibilite"
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
