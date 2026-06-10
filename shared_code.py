@@ -820,10 +820,10 @@ def filter2(df_agence_Region):
 
     # --- Préparation des données ---
     df_main = st.session_state.df_main
-    online_regions = sorted(df_main['Region'].unique().tolist())
-    all_online_agencies = sorted(df_main['NomAgence'].unique().tolist())
+    online_regions = sorted([r for r in df_main['Region'].unique().tolist() if r is not None and pd.notna(r)])
+    all_online_agencies = sorted([a for a in df_main['NomAgence'].unique().tolist() if a is not None and pd.notna(a)])
     
-    all_regions_total = df_agence_Region['Region'].unique().tolist()
+    all_regions_total = [r for r in df_agence_Region['Region'].unique().tolist() if r is not None and pd.notna(r)]
     offline_regions = sorted([r for r in all_regions_total if r not in online_regions])
     
     agency_display_map = {row['NomAgence']: f"{row['NomAgence']} ({row['Region']})" for _, row in df_agence_Region.iterrows()}
