@@ -87,18 +87,28 @@ with c1:
                 queue_length = agence_data['AttenteActuel'].values[0]
                 max_length   = agence_data['Capacites'].values[0]
             echarts_satisfaction_gauge(queue_length, max_length=max_length, title="Clients en Attente")
-            nomService=list(df_queue_filtered['NomService'].unique())
-            HeureFermeture=df_queue['HeureFermeture'].iloc[0]
-            queue_length_service={f'{i}':f"{current_attente(df_queue[df_queue['NomService']==i],selected_agence_gauge,HeureFermeture)}" for i in nomService}
-            
 
-            # Ajoutez les métriques par service ici si nécessaire
-            if queue_length_service:
-                c=c1.columns(len(queue_length_service))
-                for i,nom in enumerate(nomService):
-                    Value = queue_length_service[nom]
-                    Delta = ''
-                    c[i].metric(label=nom, value=Value, delta=Delta)
+            # Répartition par service — source : attenteParService du realtime (temps réel)
+            # Fallback sur current_attente() si le champ est absent
+            attente_par_service = {}
+            if not _rt_row.empty and "AttenteParService" in _rt_row.columns:
+                raw = _rt_row["AttenteParService"].values[0]
+                if isinstance(raw, list) and len(raw) > 0:
+                    attente_par_service = {s["nomService"]: s["clientsEnAttente"] for s in raw}
+
+            if not attente_par_service:
+                # Fallback : calcul depuis df_main (cache 30 min)
+                HeureFermeture = df_queue['HeureFermeture'].iloc[0]
+                nomService = list(df_queue_filtered['NomService'].unique())
+                attente_par_service = {
+                    s: current_attente(df_queue[df_queue['NomService'] == s], selected_agence_gauge, HeureFermeture)
+                    for s in nomService
+                }
+
+            if attente_par_service:
+                c = c1.columns(len(attente_par_service))
+                for i, (nom, val) in enumerate(attente_par_service.items()):
+                    c[i].metric(label=nom, value=int(val))
 with c2:
     st.markdown("""
 <p style="font-size: 14px; text-align: center; color: black;">

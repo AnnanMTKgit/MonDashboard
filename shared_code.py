@@ -950,8 +950,8 @@ def load_agencies_from_api() -> pd.DataFrame:
             df["Pays"]           = ""
             if "Longitude" not in df.columns: df["Longitude"] = None
             if "Latitude"  not in df.columns: df["Latitude"]  = None
-            df["Longitude"]      = pd.to_numeric(df["Longitude"], errors="coerce")
-            df["Latitude"]       = pd.to_numeric(df["Latitude"],  errors="coerce")
+            df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce").replace(0.0, float("nan"))
+            df["Latitude"]  = pd.to_numeric(df["Latitude"],  errors="coerce").replace(0.0, float("nan"))
             df["HeureFermeture"] = "18:00"
             df["HeureDemarrage"] = "08:00"
             df["Status"]         = (~df["suspensionActivite"].astype(bool)).astype(int)
@@ -991,7 +991,13 @@ def load_agencies_from_api() -> pd.DataFrame:
 
 @st.cache_data(ttl=60, show_spinner=False)
 def load_agencies_realtime() -> pd.DataFrame:
-    """Données temps réel par agence : ClientsEnAttente + Capacites (Firebase sync, cache 60 s, sans auth)."""
+    """Données temps réel par agence (cache 60 s, sans auth).
+
+    Colonnes : NomAgence, Region, Capacites, Longitude, Latitude,
+               ClientsEnAttente, AttenteParService (list[dict]),
+               SuspensionActivite, ActivationReservation.
+    ClientsEnAttente est calculé depuis les réservations en cours côté backend.
+    """
     try:
         resp = requests.get(API_AGENCIES_DISPONIBILITE_URL, verify=False, timeout=15)
         resp.raise_for_status()
@@ -1003,17 +1009,21 @@ def load_agencies_realtime() -> pd.DataFrame:
             "longitude":             "Longitude",
             "latitude":              "Latitude",
             "clientsEnAttente":      "ClientsEnAttente",
+            "attenteParService":     "AttenteParService",
             "suspensionActivite":    "SuspensionActivite",
             "activationReservation": "ActivationReservation",
         })
-        if "Longitude" not in df.columns: df["Longitude"] = None
-        if "Latitude"  not in df.columns: df["Latitude"]  = None
-        df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")
-        df["Latitude"]  = pd.to_numeric(df["Latitude"],  errors="coerce")
+        if "Longitude"        not in df.columns: df["Longitude"]        = None
+        if "Latitude"         not in df.columns: df["Latitude"]         = None
+        if "AttenteParService" not in df.columns: df["AttenteParService"] = [[] for _ in range(len(df))]
+        df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce").replace(0.0, float("nan"))
+        df["Latitude"]  = pd.to_numeric(df["Latitude"],  errors="coerce").replace(0.0, float("nan"))
         return df[["NomAgence", "Region", "Capacites", "Longitude", "Latitude",
-                   "ClientsEnAttente", "SuspensionActivite", "ActivationReservation"]]
+                   "ClientsEnAttente", "AttenteParService",
+                   "SuspensionActivite", "ActivationReservation"]]
     except Exception:
-        return pd.DataFrame(columns=["NomAgence", "Region", "Capacites", "ClientsEnAttente",
+        return pd.DataFrame(columns=["NomAgence", "Region", "Capacites", "Longitude", "Latitude",
+                                     "ClientsEnAttente", "AttenteParService",
                                      "SuspensionActivite", "ActivationReservation"])
 
 
