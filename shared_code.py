@@ -979,10 +979,15 @@ def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
         "dateFin":            "Date_Fin",
         "etatNom":            "Nom",
     })
-    # Corriger le double encodage UTF-8 sur le champ statut
-    df["Nom"] = df["Nom"].apply(
-        lambda x: x.encode("latin-1").decode("utf-8") if isinstance(x, str) else x
-    )
+    # Corriger le double encodage UTF-8 sur le champ statut (si présent)
+    def _fix_encoding(x):
+        if not isinstance(x, str):
+            return x
+        try:
+            return x.encode("latin-1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return x  # Déjà correctement encodé, on garde tel quel
+    df["Nom"] = df["Nom"].apply(_fix_encoding)
     # Minutes → secondes pour rester compatible avec le pipeline existant
     df["TempsAttenteReel"] = (df["tempsAttenteMin"] * 60).round().astype("Int64")
     df["TempOperation"]    = (df["tempsOperationMin"] * 60).round().astype("Int64")
