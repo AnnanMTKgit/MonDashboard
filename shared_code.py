@@ -412,9 +412,8 @@ def AgenceTable2(df_all, df_queue):
         # Votre dictionnaire devient beaucoup plus propre
         
         agg_perf = {
-            'Temps_Moyen_Operation': ('TempOperation', lambda x: np.mean(x) / 60),
-            'Temps_Moyen_Attente': ('TempsAttenteReel', lambda x: np.mean(x) / 60),
-            
+            'Temps_Moyen_Operation': ('TempOperation', lambda x: float(np.nanmean(x) / 60) if len(x) > 0 else 0.0),
+            'Temps_Moyen_Attente': ('TempsAttenteReel', lambda x: float(np.nanmean(x) / 60) if len(x) > 0 else 0.0),
         }
         
         agg_queue_agence = {
@@ -539,8 +538,8 @@ def AgenceTable(df_all, df_queue):
         ##### Agrégation Globale Directe ############
         # Agrégation des données de performance (df1)
         agg1_global = df1.groupby(['NomAgence', "Region", 'Capacites']).agg(
-            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60),
-            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60),
+            Temps_Moyen_Operation=('TempOperation', lambda x: float(np.nanmean(x) / 60) if len(x) > 0 else 0.0),
+            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: float(np.nanmean(x) / 60) if len(x) > 0 else 0.0),
             NombreTraites=('Nom', lambda x: ((x == 'Traitée') | (x == 'Valider')).sum()),
             NombreRejetee=('Nom', lambda x: (x == 'Rejetée').sum()),
             NombrePassee=('Nom', lambda x: (x == 'Passée').sum())
@@ -1050,6 +1049,11 @@ def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
         "dateFin":            "Date_Fin",
         "etatNom":            "Nom",
     })
+    # Normaliser la casse de la région — l'API retourne "DAKAR" et "Dakar" en même temps
+    if "Region" in df.columns:
+        df["Region"] = df["Region"].str.strip().str.title()
+    if "NomAgence" in df.columns:
+        df["NomAgence"] = df["NomAgence"].str.strip()
     # Corriger le double encodage UTF-8 sur le champ statut (si présent)
     def _fix_encoding(x):
         if not isinstance(x, str):
