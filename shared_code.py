@@ -945,11 +945,15 @@ def load_agencies_from_api() -> pd.DataFrame:
                 "nomAgence":  "NomAgence",
                 "regionName": "Region",
                 "capacites":  "Capacites",
+                "longitude":  "Longitude",
+                "latitude":   "Latitude",
             })
             df["Adresse"]        = ""
             df["Pays"]           = ""
-            df["Longitude"]      = None
-            df["Latitude"]       = None
+            if "Longitude" not in df.columns: df["Longitude"] = None
+            if "Latitude"  not in df.columns: df["Latitude"]  = None
+            df["Longitude"]      = pd.to_numeric(df["Longitude"], errors="coerce")
+            df["Latitude"]       = pd.to_numeric(df["Latitude"],  errors="coerce")
             df["HeureFermeture"] = "18:00"
             df["HeureDemarrage"] = "08:00"
             df["Status"]         = (~df["suspensionActivite"].astype(bool)).astype(int)
@@ -994,15 +998,22 @@ def load_agencies_realtime() -> pd.DataFrame:
         resp = requests.get(API_AGENCIES_DISPONIBILITE_URL, verify=False, timeout=15)
         resp.raise_for_status()
         df = pd.DataFrame(resp.json())
-        return df.rename(columns={
+        df = df.rename(columns={
             "nomAgence":             "NomAgence",
             "regionName":            "Region",
             "capacites":             "Capacites",
+            "longitude":             "Longitude",
+            "latitude":              "Latitude",
             "clientsEnAttente":      "ClientsEnAttente",
             "suspensionActivite":    "SuspensionActivite",
             "activationReservation": "ActivationReservation",
-        })[["NomAgence", "Region", "Capacites", "ClientsEnAttente",
-            "SuspensionActivite", "ActivationReservation"]]
+        })
+        if "Longitude" not in df.columns: df["Longitude"] = None
+        if "Latitude"  not in df.columns: df["Latitude"]  = None
+        df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")
+        df["Latitude"]  = pd.to_numeric(df["Latitude"],  errors="coerce")
+        return df[["NomAgence", "Region", "Capacites", "Longitude", "Latitude",
+                   "ClientsEnAttente", "SuspensionActivite", "ActivationReservation"]]
     except Exception:
         return pd.DataFrame(columns=["NomAgence", "Region", "Capacites", "ClientsEnAttente",
                                      "SuspensionActivite", "ActivationReservation"])
@@ -1138,12 +1149,16 @@ def create_sidebar_filters():
         with st.spinner("Chargement des données..."):
             st.session_state.df_main = load_main_data(start_date, end_date)
             st.session_state.last_date_range = (start_date, end_date)
-            # Enrichir df_main avec les Capacites réelles (remplacement du fallback 0)
+            # Enrichir df_main avec Capacites, Latitude, Longitude réelles
             _rt = st.session_state.agencies_realtime
             if not _rt.empty and not st.session_state.df_main.empty:
-                st.session_state.df_main = st.session_state.df_main.drop(columns=["Capacites"], errors="ignore")
+                _meta_cols = [c for c in ["NomAgence", "Capacites", "Latitude", "Longitude"] if c in _rt.columns]
+                st.session_state.df_main = st.session_state.df_main.drop(
+                    columns=[c for c in ["Capacites", "Latitude", "Longitude"] if c in st.session_state.df_main.columns],
+                    errors="ignore"
+                )
                 st.session_state.df_main = st.session_state.df_main.merge(
-                    _rt[["NomAgence", "Capacites"]], on="NomAgence", how="left"
+                    _rt[_meta_cols], on="NomAgence", how="left"
                 )
                 st.session_state.df_main["Capacites"] = (
                     st.session_state.df_main["Capacites"].fillna(0).astype(int)
