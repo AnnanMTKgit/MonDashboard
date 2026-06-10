@@ -66,13 +66,16 @@ def render_activity_page():
         
         # KPIs sur les moyennes (inchangés)
         # Calculs pour les KPIs
-        pic_moyen = rapport_moyen['nb_attente_moyen'].max()
+        pic_moyen = rapport_moyen['nb_attente_moyen'].max() if not rapport_moyen.empty else 0
         moyenne_globale = df_agence['nb_attente'].mean()
-        
-        creneau_charge_info = rapport_moyen.loc[rapport_moyen['nb_attente_moyen'].idxmax()]
-        jour_charge = creneau_charge_info['Jour_semaine']
-        heure_charge = creneau_charge_info['Heure_jour']
-        creneau_charge_str = f"{jour_charge[:3].capitalize()} {heure_charge}h"
+
+        if not rapport_moyen.empty:
+            creneau_charge_info = rapport_moyen.loc[rapport_moyen['nb_attente_moyen'].idxmax()]
+            jour_charge = creneau_charge_info['Jour_semaine']
+            heure_charge = creneau_charge_info['Heure_jour']
+            creneau_charge_str = f"{jour_charge[:3].capitalize()} {heure_charge}h"
+        else:
+            creneau_charge_str = "N/A"
 
         # peak_info = df_agence.loc[df_agence['nb_attente'].idxmax()]
         # peak_value = peak_info['nb_attente']

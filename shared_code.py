@@ -433,9 +433,9 @@ def AgenceTable2(df_all, df_queue):
     
         # ==================== 1. VUE PAR AGENCE (inchangée) ====================
         agg1_mensuel = df1.groupby(['Mois', 'NomAgence', "Region", 'Capacites']).agg(**agg_perf).reset_index()
-        agg2_mensuel = df2.groupby(['Mois', 'NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(**agg_queue_agence).reset_index()
+        agg2_mensuel = df2.groupby(['Mois', 'NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude'], dropna=False).agg(**agg_queue_agence).reset_index()
         agg1_global = df1.groupby(['NomAgence', "Region", 'Capacites']).agg(**agg_perf).reset_index()
-        agg2_global = df2.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(**agg_queue_agence).reset_index()
+        agg2_global = df2.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude'], dropna=False).agg(**agg_queue_agence).reset_index()
 
         attente_actuelle = []
         for agence in df2['NomAgence'].unique():
@@ -547,7 +547,7 @@ def AgenceTable(df_all, df_queue):
         ).reset_index()
 
         # Agrégation des données de queue (df2)
-        agg2_global = df2.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(
+        agg2_global = df2.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude'], dropna=False).agg(
             NombreTickets=('Date_Reservation', 'count'),
             TotalMobile=('IsMobile', 'sum')
         ).reset_index()
@@ -707,15 +707,15 @@ def current_attente(df_queue,agence,HeureFermeture=None):
 
         for fmt in formats_to_try:
             try:
-                # Try to parse the string with the current format
                 time_obj = datetime.strptime(HeureFermeture, fmt).time()
                 break
             except ValueError:
-                # If it fails, just continue to the next format
                 continue
-        #time_obj =datetime.strptime(HeureFermeture, "%H:%M").time()
+        else:
+            # Aucun format n'a correspondu → fallback 18h00
+            time_obj = datetime.strptime("18:00", "%H:%M").time()
 
-        six_pm_datetime=datetime.combine(current_date, time_obj)
+        six_pm_datetime = datetime.combine(current_date, time_obj)
 
     if current_datetime >six_pm_datetime:
     
@@ -1162,25 +1162,29 @@ def create_folium_map(agg):
         width="100%",
         height="100%"
     )
-    # Générer des polygones et marqueurs par ville
-    for ville, group in df.groupby("Region"):
+    # Générer des polygones et marqueurs par ville (uniquement si coordonnées disponibles)
+    df_geo = df.dropna(subset=["Latitude", "Longitude"])
+    for ville, group in df_geo.groupby("Region"):
         min_lat, max_lat = group["Latitude"].min(), group["Latitude"].max()
         min_lon, max_lon = group["Longitude"].min(), group["Longitude"].max()
 
-        # Définition du polygone (bounding box)
-        polygon_coords = [
-            [min_lat, min_lon], [max_lat, min_lon],
-            [max_lat, max_lon], [min_lat, max_lon],
-            [min_lat, min_lon]
-        ]
-        folium.Polygon(
-            locations=polygon_coords,
-            color="black",
-            fill=True,
-            fill_color="gray",
-            fill_opacity=0.2,
-            popup=f"Région: {ville}"
-        ).add_to(m)
+        # Définition du polygone (bounding box) — skip si coordonnées identiques
+        if min_lat == max_lat and min_lon == max_lon:
+            pass
+        else:
+            polygon_coords = [
+                [min_lat, min_lon], [max_lat, min_lon],
+                [max_lat, max_lon], [min_lat, max_lon],
+                [min_lat, min_lon]
+            ]
+            folium.Polygon(
+                locations=polygon_coords,
+                color="black",
+                fill=True,
+                fill_color="gray",
+                fill_opacity=0.2,
+                popup=f"Région: {ville}"
+            ).add_to(m)
 
         # Ajouter les marqueurs avec popups
         for _, row in group.iterrows():
@@ -1190,10 +1194,9 @@ def create_folium_map(agg):
                 f"<b>Client en Attente:</b> {row['AttenteActuel']} <br>"
                 f"<b>Temps Moyen d'Attente:</b> {row['Temps_Moyen_Attente']} min"
             )
-
             folium.Marker(
                 location=[row["Latitude"], row["Longitude"]],
-                tooltip=popup_text,  # Affichage au survol
+                tooltip=popup_text,
                 popup=folium.Popup(popup_text, max_width=300),
                 icon=folium.Icon(color=agence_couleur[row["NomAgence"]], icon="info-sign")
             ).add_to(m)

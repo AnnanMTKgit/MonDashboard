@@ -86,11 +86,12 @@ with c1:
             
 
             # Ajoutez les métriques par service ici si nécessaire
-            c=c1.columns(len(queue_length_service))
-            for i,nom in enumerate(nomService):
-                Value = queue_length_service[nom]
-                Delta = ''
-                c[i].metric(label=nom, value=Value, delta=Delta)
+            if queue_length_service:
+                c=c1.columns(len(queue_length_service))
+                for i,nom in enumerate(nomService):
+                    Value = queue_length_service[nom]
+                    Delta = ''
+                    c[i].metric(label=nom, value=Value, delta=Delta)
 with c2:
     st.markdown("""
 <p style="font-size: 14px; text-align: center; color: black;">
