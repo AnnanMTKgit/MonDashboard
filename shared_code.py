@@ -930,27 +930,61 @@ API_AGENCIES_DISPONIBILITE_URL = f"{API_BASE_URL}/api/agences/disponibilite"
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def load_agencies_from_api() -> pd.DataFrame:
-    """Charge la liste des agences via /api/agences/disponibilite (sans authentification, Capacites réelles)."""
-    resp = requests.get(API_AGENCIES_DISPONIBILITE_URL, verify=False, timeout=15)
-    resp.raise_for_status()
-    df = pd.DataFrame(resp.json())
-    if df.empty:
-        return pd.DataFrame(columns=["Region", "NomAgence", "Capacites"])
-    df = df.rename(columns={
-        "nomAgence":  "NomAgence",
-        "regionName": "Region",
-        "capacites":  "Capacites",
-    })
-    df["Adresse"]        = ""
-    df["Pays"]           = ""
-    df["Longitude"]      = None
-    df["Latitude"]       = None
-    df["HeureFermeture"] = "18:00"
-    df["HeureDemarrage"] = "08:00"
-    df["Status"]         = (~df["suspensionActivite"].astype(bool)).astype(int)
-    return df[["Region", "NomAgence", "Adresse", "Pays",
-               "Longitude", "Latitude", "Capacites",
-               "HeureDemarrage", "HeureFermeture", "Status"]].drop_duplicates(subset=["NomAgence"])
+    """Charge la liste des agences.
+
+    Tente d'abord /api/agences/disponibilite (pas d'auth, Capacites réelles).
+    Si indisponible, repli sur l'endpoint réservations (30 derniers jours).
+    """
+    # --- Tentative 1 : nouvel endpoint temps réel ---
+    try:
+        resp = requests.get(API_AGENCIES_DISPONIBILITE_URL, verify=False, timeout=15)
+        resp.raise_for_status()
+        df = pd.DataFrame(resp.json())
+        if not df.empty and "nomAgence" in df.columns:
+            df = df.rename(columns={
+                "nomAgence":  "NomAgence",
+                "regionName": "Region",
+                "capacites":  "Capacites",
+            })
+            df["Adresse"]        = ""
+            df["Pays"]           = ""
+            df["Longitude"]      = None
+            df["Latitude"]       = None
+            df["HeureFermeture"] = "18:00"
+            df["HeureDemarrage"] = "08:00"
+            df["Status"]         = (~df["suspensionActivite"].astype(bool)).astype(int)
+            return df[["Region", "NomAgence", "Adresse", "Pays",
+                        "Longitude", "Latitude", "Capacites",
+                        "HeureDemarrage", "HeureFermeture", "Status"]].drop_duplicates(subset=["NomAgence"])
+    except Exception:
+        pass  # repli ci-dessous
+
+    # --- Tentative 2 : repli sur les réservations des 30 derniers jours ---
+    try:
+        from datetime import date, timedelta
+        token      = get_api_token()
+        headers    = {"Authorization": f"Bearer {token}"}
+        date_fin   = date.today().strftime("%Y-%m-%d")
+        date_debut = (date.today() - timedelta(days=30)).strftime("%Y-%m-%d")
+        params     = {"date_debut": date_debut, "date_fin": date_fin, "page_size": 1000, "page": 1}
+        resp = requests.get(API_AGENCIES_URL, headers=headers, params=params, verify=False, timeout=60)
+        resp.raise_for_status()
+        rows = resp.json().get("data", [])
+        if not rows:
+            return pd.DataFrame(columns=["Region", "NomAgence", "Capacites"])
+        df = pd.DataFrame(rows).rename(columns={"agenceNom": "NomAgence", "regionLabel": "Region"})
+        for col, default in [("Adresse", ""), ("Pays", ""), ("Longitude", None), ("Latitude", None),
+                              ("Capacites", 0), ("HeureFermeture", "18:00"),
+                              ("HeureDemarrage", "08:00"), ("Status", 1)]:
+            if col not in df.columns:
+                df[col] = default
+        return df[["Region", "NomAgence", "Adresse", "Pays",
+                    "Longitude", "Latitude", "Capacites",
+                    "HeureDemarrage", "HeureFermeture", "Status"]].drop_duplicates(subset=["NomAgence"])
+    except Exception:
+        return pd.DataFrame(columns=["Region", "NomAgence", "Adresse", "Pays",
+                                     "Longitude", "Latitude", "Capacites",
+                                     "HeureDemarrage", "HeureFermeture", "Status"])
 
 
 @st.cache_data(ttl=60, show_spinner=False)
