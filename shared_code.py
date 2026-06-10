@@ -721,14 +721,12 @@ def current_attente(df_queue,agence,HeureFermeture=None):
     
         return 0
     else:
-        var='En Attente'
-        
-        df = df_queue.query(
-        f"(Nom == @var) & (Date_Reservation.dt.strftime('%Y-%m-%d') == '{current_date}') & (NomAgence == @agence)"
-    )   
-        
-        number=len(df)
-        return number
+        mask = (
+            (df_queue['Nom'].str.lower() == 'en attente') &
+            (df_queue['Date_Reservation'].dt.strftime('%Y-%m-%d') == str(current_date)) &
+            (df_queue['NomAgence'] == agence)
+        )
+        return int(mask.sum())
 
 
 # --- Composants UI Partagés ---
