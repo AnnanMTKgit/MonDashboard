@@ -51,30 +51,31 @@ def show_login_page():
         if submitted:
             try:
                 # Vérifier d'abord les utilisateurs locaux (définis dans secrets.toml)
-                local_users = st.secrets.get("local_users", {})
-                local_user  = local_users.get(email)
+                try:
+                    local_user = st.secrets["local_users"][email]
+                except (KeyError, Exception):
+                    local_user = None
 
-                if local_user and password == local_user.get("password", ""):
+                if local_user is not None and password == local_user["password"]:
                     # Utilisateur local validé — s'authentifier en arrière-plan avec le compte admin
-                    api_creds = st.secrets.get("api", {})
                     resp = requests.post(
                         API_LOGIN_URL,
-                        json={"email": api_creds["email"], "password": api_creds["password"]},
+                        json={"email": st.secrets["api"]["email"], "password": st.secrets["api"]["password"]},
                         verify=False,
                         timeout=10,
                     )
                     resp.raise_for_status()
                     token = resp.json().get("token", "")
-                    local_role = local_user.get("role", "Admin")
+                    local_role = local_user.get("role", "Admin") if hasattr(local_user, "get") else local_user["role"]
                     st.session_state.logged_in    = True
-                    st.session_state.username     = local_user.get("display_name", email)
+                    st.session_state.username     = local_user.get("display_name", email) if hasattr(local_user, "get") else local_user["display_name"]
                     st.session_state.api_token    = token
                     st.session_state.user_profile = (
                         "Admin" if local_role.lower() in ("admin", "super_admin", "superadmin") else "Caissier"
                     )
                     initialize_session_state()
                     st.rerun()
-                elif local_user:
+                elif local_user is not None:
                     # Utilisateur local trouvé mais mot de passe incorrect
                     st.error("Email ou mot de passe incorrect.")
                 else:
