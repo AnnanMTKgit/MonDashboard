@@ -3142,7 +3142,14 @@ def run_analysis_pipeline(_df_source, filtrer_semaine=True):
 
 import holidays
 from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import LSTM as _KerasLSTM
 from joblib import load
+
+class _LSTMCompat(_KerasLSTM):
+    """Wrapper qui ignore time_major pour la compatibilité h5 Keras 2 → Keras 3."""
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('time_major', None)
+        super().__init__(*args, **kwargs)
 \
 
 # ==============================================================================
@@ -3221,9 +3228,9 @@ def _apply_common_processing_steps_base(df_raw, all_known_agencies, fixed_min_da
 @st.cache_resource
 def load_model_and_scaler():
     """Charge le modèle et le scaler depuis le disque. Mis en cache pour toute la session."""
-    
+    _compat = {'LSTM': _LSTMCompat}
     try:
-        model = load_model('final_lstm_model.h5')
+        model = load_model('final_lstm_model.h5', custom_objects=_compat)
         scaler = load('final_scaler.gz')
         return model, scaler
     except Exception as e:
@@ -3255,7 +3262,7 @@ def run_prediction_pipeline(df_raw_actual, df_raw_past):
 
     # --- 2. Chargement des artefacts ---
     try:
-        model = load_model('final_lstm_model.h5')
+        model = load_model('final_lstm_model.h5', custom_objects={'LSTM': _LSTMCompat})
         scaler = load('final_scaler.gz')
     except Exception as e:
         st.error(f"Erreur lors du chargement du modèle ou du scaler : {e}")
