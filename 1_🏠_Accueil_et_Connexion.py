@@ -50,27 +50,56 @@ def show_login_page():
 
         if submitted:
             try:
-                resp = requests.post(
-                    API_LOGIN_URL,
-                    json={"email": email, "password": password},
-                    verify=False,
-                    timeout=10,
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    user  = data.get("user", {})
-                    token = data.get("token", "")
-                    role  = user.get("role", "").lower()
+                # Vérifier d'abord les utilisateurs locaux (définis dans secrets.toml)
+                local_users = st.secrets.get("local_users", {})
+                local_user  = local_users.get(email)
+
+                if local_user and password == local_user.get("password", ""):
+                    # Utilisateur local validé — s'authentifier en arrière-plan avec le compte admin
+                    api_creds = st.secrets.get("api", {})
+                    resp = requests.post(
+                        API_LOGIN_URL,
+                        json={"email": api_creds["email"], "password": api_creds["password"]},
+                        verify=False,
+                        timeout=10,
+                    )
+                    resp.raise_for_status()
+                    token = resp.json().get("token", "")
+                    local_role = local_user.get("role", "Admin")
                     st.session_state.logged_in    = True
-                    st.session_state.username     = user.get("name", email)
+                    st.session_state.username     = local_user.get("display_name", email)
                     st.session_state.api_token    = token
                     st.session_state.user_profile = (
-                        "Admin" if role in ("admin", "super_admin", "superadmin") else "Caissier"
+                        "Admin" if local_role.lower() in ("admin", "super_admin", "superadmin") else "Caissier"
                     )
                     initialize_session_state()
                     st.rerun()
-                else:
+                elif local_user:
+                    # Utilisateur local trouvé mais mot de passe incorrect
                     st.error("Email ou mot de passe incorrect.")
+                else:
+                    # Pas un utilisateur local → essayer directement l'API
+                    resp = requests.post(
+                        API_LOGIN_URL,
+                        json={"email": email, "password": password},
+                        verify=False,
+                        timeout=10,
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        user  = data.get("user", {})
+                        token = data.get("token", "")
+                        role  = user.get("role", "").lower()
+                        st.session_state.logged_in    = True
+                        st.session_state.username     = user.get("name", email)
+                        st.session_state.api_token    = token
+                        st.session_state.user_profile = (
+                            "Admin" if role in ("admin", "super_admin", "superadmin") else "Caissier"
+                        )
+                        initialize_session_state()
+                        st.rerun()
+                    else:
+                        st.error("Email ou mot de passe incorrect.")
             except Exception as e:
                 st.error(f"Erreur de connexion à l'API : {e}")
 
