@@ -101,42 +101,42 @@ def setup_auto_refresh(interval_minutes=10):
 class SQLQueries:
     def __init__(self):
         # ... (copiez votre classe SQLQueries ici)
-    #     self.AllQueueQueries = f""" SELECT u.FirstName,u.LastName,u.UserName,q.Date_Reservation,q.Date_Appel,q.TempAttenteMoyen,DATEDIFF(second, q.Date_Reservation, q.Date_Appel) as TempsAttenteReel,
-    # q.Date_Fin,DATEDIFF(second, q.Date_Appel, q.Date_Fin) as TempOperation,q.IsMobile,e.Nom ,s.NomService,t.Label as Type_Operation,r.ReservationParHeure,
-    # r.AgenceId,a.NomAgence,a.Capacites,a.Longitude,a.Latitude ,a.HeureFermeture, rg.Label Region FROM reservation r LEFT JOIN TypeOperation t ON t.Id=r.TypeOperationId LEFT JOIN queue q ON r.id = q.reservationId
-    # LEFT JOIN Service s ON r.ServiceId = s.Id LEFT JOIN [User] u ON u.Id = q.userId LEFT JOIN Etat e ON e.Id = q.EtatId LEFT JOIN Agence a ON a.Id = r.AgenceId LEFT JOIN Region rg ON rg.Id=a.RegionId
-    # WHERE Date_Reservation is not NULL and CAST(q.Date_Reservation AS DATE) BETWEEN CAST(? AS datetime) AND CAST(? AS datetime) 
-    # ORDER BY q.Date_Reservation DESC; """
-        
-        self.AllQueueQueries = f""" SELECT
-      [Date_Reservation]
-      ,[Date_Appel]
-      ,[TempAttenteMoyen]
-      ,DATEDIFF(second, q.Date_Reservation, q.Date_Appel) as TempsAttenteReel
-      ,[Date_Fin]
-      ,DATEDIFF(second, q.Date_Appel, q.Date_Fin) as TempOperation
-      ,u.[UserName]
-      ,q.[FirstName]
-      ,q.[LastName]
-      ,[Nom]
-      ,q.[AgenceId]
-      ,a.[NomAgence]
-      ,a.[Capacites]
-      ,a.[Longitude]
-      ,a.[Latitude]
-      ,a.[HeureFermeture]
-      ,rg.[Label] as Region
-      ,[ServiceId]
-      ,[NomService]
-      ,[TypeOperationId]
-      ,[Type_Operation]
-      ,[IsMobile]
-      
-      ,[ReservationParHeure]
-      ,[FetchedAt]
-  FROM [dbo].[QueueUnified] q LEFT JOIN [User] u ON u.Id = q.UserName LEFT JOIN Agence a ON a.Id = q.AgenceId LEFT JOIN Region rg ON rg.Id=a.RegionId
+        self.AllQueueQueries = f""" SELECT u.FirstName,u.LastName,u.UserName,q.Date_Reservation,q.Date_Appel,q.TempAttenteMoyen,DATEDIFF(second, q.Date_Reservation, q.Date_Appel) as TempsAttenteReel,
+    q.Date_Fin,DATEDIFF(second, q.Date_Appel, q.Date_Fin) as TempOperation,q.IsMobile,e.Nom ,s.NomService,t.Label as Type_Operation,r.ReservationParHeure,
+    r.AgenceId,a.NomAgence,a.Capacites,a.Longitude,a.Latitude ,a.HeureFermeture, rg.Label Region FROM reservation r LEFT JOIN TypeOperation t ON t.Id=r.TypeOperationId LEFT JOIN queue q ON r.id = q.reservationId
+    LEFT JOIN Service s ON r.ServiceId = s.Id LEFT JOIN [User] u ON u.Id = q.userId LEFT JOIN Etat e ON e.Id = q.EtatId LEFT JOIN Agence a ON a.Id = r.AgenceId LEFT JOIN Region rg ON rg.Id=a.RegionId
     WHERE Date_Reservation is not NULL and CAST(q.Date_Reservation AS DATE) BETWEEN CAST(? AS datetime) AND CAST(? AS datetime) 
     ORDER BY q.Date_Reservation DESC; """
+        
+#         self.AllQueueQueries = f""" SELECT
+#       [Date_Reservation]
+#       ,[Date_Appel]
+#       ,[TempAttenteMoyen]
+#       ,DATEDIFF(second, q.Date_Reservation, q.Date_Appel) as TempsAttenteReel
+#       ,[Date_Fin]
+#       ,DATEDIFF(second, q.Date_Appel, q.Date_Fin) as TempOperation
+#       ,u.[UserName]
+#       ,q.[FirstName]
+#       ,q.[LastName]
+#       ,[Nom]
+#       ,q.[AgenceId]
+#       ,a.[NomAgence]
+#       ,a.[Capacites]
+#       ,a.[Longitude]
+#       ,a.[Latitude]
+#       ,a.[HeureFermeture]
+#       ,rg.[Label] as Region
+#       ,[ServiceId]
+#       ,[NomService]
+#       ,[TypeOperationId]
+#       ,[Type_Operation]
+#       ,[IsMobile]
+      
+#       ,[ReservationParHeure]
+#       ,[FetchedAt]
+#   FROM [dbo].[QueueUnified] q LEFT JOIN [User] u ON u.Id = q.UserName LEFT JOIN Agence a ON a.Id = q.AgenceId LEFT JOIN Region rg ON rg.Id=a.RegionId
+#     WHERE Date_Reservation is not NULL and CAST(q.Date_Reservation AS DATE) BETWEEN CAST(? AS datetime) AND CAST(? AS datetime) 
+#     ORDER BY q.Date_Reservation DESC; """
 
         self.ProfilQueries = f"""SELECT
       U.[FirstName]
@@ -378,6 +378,119 @@ def _format_and_finalize_df(df, sort_by, periode_str=None, is_reseau_view=False)
     return df
 
 
+# def AgenceTable2(df_all, df_queue):
+#     """
+#     Calcule 4 tables de performance avec la logique de capacité réseau corrigée.
+#     """
+#     try:
+#         if df_all.empty or df_queue.empty:
+#             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+#         df1 = df_all.copy()
+#         df1 = df1[df1['Nom'] == 'Traitée'].copy()
+#         df2 = df_queue.copy()
+
+#         df1['Date_Reservation'] = pd.to_datetime(df1['Date_Reservation'])
+#         df2['Date_Reservation'] = pd.to_datetime(df2['Date_Reservation'])
+#         df1['Mois'] = df1['Date_Reservation'].dt.to_period('M').astype(str)
+#         df2['Mois'] = df2['Date_Reservation'].dt.to_period('M').astype(str)
+
+#         # Concaténer les deux dataframes pour avoir une liste complète des agences et de leurs capacités
+#         df_combined = pd.concat([
+#             df1[['NomAgence', 'Region', 'Capacites', 'Mois']],
+#             df2[['NomAgence', 'Region', 'Capacites', 'Mois']]
+#         ]).drop_duplicates().reset_index(drop=True)
+
+        
+#         # Votre dictionnaire devient beaucoup plus propre
+        
+#         agg_perf = {
+#             'Temps_Moyen_Operation': ('TempOperation', lambda x: np.mean(x) / 60),
+#             'Temps_Moyen_Attente': ('TempsAttenteReel', lambda x: np.mean(x) / 60),
+            
+#         }
+        
+#         agg_queue_agence = {
+#             'NombreTraites': ('Nom', lambda x:  (x == 'Traitée').sum()),
+#             'NombreRejetee': ('Nom', lambda x: (x == 'Rejetée').sum()),
+#             'NombrePassee': ('Nom', lambda x: (x == 'Passée').sum()),
+#             'NombreTickets': ('Date_Reservation', 'count'),
+#             'TotalMobile': ('IsMobile', 'sum')
+#         }
+        
+#         # Pour le réseau, on ne calcule plus la capacité ici.
+#         agg_queue_reseau = {
+#             'NombreTickets': ('Date_Reservation', 'count'),
+#             'TotalMobile': ('IsMobile', 'sum')
+#         }
+    
+#         # ==================== 1. VUE PAR AGENCE (inchangée) ====================
+#         agg1_mensuel = df1.groupby(['Mois', 'NomAgence', "Region", 'Capacites']).agg(**agg_perf).reset_index()
+#         agg2_mensuel = df2.groupby(['Mois', 'NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(**agg_queue_agence).reset_index()
+#         agg1_global = df1.groupby(['NomAgence', "Region", 'Capacites']).agg(**agg_perf).reset_index()
+#         agg2_global = df2.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(**agg_queue_agence).reset_index()
+
+#         attente_actuelle = []
+#         for agence in df2['NomAgence'].unique():
+#             df_agence = df2[df2['NomAgence'] == agence]
+#             if not df_agence.empty:
+#                 heure_fermeture = df_agence['HeureFermeture'].iloc[0]
+#                 attente = current_attente(df2, agence, heure_fermeture)
+#                 attente_actuelle.append({'NomAgence': agence, 'AttenteActuel': attente})
+        
+#         attente_df = pd.DataFrame(attente_actuelle)
+#         if attente_actuelle:
+#             agg2_global = pd.merge(agg2_global, pd.DataFrame(attente_actuelle), on='NomAgence', how='left')
+#         else:
+#             agg2_global['AttenteActuel'] = 0
+
+#         agence_mensuel = pd.merge(agg2_mensuel, agg1_mensuel, on=['Mois', 'NomAgence', "Region", 'Capacites'], how='outer')
+#         agence_global = pd.merge(agg2_global, agg1_global, on=['NomAgence', "Region", 'Capacites'], how='outer')
+
+#         # ==================== 2. VUE POUR LE RÉSEAU (logique corrigée) ====================
+#         # Agrégations pour le réseau (tickets, mobiles, temps, statuts...)
+#         agg1_reseau_mensuel = df1.groupby(['Mois', 'Region']).agg(**agg_perf).reset_index()
+#         agg2_reseau_mensuel = df2.groupby(['Mois', 'Region']).agg(**agg_queue_reseau).reset_index()
+#         agg1_reseau_global = df1.groupby(['Region']).agg(**agg_perf).reset_index()
+#         agg2_reseau_global = df2.groupby(['Region']).agg(**agg_queue_reseau).reset_index()
+
+#         # === NOUVELLE LOGIQUE POUR LA CAPACITÉ RÉSEAU ===
+#         # 1. Obtenir la capacité unique pour chaque agence
+#         capacites_uniques_par_agence = df_combined[['NomAgence', 'Region', 'Capacites']].drop_duplicates()
+        
+#         # 2. Calculer la capacité totale du réseau (global) par région
+#         capacite_reseau_global = capacites_uniques_par_agence.groupby('Region')['Capacites'].sum().reset_index()
+        
+#         # 3. Calculer la capacité totale du réseau (mensuel) par mois et par région
+#         # On ne garde qu'une ligne par mois/agence pour éviter les doublons avant de sommer
+#         capacites_uniques_par_mois = df_combined[['Mois', 'NomAgence', 'Region', 'Capacites']].drop_duplicates()
+#         capacite_reseau_mensuel = capacites_uniques_par_mois.groupby(['Mois', 'Region'])['Capacites'].sum().reset_index()
+
+#         # Fusion des données de performance et de file d'attente
+#         reseau_mensuel = pd.merge(agg2_reseau_mensuel, agg1_reseau_mensuel, on=['Mois', 'Region'], how='outer')
+#         reseau_global = pd.merge(agg2_reseau_global, agg1_reseau_global, on=['Region'], how='outer')
+
+#         # Fusion AVEC LA CAPACITÉ CORRECTEMENT CALCULÉE
+#         reseau_mensuel = pd.merge(reseau_mensuel, capacite_reseau_mensuel, on=['Mois', 'Region'], how='left')
+#         reseau_global = pd.merge(reseau_global, capacite_reseau_global, on=['Region'], how='left')
+        
+#         # ==================== 3. FORMATAGE FINAL (inchangé) ====================
+#         all_dates = pd.concat([df1['Date_Reservation'], df2['Date_Reservation']]).dropna()
+#         periode_globale = f"{all_dates.min().strftime('%Y-%m-%d')} - {all_dates.max().strftime('%Y-%m-%d')}"
+        
+#         agence_mensuel_f = _format_and_finalize_df(agence_mensuel, sort_by=['Période', "Nom d'Agence"])
+#         agence_global_f = _format_and_finalize_df(agence_global, sort_by=["Nom d'Agence"], periode_str=periode_globale)
+#         reseau_mensuel_f = _format_and_finalize_df(reseau_mensuel, sort_by=['Période', 'Region'], is_reseau_view=True)
+#         reseau_global_f = _format_and_finalize_df(reseau_global, sort_by=['Region'], periode_str=periode_globale, is_reseau_view=True)
+        
+#         return agence_mensuel_f, agence_global_f, reseau_mensuel_f, reseau_global_f
+
+#     except Exception as e:
+#         # st.error(f"Erreur dans AgenceTable: {e}")
+#         print(f"Erreur dans AgenceTable: {e}")
+#         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+
 def AgenceTable2(df_all, df_queue):
     """
     Calcule 4 tables de performance avec la logique de capacité réseau corrigée.
@@ -386,8 +499,8 @@ def AgenceTable2(df_all, df_queue):
         if df_all.empty or df_queue.empty:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
+        # On garde df1 complet au départ
         df1 = df_all.copy()
-        df1 = df1[df1['Nom'] == 'Traitée'].copy()
         df2 = df_queue.copy()
 
         df1['Date_Reservation'] = pd.to_datetime(df1['Date_Reservation'])
@@ -395,39 +508,57 @@ def AgenceTable2(df_all, df_queue):
         df1['Mois'] = df1['Date_Reservation'].dt.to_period('M').astype(str)
         df2['Mois'] = df2['Date_Reservation'].dt.to_period('M').astype(str)
 
-        # Concaténer les deux dataframes pour avoir une liste complète des agences et de leurs capacités
+        # Concaténer pour la liste complète des agences/capacités
         df_combined = pd.concat([
             df1[['NomAgence', 'Region', 'Capacites', 'Mois']],
             df2[['NomAgence', 'Region', 'Capacites', 'Mois']]
         ]).drop_duplicates().reset_index(drop=True)
 
-        
-        # Votre dictionnaire devient beaucoup plus propre
-        
-        agg_perf = {
-            'Temps_Moyen_Operation': ('TempOperation', lambda x: np.mean(x) / 60),
-            'Temps_Moyen_Attente': ('TempsAttenteReel', lambda x: np.mean(x) / 60),
-            
-        }
-        
+        # Extraction de df1_traitee UNIQUEMENT pour le temps d'opération
+        df1_traitee = df1[df1['Nom'] == 'Traitée']
+
+        # Dictionnaires de file d'attente
         agg_queue_agence = {
-            'NombreTraites': ('Nom', lambda x:  (x == 'Traitée').sum()),
+            'NombreTraites': ('Nom', lambda x: (x == 'Traitée').sum()),
             'NombreRejetee': ('Nom', lambda x: (x == 'Rejetée').sum()),
             'NombrePassee': ('Nom', lambda x: (x == 'Passée').sum()),
             'NombreTickets': ('Date_Reservation', 'count'),
             'TotalMobile': ('IsMobile', 'sum')
         }
         
-        # Pour le réseau, on ne calcule plus la capacité ici.
         agg_queue_reseau = {
             'NombreTickets': ('Date_Reservation', 'count'),
+            'NombreTraites': ('Nom', lambda x: (x == 'Traitée').sum()),
+            'NombreRejetee': ('Nom', lambda x: (x == 'Rejetée').sum()),
+            'NombrePassee': ('Nom', lambda x: (x == 'Passée').sum()),
             'TotalMobile': ('IsMobile', 'sum')
         }
     
-        # ==================== 1. VUE PAR AGENCE (inchangée) ====================
-        agg1_mensuel = df1.groupby(['Mois', 'NomAgence', "Region", 'Capacites']).agg(**agg_perf).reset_index()
+        # ==================== 1. VUE PAR AGENCE ====================
+        # Étape A : Calcul du Temps Moyen d'Opération (df1 filtré 'Traitée')
+        agg1_ope_mensuel = df1_traitee.groupby(['Mois', 'NomAgence', "Region", 'Capacites']).agg(
+            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
+        ).reset_index()
+        
+        agg1_ope_global = df1_traitee.groupby(['NomAgence', "Region", 'Capacites']).agg(
+            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
+        ).reset_index()
+
+        # Étape B : Calcul du Temps Moyen d'Attente (df1 COMPLET, sans filtre)
+        agg1_att_mensuel = df1.groupby(['Mois', 'NomAgence', "Region", 'Capacites']).agg(
+            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
+        ).reset_index()
+        
+        agg1_att_global = df1.groupby(['NomAgence', "Region", 'Capacites']).agg(
+            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
+        ).reset_index()
+
+        # Fusion des deux morceaux de performance (Opération + Attente)
+        agg1_mensuel = pd.merge(agg1_ope_mensuel, agg1_att_mensuel, on=['Mois', 'NomAgence', "Region", 'Capacites'], how='outer')
+        agg1_global = pd.merge(agg1_ope_global, agg1_att_global, on=['NomAgence', "Region", 'Capacites'], how='outer')
+
+        # Reste de la vue Agence (df2)
         agg2_mensuel = df2.groupby(['Mois', 'NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(**agg_queue_agence).reset_index()
-        agg1_global = df1.groupby(['NomAgence', "Region", 'Capacites']).agg(**agg_perf).reset_index()
         agg2_global = df2.groupby(['NomAgence', "Region", 'Capacites', 'Longitude', 'Latitude']).agg(**agg_queue_agence).reset_index()
 
         attente_actuelle = []
@@ -438,7 +569,6 @@ def AgenceTable2(df_all, df_queue):
                 attente = current_attente(df2, agence, heure_fermeture)
                 attente_actuelle.append({'NomAgence': agence, 'AttenteActuel': attente})
         
-        attente_df = pd.DataFrame(attente_actuelle)
         if attente_actuelle:
             agg2_global = pd.merge(agg2_global, pd.DataFrame(attente_actuelle), on='NomAgence', how='left')
         else:
@@ -447,34 +577,48 @@ def AgenceTable2(df_all, df_queue):
         agence_mensuel = pd.merge(agg2_mensuel, agg1_mensuel, on=['Mois', 'NomAgence', "Region", 'Capacites'], how='outer')
         agence_global = pd.merge(agg2_global, agg1_global, on=['NomAgence', "Region", 'Capacites'], how='outer')
 
-        # ==================== 2. VUE POUR LE RÉSEAU (logique corrigée) ====================
-        # Agrégations pour le réseau (tickets, mobiles, temps, statuts...)
-        agg1_reseau_mensuel = df1.groupby(['Mois', 'Region']).agg(**agg_perf).reset_index()
+        # ==================== 2. VUE POUR LE RÉSEAU ====================
+        # Étape A : Temps Moyen d'Opération Réseau (df1 filtré 'Traitée')
+        agg1_ope_reseau_mensuel = df1_traitee.groupby(['Mois', 'Region']).agg(
+            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
+        ).reset_index()
+        
+        agg1_ope_reseau_global = df1_traitee.groupby(['Region']).agg(
+            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
+        ).reset_index()
+
+        # Étape B : Temps Moyen d'Attente Réseau (df1 COMPLET)
+        agg1_att_reseau_mensuel = df1.groupby(['Mois', 'Region']).agg(
+            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
+        ).reset_index()
+        
+        agg1_att_reseau_global = df1.groupby(['Region']).agg(
+            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
+        ).reset_index()
+
+        # Fusion des performances Réseau
+        agg1_reseau_mensuel = pd.merge(agg1_ope_reseau_mensuel, agg1_att_reseau_mensuel, on=['Mois', 'Region'], how='outer')
+        agg1_reseau_global = pd.merge(agg1_ope_reseau_global, agg1_att_reseau_global, on=['Region'], how='outer')
+
+        # Reste de la vue Réseau
         agg2_reseau_mensuel = df2.groupby(['Mois', 'Region']).agg(**agg_queue_reseau).reset_index()
-        agg1_reseau_global = df1.groupby(['Region']).agg(**agg_perf).reset_index()
         agg2_reseau_global = df2.groupby(['Region']).agg(**agg_queue_reseau).reset_index()
 
-        # === NOUVELLE LOGIQUE POUR LA CAPACITÉ RÉSEAU ===
-        # 1. Obtenir la capacité unique pour chaque agence
+        # Capacité Réseau
         capacites_uniques_par_agence = df_combined[['NomAgence', 'Region', 'Capacites']].drop_duplicates()
-        
-        # 2. Calculer la capacité totale du réseau (global) par région
         capacite_reseau_global = capacites_uniques_par_agence.groupby('Region')['Capacites'].sum().reset_index()
         
-        # 3. Calculer la capacité totale du réseau (mensuel) par mois et par région
-        # On ne garde qu'une ligne par mois/agence pour éviter les doublons avant de sommer
         capacites_uniques_par_mois = df_combined[['Mois', 'NomAgence', 'Region', 'Capacites']].drop_duplicates()
         capacite_reseau_mensuel = capacites_uniques_par_mois.groupby(['Mois', 'Region'])['Capacites'].sum().reset_index()
 
-        # Fusion des données de performance et de file d'attente
+        # Fusions Finales Réseau
         reseau_mensuel = pd.merge(agg2_reseau_mensuel, agg1_reseau_mensuel, on=['Mois', 'Region'], how='outer')
         reseau_global = pd.merge(agg2_reseau_global, agg1_reseau_global, on=['Region'], how='outer')
 
-        # Fusion AVEC LA CAPACITÉ CORRECTEMENT CALCULÉE
         reseau_mensuel = pd.merge(reseau_mensuel, capacite_reseau_mensuel, on=['Mois', 'Region'], how='left')
         reseau_global = pd.merge(reseau_global, capacite_reseau_global, on=['Region'], how='left')
         
-        # ==================== 3. FORMATAGE FINAL (inchangé) ====================
+        # ==================== 3. FORMATAGE FINAL ====================
         all_dates = pd.concat([df1['Date_Reservation'], df2['Date_Reservation']]).dropna()
         periode_globale = f"{all_dates.min().strftime('%Y-%m-%d')} - {all_dates.max().strftime('%Y-%m-%d')}"
         
@@ -486,14 +630,8 @@ def AgenceTable2(df_all, df_queue):
         return agence_mensuel_f, agence_global_f, reseau_mensuel_f, reseau_global_f
 
     except Exception as e:
-        # st.error(f"Erreur dans AgenceTable: {e}")
         print(f"Erreur dans AgenceTable: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
-
-
-
-
 
 
 
