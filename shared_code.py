@@ -421,11 +421,56 @@ def AgenceTable2(df_all, df_queue):
         # Extraction pour le temps d'opération (Traitée ou Rejetée)
         df1_operation = df1[df1['Nom'].isin(['Traitée', 'Rejetée'])]
 
+        
+
         def calculer_non_traites(df_contexte):
-            aujourdhui = datetime.now().strftime("%Y-%m-%d")
+            current_date = datetime.now().date()
+            current_datetime = datetime.now()
+            
+            # 1. Fonction interne basée sur ton code pour calculer l'heure cible ligne par ligne
+            def determiner_heure_fermeture(val_heure):
+                # Sécurité si la valeur est manquante (None ou NaN de Pandas)
+                if pd.isna(val_heure) or not str(val_heure).strip():
+                    return current_datetime.replace(hour=18, minute=0, second=0, microsecond=0)
+                
+                # Nettoyage rapide pour enlever les espaces superflus
+                HeureFermeture = str(val_heure).strip()
+                
+                # Liste de tes formats à tester
+                formats_to_try = [
+                    '%Hh%M',    
+                    '%H:%M',    
+                    '%H.%M',    
+                    '%H %M',    
+                    '%H'       
+                ]
+
+                for fmt in formats_to_try:
+                    try:
+                        time_obj = datetime.strptime(HeureFermeture, fmt).time()
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    # Aucun format n'a correspondu → fallback 18h00
+                    time_obj = datetime.strptime("18:00", "%H:%M").time()
+
+                # On combine la date du jour avec l'heure extraite
+                return datetime.combine(current_date, time_obj)
+
+            # 2. On applique cette logique à toute la colonne (on obtient une Series de datetime complets)
+            dates_fermeture_completes = df_contexte['HeureFermeture'].apply(determiner_heure_fermeture)
+            
+            # 3. Ton filtre final retourné sous forme de fonction lambda
             return lambda x: (
-                (df_contexte.loc[x.index, 'Nom'] == 'En attente') & 
-                (x.astype(str).str[:10] != aujourdhui)
+                # Option 1 : Le statut n'est pas Traitée, Rejetée ou Passée
+                (~df_contexte.loc[x.index, 'Nom'].isin(['Traitée', 'Rejetée', 'Passée'])) | 
+                
+                # Option 2 : Statut 'En attente' ET l'instant actuel a dépassé le datetime de fermeture calculé
+                (
+                    (df_contexte.loc[x.index, 'Nom'] == 'En attente') & 
+                    (current_datetime > dates_fermeture_completes.loc[x.index])
+                )
             ).sum()
 
         # Dictionnaires d'agrégation des files d'attente
@@ -542,7 +587,6 @@ def AgenceTable2(df_all, df_queue):
     except Exception as e:
         print(f"Erreur dans AgenceTable: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
 
 
 
