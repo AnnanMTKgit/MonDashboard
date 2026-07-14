@@ -232,85 +232,8 @@ def create_excel_buffer(df, sheet_name="Sheet1"):
 # Dans shared_code.py
 
 
-def get_connection():
-    """Crée et met en cache la connexion à la base de données."""
-    try:
-        server = st.secrets['db_server']
-        database = st.secrets['db_database']
-        username = st.secrets['db_username']
-        password = st.secrets['db_password']
-        driver_name = st.secrets['db_driver'] # ex: 'ODBC Driver 17 for SQL Server'
 
-        # FORCER le format correct pour le pilote
-        # La chaîne de connexion doit avoir DRIVER={Nom du Pilote}
-        # et non DRIVER='{Nom du Pilote};...'
-        connection_string = (
-            f"DRIVER={driver_name};"
-            f"SERVER={server};"
-            f"DATABASE={database};"
-            f'PORT=1433;'
-            f"UID={username};"
-            f"PWD={password};"
-        )
-        
-        return pyodbc.connect(connection_string)
-    
-    except Exception as e:
-        st.error(f"Erreur de connexion à la base de données: {e}")
-        st.info("Veuillez vérifier les points suivants :")
-        st.markdown("""
-            - Le pilote ODBC pour SQL Server est-il bien installé ? (voir `brew install msodbcsql17`)
-            - Les informations dans votre fichier `secrets.toml` sont-elles correctes ?
-            - Votre Mac est-il connecté à un réseau qui autorise l'accès au serveur de base de données (vérifiez le pare-feu) ?
-        """)
-        st.stop()
 
-_pyodbc_hash_funcs = {pyodbc.Connection: id} if pyodbc else {}
-
-#@st.cache_data(hash_funcs=_pyodbc_hash_funcs, ttl=3600, show_spinner=False)  # Cache 1h
-def run_query_cached(_connection, sql, params):
-    """Cache intelligent pour les requêtes lourdes avec TTL de 1h"""
-    try:
-        # Exécuter la requête et retourner le résultat
-        df = pd.read_sql_query(sql, _connection, params=params)
-        return df
-    except Exception as e:
-        st.error(f"Erreur lors de l'exécution de la requête : {e}")
-        return pd.DataFrame() # Retourner un DataFrame vide en cas d'erreur
-
-    
-
-def run_query(_connection, sql, params=None):
-    """
-    Exécute une requête SQL avec cache intelligent pour optimiser les performances.
-    Cache automatiquement les requêtes lourdes (>1 jour de données).
-    """
-    current_date = datetime.now().date()
-    current_hour = datetime.now().hour
-    
-    # Déterminer si on doit utiliser le cache
-    use_cache = False
-    if params and len(params) >= 2:
-        try:
-            start_date = pd.to_datetime(params[0]).date()
-            end_date = pd.to_datetime(params[1]).date()
-            date_range_days = (end_date - start_date).days
-            
-            # Utiliser le cache pour les requêtes sur plus d'1 jour OU en dehors des heures de bureau
-            use_cache = (date_range_days > 1) or (current_hour < 7 or current_hour >= 18)
-        except:
-            use_cache = False
-    
-    if use_cache:
-        return run_query_cached(_connection, sql, params)
-    else:
-        try:
-            df = pd.read_sql_query(sql, _connection, params=params)
-            return df
-        except Exception as e:
-            st.error(f"Erreur lors de l'exécution de la requête : {e}")
-            return pd.DataFrame()
-# --- Fonctions de Traitement de Données (depuis functions.py) ---
 
 
 def _format_and_finalize_df(df, sort_by, periode_str=None, is_reseau_view=False):
@@ -726,55 +649,6 @@ def AgenceTable(df_all, df_queue):
 
 
 
-
-
-
-
-# def AgenceTable(df_all,df_queue):
-
-#     ########## Journalier ##################
-    
-#     df1=df_all.copy()
-    
-    
-#     df1['Période'] = df1['Date_Reservation'].dt.date
-#     agg1 = df1.groupby(['Période','NomAgence',"Region", 'Capacites']).agg(
-#     Temps_Moyen_Operation=('TempOperation', lambda x: np.round(np.mean(x)/60).astype(int)),
-#     Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.round(np.mean(x)/60).astype(int)),NombreTraites=('Nom',lambda x: (x == 'Traitée').sum()),NombreRejetee=('Nom',lambda x: (x == 'Rejetée').sum()),NombrePassee=('Nom',lambda x: (x == 'Passée').sum())
-# ).reset_index()
-#     agg1["Temps Moyen de Passage(MIN)"]=agg1['Temps_Moyen_Attente']+agg1['Temps_Moyen_Operation']
-#     df2=df_queue.copy()
-#     df2['Période'] = df2['Date_Reservation'].dt.date
-#     agg2=df2.groupby(['Période','NomAgence',"Region", 'Capacites','Longitude','Latitude']).agg(NombreTickets=('Date_Reservation', np.count_nonzero),AttenteActuel=("NomAgence",lambda x: current_attente(df2,agence=x.iloc[0],HeureFermeture=df2[df2['NomAgence']==x.iloc[0]]['HeureFermeture'].values[0])),TotalMobile=('IsMobile',lambda x: int(sum(x)))).reset_index()
-    
-#     detail=pd.merge(agg2,agg1,on=['Période','NomAgence',"Region", 'Capacites'],how='outer')
-    
-#     ##### Global ############
-#     globale=detail.groupby(['NomAgence',"Region", 'Capacites','Longitude','Latitude']).agg(
-#     Temps_Moyen_Operation=('Temps_Moyen_Operation', lambda x: np.round(np.mean(x)).astype(int)),
-#     Temps_Moyen_Attente=('Temps_Moyen_Attente', lambda x: np.round(np.mean(x)).astype(int)),NombreTraites=('NombreTraites',lambda x: x.sum()),NombreRejetee=('NombreRejetee',lambda x: x.sum()),NombrePassee=('NombrePassee',lambda x: x.sum()),
-#     TMP=("Temps Moyen de Passage(MIN)", lambda x: np.round(np.mean(x)).astype(int)),
-# NombreTickets=('NombreTickets', lambda x: np.sum(x)),AttenteActuel=("AttenteActuel",lambda x: x.sum()),TotalMobile=('TotalMobile',lambda x: int(sum(x)))).reset_index()
-#     globale["Période"]=f"{df_queue['Date_Reservation'].min().strftime('%Y-%m-%d')} - {df_queue['Date_Reservation'].max().strftime('%Y-%m-%d')}"
-#     globale["Temps Moyen de Passage(MIN)"]=globale['Temps_Moyen_Attente']+globale['Temps_Moyen_Operation']
-#     ###########
-    
-#     new_name={'NomAgence':"Nom d'Agence",'Capacites':'Capacité','Temps_Moyen_Operation':"Temps Moyen d'Operation (MIN)",'Temps_Moyen_Attente':"Temps Moyen d'Attente (MIN)",'NombreTraites':'Total Traités','NombreRejetee':'Total Rejetées','NombrePassee':'Total Passées','NombreTickets':'Total Tickets','AttenteActuel':'Clients en Attente Actuelle'}
-
-
-#     detail=detail.rename(columns=new_name)
-#     globale=globale.rename(columns=new_name)
-    
-
-#     # order=['Période',"Nom d'Agence", "Temps Moyen d'Operation (MIN)", "Temps Moyen d'Attente (MIN)","Temps Moyen de Passage(MIN)",'Capacité','Total Tickets','Total Traités','Total Rejetées','Total Passées','TotalMobile','Clients en Attente Actuelle','Longitude','Latitude']
-#     # detail=detail[order]
-#     # globale=globale[order]
-  
-#     # globale=globale.replace(-9223372036854775808, 0)
-#     # detail=detail.replace(-9223372036854775808, 0)
-    
-   
-#     return detail,globale
 def current_attente(df_queue,agence,HeureFermeture=None):
     current_date = datetime.now().date()
     current_datetime = datetime.now()
@@ -2109,7 +1983,7 @@ def top_agence_freq_echarts(df_all, df_queue, title, color=['#2ECC71', '#3498DB'
     utilisant des chaînes de caractères littérales pour les formatters.
     """
     # 1. & 2. Préparation des données (inchangée)
-    _, agg = AgenceTable(df_all, df_queue)
+    _, agg,_,_ = AgenceTable2(df_all, df_queue)
     top_5_df = agg.sort_values(by=title[0], ascending=False).head(5)
     top_5_df = top_5_df.iloc[::-1]
     agences = top_5_df["Nom d'Agence"].tolist()
@@ -2166,7 +2040,7 @@ def top_agence_freq_echarts(df_all, df_queue, title, color=['#2ECC71', '#3498DB'
     }
     return options
 def top_agence_freq(df_all,df_queue,title,color=[green_color,blue_clair_color]): 
-    _,agg=AgenceTable(df_all,df_queue)
+    _,agg,_,_ = AgenceTable2(df_all,df_queue)
     agg=agg[["Nom d'Agence",title[0],title[1]]]
     
 
