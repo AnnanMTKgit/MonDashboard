@@ -54,9 +54,9 @@ selected_tab = option_menu(
 )
 
 # On mémorise immédiatement l'onglet textuel sélectionné par l'utilisateur
-if st.session_state.active_global_tab != selected_tab:
-    st.session_state.active_global_tab = selected_tab
-    st.rerun()
+# if st.session_state.active_global_tab != selected_tab:
+#     st.session_state.active_global_tab = selected_tab
+#     st.rerun()
 
 st.markdown("<br/>", unsafe_allow_html=True)
 
