@@ -78,71 +78,71 @@ with c1:
         )
         
         agence_data = agg_map[agg_map['NomAgence'] == selected_agence_gauge]
-        if not agence_data.empty:
-
-            
-            queue_length = agence_data['AttenteActuel'].values[0]
-            max_length = agence_data['Capacites'].values[0]
-            echarts_satisfaction_gauge(queue_length, max_length=max_length, title="Clients en Attente")
-            
-            # 1. On récupère les services uniques UNIQUEMENT pour l'agence filtrée
-            nomService = list(df_queue_filtered['NomService'].unique())
-            
-            # Sécurité : on retire 'Armateurs' uniquement s'il est présent dans la liste
-            if 'Armateurs' in nomService:
-                nomService.remove('Armateurs')
-                
-            if nomService:  # On vérifie qu'il reste au moins un service à afficher
-                HeureFermeture = df_queue_filtered['HeureFermeture'].iloc[0]
-                
-                # 2. On utilise df_queue_filtered ici aussi pour ne cibler que l'agence actuelle
-                queue_length_service = {
-                    f'{i}': f"{current_attente(df_queue_filtered[df_queue_filtered['NomService'] == i], selected_agence_gauge, HeureFermeture)}" 
-                    for i in nomService
-                }
-                
-                # 3. Affichage dynamique des colonnes Streamlit
-                c = c1.columns(len(queue_length_service))
-                for i, nom in enumerate(nomService):
-                    Value = queue_length_service[nom]
-                    Delta = ''
-                    c[i].metric(label=nom, value=Value, delta=Delta)
-            else:
-                c1.info("Aucun service disponible pour cette agence.")
-            
         # if not agence_data.empty:
-        #     # Privilégier les données temps réel (Firebase) pour la jauge
-        #     _rt = st.session_state.get('agencies_realtime', pd.DataFrame())
-        #     _rt_row = _rt[_rt['NomAgence'] == selected_agence_gauge] if not _rt.empty else pd.DataFrame()
-        #     if not _rt_row.empty:
-        #         queue_length = int(_rt_row['ClientsEnAttente'].values[0])
-        #         max_length   = int(_rt_row['Capacites'].values[0])
-        #     else:
-        #         queue_length = agence_data['AttenteActuel'].values[0]
-        #         max_length   = agence_data['Capacites'].values[0]
+
+            
+        #     queue_length = agence_data['AttenteActuel'].values[0]
+        #     max_length = agence_data['Capacites'].values[0]
         #     echarts_satisfaction_gauge(queue_length, max_length=max_length, title="Clients en Attente")
-
-        #     # Répartition par service — source : attenteParService du realtime (temps réel)
-        #     # Fallback sur current_attente() si le champ est absent
-        #     attente_par_service = {}
-        #     if not _rt_row.empty and "AttenteParService" in _rt_row.columns:
-        #         raw = _rt_row["AttenteParService"].values[0]
-        #         if isinstance(raw, list) and len(raw) > 0:
-        #             attente_par_service = {s["nomService"]: s["clientsEnAttente"] for s in raw}
-
-        #     if not attente_par_service:
-        #         # Fallback : calcul depuis df_main (cache 30 min)
-        #         HeureFermeture = df_queue['HeureFermeture'].iloc[0]
-        #         nomService = list(df_queue_filtered['NomService'].unique())
-        #         attente_par_service = {
-        #             s: current_attente(df_queue[df_queue['NomService'] == s], selected_agence_gauge, HeureFermeture)
-        #             for s in nomService
+            
+        #     # 1. On récupère les services uniques UNIQUEMENT pour l'agence filtrée
+        #     nomService = list(df_queue_filtered['NomService'].unique())
+            
+        #     # Sécurité : on retire 'Armateurs' uniquement s'il est présent dans la liste
+        #     if 'Armateurs' in nomService:
+        #         nomService.remove('Armateurs')
+                
+        #     if nomService:  # On vérifie qu'il reste au moins un service à afficher
+        #         HeureFermeture = df_queue_filtered['HeureFermeture'].iloc[0]
+                
+        #         # 2. On utilise df_queue_filtered ici aussi pour ne cibler que l'agence actuelle
+        #         queue_length_service = {
+        #             f'{i}': f"{current_attente(df_queue_filtered[df_queue_filtered['NomService'] == i], selected_agence_gauge, HeureFermeture)}" 
+        #             for i in nomService
         #         }
+                
+        #         # 3. Affichage dynamique des colonnes Streamlit
+        #         c = c1.columns(len(queue_length_service))
+        #         for i, nom in enumerate(nomService):
+        #             Value = queue_length_service[nom]
+        #             Delta = ''
+        #             c[i].metric(label=nom, value=Value, delta=Delta)
+        #     else:
+        #         c1.info("Aucun service disponible pour cette agence.")
+            
+        if not agence_data.empty:
+            # Privilégier les données temps réel (Firebase) pour la jauge
+            _rt = st.session_state.get('agencies_realtime', pd.DataFrame())
+            _rt_row = _rt[_rt['NomAgence'] == selected_agence_gauge] if not _rt.empty else pd.DataFrame()
+            if not _rt_row.empty:
+                queue_length = int(_rt_row['ClientsEnAttente'].values[0])
+                max_length   = int(_rt_row['Capacites'].values[0])
+            else:
+                queue_length = agence_data['AttenteActuel'].values[0]
+                max_length   = agence_data['Capacites'].values[0]
+            echarts_satisfaction_gauge(queue_length, max_length=max_length, title="Clients en Attente")
 
-        #     if attente_par_service:
-        #         c = c1.columns(len(attente_par_service))
-        #         for i, (nom, val) in enumerate(attente_par_service.items()):
-        #             c[i].metric(label=nom, value=int(val))
+            # Répartition par service — source : attenteParService du realtime (temps réel)
+            # Fallback sur current_attente() si le champ est absent
+            attente_par_service = {}
+            if not _rt_row.empty and "AttenteParService" in _rt_row.columns:
+                raw = _rt_row["AttenteParService"].values[0]
+                if isinstance(raw, list) and len(raw) > 0:
+                    attente_par_service = {s["nomService"]: s["clientsEnAttente"] for s in raw}
+
+            if not attente_par_service:
+                # Fallback : calcul depuis df_main (cache 30 min)
+                HeureFermeture = df_queue['HeureFermeture'].iloc[0]
+                nomService = list(df_queue_filtered['NomService'].unique())
+                attente_par_service = {
+                    s: current_attente(df_queue[df_queue['NomService'] == s], selected_agence_gauge, HeureFermeture)
+                    for s in nomService
+                }
+
+            if attente_par_service:
+                c = c1.columns(len(attente_par_service))
+                for i, (nom, val) in enumerate(attente_par_service.items()):
+                    c[i].metric(label=nom, value=int(val))
 with c2:
     st.markdown("""
 <p style="font-size: 14px; text-align: center; color: black;">

@@ -156,18 +156,28 @@ if selected_tab == SUPERVISION_TABS[0]:
         
         agence_data = agg_global[agg_global["Nom d'Agence"] == nom_agence]
         
-        # Votre logique de récupération de données reste la même
-        max_cap = agence_data['Capacité'].values[0]
-        queue_now = agence_data['Clients en Attente Actuelle'].values[0]
-        df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
-        services_agence = df_agence_queue['NomService'].unique()
-        
-        service_dict = {}
-        for service in services_agence:
-            df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
-            attente_service = current_attente(df_service_queue, nom_agence)
-            service_dict[service]=attente_service
+        # Capacité et file d'attente : données temps réel Firebase en priorité
+        _rt = st.session_state.get('agencies_realtime', pd.DataFrame())
+        _rt_row = _rt[_rt['NomAgence'] == nom_agence] if not _rt.empty else pd.DataFrame()
+        if not _rt_row.empty:
             
+            max_cap   = int(_rt_row['Capacites'].values[0])
+            queue_now = int(_rt_row['ClientsEnAttente'].values[0])
+            AttenteParService = _rt_row['AttenteParService'].values[0]
+            service_dict = {item["nomService"]: item["clientsEnAttente"] for item in AttenteParService}
+        else:
+            max_cap   = agence_data['Capacité'].values[0]
+            queue_now = agence_data['Clients en Attente Actuelle'].values[0]
+        
+            df_agence_queue = df_queue_filtered[df_queue_filtered['NomAgence'] == nom_agence]
+            services_agence = df_agence_queue['NomService'].unique()
+            
+            service_dict = {}
+            for service in services_agence:
+                df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
+                attente_service = current_attente(df_service_queue, nom_agence)
+                service_dict[service]=attente_service
+                
         row = {
             "NomAgence": nom_agence,
             "Clients en Attente": queue_now,
