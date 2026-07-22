@@ -194,51 +194,51 @@ if selected_tab == GLOBAL_TABS[0]:
 # ==============================================================================
 elif selected_tab == GLOBAL_TABS[1]:
     st.markdown("### 🔍 Analyse & Export des Données Brutes")
-    
-    if not df_queue_filtered.empty:
-        # Forcer le calcul propre sur le dataframe actuellement filtré par la sidebar
-        total_lignes = int(df_queue_filtered.shape[0])
+    st.write("Donnees brutes en cours de Maintenance. Bientôt disponible.")
+#     if not df_queue_filtered.empty:
+#         # Forcer le calcul propre sur le dataframe actuellement filtré par la sidebar
+#         total_lignes = int(df_queue_filtered.shape[0])
         
-        # Affichage sans espaceur complexe pour éviter les bugs de chaînes
-        st.metric(label="Nombre total de lignes filtrées", value=f"{total_lignes}")
-        st.markdown("<br/>", unsafe_allow_html=True)
+#         # Affichage sans espaceur complexe pour éviter les bugs de chaînes
+#         st.metric(label="Nombre total de lignes filtrées", value=f"{total_lignes}")
+#         st.markdown("<br/>", unsafe_allow_html=True)
         
-        all_columns = list(df_queue_filtered.columns)
+#         all_columns = list(df_queue_filtered.columns)
         
-        # Colonnes pré-sélectionnées par défaut
-        default_cols = [col for col in [
-    'UserName', 'FirstName', 'LastName', 'Date_Reservation', 
-    'Date_Appel', 'Date_Fin', 'TempAttenteMoyen', 'TempsAttenteReel', 
-    'TempOperation', 'Nom', 'NomService', 'TypeOperationId', 
-    'AgenceId', 'NomAgence',"Capacites",'Region',"IsMobile",'HeureFermeture', 'Longitude', 'Latitude'
-] if col in all_columns]
-        if not default_cols:
-            default_cols = all_columns[:5]
+#         # Colonnes pré-sélectionnées par défaut
+#         default_cols = [col for col in [
+#     'UserName', 'FirstName', 'LastName', 'Date_Reservation', 
+#     'Date_Appel', 'Date_Fin', 'TempAttenteMoyen', 'TempsAttenteReel', 
+#     'TempOperation', 'Nom', 'NomService', 'TypeOperationId', 
+#     'AgenceId', 'NomAgence',"Capacites",'Region',"IsMobile",'HeureFermeture', 'Longitude', 'Latitude'
+# ] if col in all_columns]
+#         if not default_cols:
+#             default_cols = all_columns[:5]
 
-        # Multi-sélecteur de colonnes
-        selected_cols = st.multiselect(
-            "Sélectionnez les colonnes brutes à afficher et exporter :",
-            options=all_columns,
-            default=default_cols
-        )
+#         # Multi-sélecteur de colonnes
+#         selected_cols = st.multiselect(
+#             "Sélectionnez les colonnes brutes à afficher et exporter :",
+#             options=all_columns,
+#             default=default_cols
+#         )
         
-        if selected_cols:
-            df_brute_visu = df_queue_filtered[selected_cols]
+#         if selected_cols:
+#             df_brute_visu = df_queue_filtered[selected_cols]
             
-            # Bouton de téléchargement CSV placé au-dessus du tableau
-            csv_data = df_brute_visu.to_csv(index=False, sep=';').encode('utf-8-sig')
-            st.download_button(
-                label="📥 Télécharger les colonnes sélectionnées en CSV",
-                data=csv_data,
-                file_name=f'Donnees_Brutes_{st.session_state.start_date}_to_{st.session_state.end_date}.csv',
-                mime='text/csv',
-                key='download_csv_brute'
-            )
+#             # Bouton de téléchargement CSV placé au-dessus du tableau
+#             csv_data = df_brute_visu.to_csv(index=False, sep=';').encode('utf-8-sig')
+#             st.download_button(
+#                 label="📥 Télécharger les colonnes sélectionnées en CSV",
+#                 data=csv_data,
+#                 file_name=f'Donnees_Brutes_{st.session_state.start_date}_to_{st.session_state.end_date}.csv',
+#                 mime='text/csv',
+#                 key='download_csv_brute'
+#             )
             
-            st.markdown("<br/>", unsafe_allow_html=True)
-            # Affichage de l'aperçu
-            st.dataframe(df_brute_visu, use_container_width=True)
-        else:
-            st.warning("Veuillez sélectionner au moins une colonne.")
-    else:
-        st.info("Aucune donnée brute disponible pour la sélection actuelle.")
+#             st.markdown("<br/>", unsafe_allow_html=True)
+#             # Affichage de l'aperçu
+#             st.dataframe(df_brute_visu, use_container_width=True)
+#         else:
+#             st.warning("Veuillez sélectionner au moins une colonne.")
+#     else:
+#         st.info("Aucune donnée brute disponible pour la sélection actuelle.")

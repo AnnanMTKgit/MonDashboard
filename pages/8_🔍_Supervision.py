@@ -163,12 +163,15 @@ if selected_tab == SUPERVISION_TABS[0]:
             
             max_cap   = int(_rt_row['Capacites'].values[0])
             queue_now = int(_rt_row['ClientsEnAttente'].values[0])
-            raw_attente = _rt_row['AttenteParService'].values[0]
             
-            if pd.notna(raw_attente) and raw_attente:
-                service_dict = {item["nomService"]: item["clientsEnAttente"] for item in raw_attente}
-            else:
-                service_dict = {}
+            
+            if "AttenteParService" in _rt_row.columns :
+                raw_attente = _rt_row['AttenteParService'].values[0]
+                if len(raw_attente) > 0 and isinstance(raw_attente, list):
+                
+                    service_dict = {item["nomService"]: item["clientsEnAttente"] for item in raw_attente}
+                else:
+                    service_dict = {}
         else:
             max_cap   = agence_data['Capacité'].values[0]
             queue_now = agence_data['Clients en Attente Actuelle'].values[0]
