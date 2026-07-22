@@ -163,8 +163,12 @@ if selected_tab == SUPERVISION_TABS[0]:
             
             max_cap   = int(_rt_row['Capacites'].values[0])
             queue_now = int(_rt_row['ClientsEnAttente'].values[0])
-            AttenteParService = _rt_row['AttenteParService'].values[0]
-            service_dict = {item["nomService"]: item["clientsEnAttente"] for item in AttenteParService}
+            raw_attente = _rt_row['AttenteParService'].values[0]
+            
+            if pd.notna(raw_attente) and raw_attente:
+                service_dict = {item["nomService"]: item["clientsEnAttente"] for item in raw_attente}
+            else:
+                service_dict = {}
         else:
             max_cap   = agence_data['Capacité'].values[0]
             queue_now = agence_data['Clients en Attente Actuelle'].values[0]
@@ -173,10 +177,11 @@ if selected_tab == SUPERVISION_TABS[0]:
             services_agence = df_agence_queue['NomService'].unique()
             
             service_dict = {}
-            for service in services_agence:
-                df_service_queue = df_agence_queue[df_agence_queue['NomService'] == service]
-                attente_service = current_attente(df_service_queue, nom_agence)
-                service_dict[service]=attente_service
+            # Version plus rapide et idiomatique
+            service_dict = {
+                service: current_attente(df_service_queue, nom_agence)
+                for service, df_service_queue in df_agence_queue.groupby('NomService')
+            }
                 
         row = {
             "NomAgence": nom_agence,
