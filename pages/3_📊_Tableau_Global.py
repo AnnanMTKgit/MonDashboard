@@ -34,8 +34,8 @@ st.markdown("<br/>", unsafe_allow_html=True)
 GLOBAL_TABS = ["Statistiques Agences & Réseau", "Données Brutes"]
 
 # Si c'est le premier chargement de l'application, on définit l'onglet par défaut
-if 'active_global_tab' not in st.session_state:
-    st.session_state.active_global_tab = GLOBAL_TABS[0]
+if 'active_global_tab_index' not in st.session_state:
+    st.session_state.active_global_tab_index = 0
 
 # Affichage du menu
 selected_tab = option_menu(
@@ -54,9 +54,9 @@ selected_tab = option_menu(
 )
 
 # On mémorise immédiatement l'onglet textuel sélectionné par l'utilisateur
-if st.session_state.active_global_tab != selected_tab:
-    st.session_state.active_global_tab = selected_tab
-    st.rerun()
+# if st.session_state.active_global_tab != selected_tab:
+#     st.session_state.active_global_tab = selected_tab
+#     st.rerun()
 
 st.markdown("<br/>", unsafe_allow_html=True)
 
@@ -219,7 +219,7 @@ elif selected_tab == GLOBAL_TABS[1]:
 #         selected_cols = st.multiselect(
 #             "Sélectionnez les colonnes brutes à afficher et exporter :",
 #             options=all_columns,
-#             default=default_cols
+#             default=all_columns # Sélection par défaut de toutes les colonnes
 #         )
         
 #         if selected_cols:

@@ -32,7 +32,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo ##
 import base64
 import math
 import requests
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
 try:
     import pyodbc
 except ImportError:
@@ -997,16 +997,14 @@ def load_agencies_realtime() -> pd.DataFrame:
                                      "SuspensionActivite", "ActivationReservation"])
 
 
-#@st.cache_data(ttl=3000, show_spinner=False)
 def get_api_token() -> str:
     credentials = {
-        "email":    st.secrets["api"]["email"],
-        "password": st.secrets["api"]["password"],
+        "email":    "admin@marlodjinfra.com",
+        "password": "Admin@2024!",
     }
     resp = requests.post(API_LOGIN_URL, json=credentials, verify=False, timeout=30)
     resp.raise_for_status()
     return resp.json()["token"]
-
 
 def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns={
@@ -1020,11 +1018,13 @@ def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
         "dateFin":            "Date_Fin",
         "etatNom":            "Nom",
     })
+    
     # Normaliser la casse de la région — l'API retourne "DAKAR" et "Dakar" en même temps
     if "Region" in df.columns:
         df["Region"] = df["Region"].str.strip().str.title()
     if "NomAgence" in df.columns:
         df["NomAgence"] = df["NomAgence"].str.strip()
+        
     # Corriger le double encodage UTF-8 sur le champ statut (si présent)
     def _fix_encoding(x):
         if not isinstance(x, str):
@@ -1033,21 +1033,27 @@ def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
             return x.encode("latin-1").decode("utf-8")
         except (UnicodeEncodeError, UnicodeDecodeError):
             return x  # Déjà correctement encodé, on garde tel quel
-    df["Nom"] = df["Nom"].apply(_fix_encoding)
+
+    if "Nom" in df.columns:
+        df["Nom"] = df["Nom"].apply(_fix_encoding)
+        
     df["Date_Reservation"] = pd.to_datetime(df["Date_Reservation"], errors="coerce")
     df["Date_Appel"]       = pd.to_datetime(df["Date_Appel"],       errors="coerce")
     df["Date_Fin"]         = pd.to_datetime(df["Date_Fin"],         errors="coerce")
+    
     # Recalcul depuis les timestamps — identique au DATEDIFF SQL (secondes)
-    # tempsAttenteMin peut être 0 ou null côté API ; le diff de dates est toujours fiable.
-    # On garde float (pas Int64) : NaN float est compatible avec np.mean/np.round ;
-    # pd.NA (Int64 nullable) ne l'est pas.
     df["TempsAttenteReel"] = (
         (df["Date_Appel"] - df["Date_Reservation"]).dt.total_seconds().clip(lower=0)
     )
     df["TempOperation"] = (
         (df["Date_Fin"] - df["Date_Appel"]).dt.total_seconds().clip(lower=0)
     )
-    df["IsMobile"] = df["isMobile"].astype(int)
+    
+    if "isMobile" in df.columns:
+        df["IsMobile"] = df["isMobile"].fillna(0).astype(int)
+    else:
+        df["IsMobile"] = 0
+        
     # Métadonnées agence non fournies par l'API — valeurs de fallback
     df["Capacites"]      = 0
     df["Longitude"]      = None
@@ -1056,47 +1062,67 @@ def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-#@st.cache_data(ttl=1800, show_spinner=False)
+# @st.cache_data(ttl=1800, show_spinner="Chargement des données via l'API...")
 def load_from_api(start_date: str, end_date: str) -> pd.DataFrame:
     token = get_api_token()
     headers = {"Authorization": f"Bearer {token}"}
-    all_records = []
-    page = 1
-    while True:
-        params = {
-            "date_debut": start_date,
-            "date_fin":   end_date,
-            "page":       page,
-            "page_size":  1000,
-        }
-        resp = requests.get(
-            API_RESERVATIONS_URL, headers=headers, params=params,
-            verify=False, timeout=60
-        )
-        resp.raise_for_status()
-        body = resp.json()
-        all_records.extend(body["data"])
-        if page >= body["pages"]:
-            break
-        page += 1
+    base_params = {
+        "date_debut": start_date,
+        "date_fin":   end_date,
+        "page_size":  1000,
+    }
+
+    session = requests.Session()
+    session.headers.update(headers)
+    session.verify = False  # Conservé selon la configuration initiale
+
+    # 1. Première requête synchrone pour la page 1 et métadonnées de pagination
+    params_p1 = {**base_params, "page": 1}
+    resp = session.get(API_RESERVATIONS_URL, params=params_p1, timeout=60)
+    resp.raise_for_status()
+    body = resp.json()
+
+    total_pages = body.get("pages", 1)
+    all_records = list(body.get("data", []))
+
+    # 2. Fonction worker pour récupérer les pages subséquentes
+    def fetch_page(page_num: int):
+        params = {**base_params, "page": page_num}
+        # Utiliser requests directement dans les threads résout les blocages de session
+        r = requests.get(API_RESERVATIONS_URL, params=params, headers=headers, verify=False, timeout=60)
+        r.raise_for_status()
+        return r.json().get("data", [])
+
+    # 3. Récupération parallèle des pages 2 à total_pages (10 workers simultanés)
+    if total_pages > 1:
+        pages_to_fetch = list(range(2, total_pages + 1))
+        with ThreadPoolExecutor(max_workers=10) as executor:
+
+            results = executor.map(fetch_page, pages_to_fetch)
+            for data in results:
+                
+                all_records.extend(data)
+
+    session.close()
+
     if not all_records:
-        # Retourner un DataFrame vide avec les colonnes attendues par le pipeline
         return pd.DataFrame(columns=[
             "NomAgence", "Region", "NomService", "Type_Operation", "UserName",
             "Date_Reservation", "Date_Appel", "Date_Fin", "Nom",
             "TempsAttenteReel", "TempOperation", "IsMobile",
             "Capacites", "Longitude", "Latitude", "HeureFermeture",
         ])
+
     return _map_api_to_df(pd.DataFrame(all_records))
 
 
-#@st.cache_data(ttl=1800, show_spinner=False)
 def load_main_data(start_date, end_date):
     """Charge les données principales via l'API REST (paginée)."""
     return load_from_api(
         start_date.strftime("%Y-%m-%d"),
         end_date.strftime("%Y-%m-%d"),
     )
+
 
 def create_sidebar_filters():
     # Initialiser les clés de session manquantes (ex: refresh direct sur une page)
