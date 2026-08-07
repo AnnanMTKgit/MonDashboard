@@ -44,7 +44,7 @@ selected_tab = option_menu(
     icons=['table', 'database-gear'],
     orientation="horizontal",
     # On force l'index basé sur la chaîne de caractères enregistrée
-    default_index=GLOBAL_TABS.index(st.session_state.active_global_tab_index),
+    default_index=0,
     styles={
         "container": {"padding": "0!important", "background-color": "white", "border-bottom": "1px solid #333"},
         "icon": {"color": "black", "font-size": "18px"},
