@@ -31,7 +31,7 @@ st.markdown("<h1 style='text-align: center;font-size:1.5em;'>Tableau Global</h1>
 st.markdown("<br/>", unsafe_allow_html=True)
 
 # --- Configuration des onglets avec option_menu ---
-GLOBAL_TABS = ["Statistiques Agences & Réseau", "Données Brutes"]
+GLOBAL_TABS = ["Statistiques Agences & Réseau"]
 
 # Si c'est le premier chargement de l'application, on définit l'onglet par défaut
 if 'active_global_tab_index' not in st.session_state:
@@ -192,9 +192,9 @@ if selected_tab == GLOBAL_TABS[0]:
 # ==============================================================================
 # --- ONGLET 2 : VISUALISATION ET EXPORT DES DONNÉES BRUTES ---
 # ==============================================================================
-elif selected_tab == GLOBAL_TABS[1]:
-    st.markdown("### 🔍 Analyse & Export des Données Brutes")
-    st.write("Donnees brutes en cours de Maintenance. Bientôt disponible.")
+# elif selected_tab == GLOBAL_TABS[1]:
+#     st.markdown("### 🔍 Analyse & Export des Données Brutes")
+#     st.write("Donnees brutes en cours de Maintenance. Bientôt disponible.")
 #     if not df_queue_filtered.empty:
 #         # Forcer le calcul propre sur le dataframe actuellement filtré par la sidebar
 #         total_lignes = int(df_queue_filtered.shape[0])
