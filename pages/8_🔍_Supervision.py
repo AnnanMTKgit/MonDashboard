@@ -350,7 +350,7 @@ elif selected_tab == SUPERVISION_TABS[3]:
     
     if is_today:
         
-
+        st.write('hello')
         df_past = load_from_api(str(yesterday), str(yesterday))
 
         df_past = df_past[df_past['NomAgence'].isin(st.session_state.selected_agencies)]
