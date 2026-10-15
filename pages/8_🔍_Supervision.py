@@ -124,9 +124,10 @@ if selected_tab == SUPERVISION_TABS[0]:
 
     st.markdown("<h1 style='text-align: center;font-size:2em;'>État des Files d'Attente en Temps Réel</h1>", unsafe_allow_html=True)
     _, agg_global,_,_ = AgenceTable2(df_all_filtered, df_queue_filtered)
-   
-    agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
+    
+    
     if not agg_global.empty:
+        agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
         st.markdown(f"<h3 style='{section_title_style}'>Agences en Lignes</h3>", unsafe_allow_html=True)
         
     agg_global = agg_global.sort_values(by='Clients en Attente Actuelle', ascending=False)
