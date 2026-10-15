@@ -30,7 +30,7 @@ df_all_filtered = df_all[df_all['NomAgence'].isin(st.session_state.selected_agen
 df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selected_agencies)]
 
 if df_all_filtered.empty: 
-    st.error("Donnée disponible seulement pour la prediction De l'affluence.")
+    st.error("Donnée actuelle indisponible.")
     
     st.stop()
 yesterday = st.session_state.end_date - timedelta(days=1)
