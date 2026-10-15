@@ -33,6 +33,16 @@ import base64
 import math
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
+import json
+import pickle
+import h5py
+from tensorflow.keras.layers import Dense, Dropout, LSTM
+from tensorflow.keras.models import Sequential, load_model
+import holidays
+#from tensorflow.keras.layers import LSTM as _KerasLSTM
+from joblib import load
+
 try:
     import pyodbc
 except ImportError:
@@ -1062,8 +1072,8 @@ def _map_api_to_df(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# @st.cache_data(ttl=1800, show_spinner="Chargement des données via l'API...")
-def load_from_api(start_date: str, end_date: str) -> pd.DataFrame:
+
+def _fetch_from_api_raw(start_date: str, end_date: str) -> pd.DataFrame:
     token = get_api_token()
     headers = {"Authorization": f"Bearer {token}"}
     base_params = {
@@ -1115,14 +1125,37 @@ def load_from_api(start_date: str, end_date: str) -> pd.DataFrame:
 
     return _map_api_to_df(pd.DataFrame(all_records))
 
+# 2. Version mise en cache de la fonction
+@st.cache_data(ttl=180000, show_spinner=False)
+def _load_from_api_cached(start_date: str, end_date: str) -> pd.DataFrame:
+    return _fetch_from_api_raw(start_date, end_date)
 
+
+# 3. Fonction principale avec option de cache ou non
+def load_from_api(start_date: str, end_date: str, use_cache: bool = True) -> pd.DataFrame:
+    """
+    Charge les données depuis l'API.
+    :param use_cache: Si True, utilise le cache Streamlit. Si False, contourne le cache et appelle l'API en direct.
+    """
+    if not use_cache:
+        # Contourne le cache et met à jour optionnellement le cache existant si besoin
+        return _fetch_from_api_raw(start_date, end_date)
+    
+    return _load_from_api_cached(start_date, end_date)
 def load_main_data(start_date, end_date):
     """Charge les données principales via l'API REST (paginée)."""
-    return load_from_api(
+    if datetime.now().date() == end_date:
+        
+        return load_from_api(
         start_date.strftime("%Y-%m-%d"),
-        end_date.strftime("%Y-%m-%d"),
+        end_date.strftime("%Y-%m-%d"),use_cache=False
     )
-
+    else:
+        st.write("2")
+        return load_from_api(
+        start_date.strftime("%Y-%m-%d"),
+        end_date.strftime("%Y-%m-%d"),use_cache=True
+    )
 
 def create_sidebar_filters():
     # Initialiser les clés de session manquantes (ex: refresh direct sur une page)
@@ -3139,13 +3172,10 @@ def run_analysis_pipeline(_df_source, filtrer_semaine=True):
 
 
 
-import holidays
-from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import LSTM as _KerasLSTM
-from joblib import load
+
 
 # --- Compatibilité Keras 2 -> Keras 3 ---
-class _LSTMCompat(_KerasLSTM):
+class _LSTMCompat(LSTM):
     """Wrapper qui ignore time_major pour la compatibilité h5 Keras 2 → Keras 3."""
     def __init__(self, *args, **kwargs):
         kwargs.pop('time_major', None)
@@ -3368,3 +3398,430 @@ def run_prediction_pipeline(df_raw_actual, df_raw_past):
 def get_historical_data(_df):
     all_agencies = _df['NomAgence'].unique().tolist()
     return _apply_common_processing_steps_base(_df, all_agencies, is_actual_data_processing=True, current_time_for_processing=_df['Date_Reservation'].max())
+
+
+
+############### PREDICTION  DU TEMPS MOYEN ATTENTE##########################
+
+
+def get_config(base_dir=None, open_start=7, open_end=19):
+    """Chemins, hyper-parametres et heures ouvrables du module.
+
+    - base_dir : racine du projet (par defaut : dossier de ce fichier).
+    - open_start (inclus) / open_end (exclu) : predictions affichees
+      uniquement sur cette plage. Entre 19h00 et 07h00 -> None (courbe coupee).
+    Retourne un dict : DIR, MODEL, META, FMT, SEQ, FEATS,
+    CLIP_REL, ALPHA, OPEN_START, OPEN_END.
+    """
+    _DIR = os.path.dirname(os.path.abspath(__file__)) if base_dir is None else base_dir
+    _MODEL = os.path.join(_DIR, 'models_lstm', 'global_lstm_attente.h5')
+    _META = os.path.join(_DIR, 'models_lstm', 'meta.json')
+    FMT = '%Y-%m-%d %H:%M:%S'
+    # Features GENERALISTES : aucune reference au nom/id/nombre d'agence.
+    # 'y' = ratio tempsAttenteMin / amean[agence] (meta['amean'] pour denormaliser).
+    SEQ, FEATS = 24, ['y', 'h_sin', 'h_cos', 'dw', 'nn']
+    _SCALER_N = os.path.join(_DIR, 'models_lstm', 'scaler_n.pkl')
+    CLIP_REL, ALPHA = 8.0, 0.35
+    # Heures ouvrables : predictions affichees uniquement entre OPEN_START (inclus)
+    # et OPEN_END (exclu). Entre 19h00 et 07h00 -> None (courbe coupee).
+    OPEN_START, OPEN_END = open_start, open_end
+    return {'DIR': _DIR, 'MODEL': _MODEL, 'META': _META,
+            'FMT': FMT, 'SEQ': SEQ, 'FEATS': FEATS,
+            'CLIP_REL': CLIP_REL, 'ALPHA': ALPHA,
+            'OPEN_START': OPEN_START, 'OPEN_END': OPEN_END}
+
+
+def _nn_next(a, ts, scn, nprof, nmedian):
+    prof = nprof.get(a)
+    raw = prof[pd.Timestamp(ts).hour % 24] if (isinstance(prof, list) and len(prof) == 24) else nmedian
+    if scn is None:
+        return float(np.clip(raw/54.0, 0.0, 1.0))
+    return float(np.clip(scn.transform(np.array([[raw]]))[0, 0], 0.0, 1.0))
+
+
+def _is_open(ts, config=None):
+    cfg = config or get_config()
+    h = pd.Timestamp(ts).hour
+    return cfg['OPEN_START'] <= h < cfg['OPEN_END']
+
+_M = {'m': None, 'scn': None, 'meta': None, 'nprof': {}, 'nmedian': 9.0}
+
+
+def _norm(df):
+    if df is None or len(df) == 0:
+        # Cadre vide mais type : evite les crashs sur .dt / .astype plus bas.
+        return pd.DataFrame({'agenceId': pd.Series(dtype='int64'),
+                             'tempsAttenteMin': pd.Series(dtype='float64'),
+                             'Date_Reservation': pd.Series(dtype='datetime64[ns]')})
+    d = df.copy()
+    # d = d.rename(columns={'TempsAttente': 'tempsAttenteMin',
+    #                       'agenceId_x': 'agenceId', 'agenceId': 'agenceId',
+    #                       'Agence': 'AgenceId'})
+    for c in ['Date_Reservation', 'Date_Appel', 'Date_Fin']:
+        if c in d.columns:
+            d[c] = pd.to_datetime(d[c], errors='coerce', utc=True).dt.tz_convert(None)
+    d['tempsAttenteMin'] = pd.to_numeric(d.get('tempsAttenteMin'), errors='coerce')
+    d['agenceId'] = pd.to_numeric(d.get('agenceId'), errors='coerce')
+    return d.dropna(subset=['agenceId']).assign(
+        agenceId=lambda x: x['agenceId'].astype(int))
+def _rebuild_from_h5(path, seq, n_feats):
+    """Rebuild dynamique : archi deduite des shapes lues dans le .h5.
+
+    Robuste aux 2 formats rencontres :
+      - Keras 3 (TF 2.15) : 'lstm/lstm_cell/kernel', 'dense/kernel'...
+      - Jupyter kernel     : 'lstm_3/lstm_3/lstm_cell/kernel:0', 'dense_6/dense_6/kernel:0'...
+    Les couches LSTM sont ordonnees par mangling de noms, les Dense triees
+    par taille de sortie croissante... sauf la derniere (sortie 1) gardee en fin.
+    """
+    import re
+
+    def _norm(n):
+        return re.sub(r':\d+$', '', n)
+
+    with h5py.File(path, 'r') as f:
+        g = f['model_weights']
+        hits = []
+        g.visititems(lambda n, o: hits.append(_norm(n)) if hasattr(o, 'shape') else None)
+        get = lambda n: np.array(g[n if n in g else n + ':0'][()])
+
+        def _bases(suffix):
+            bs = []
+            for h in sorted(x for x in hits if x.endswith(suffix)):
+                b = h[:len(h) - len(suffix)]
+                if b not in bs:
+                    bs.append(b)
+            return bs
+
+        lstm_b = _bases('lstm_cell/kernel')
+        lstm_w = [[get(b + 'lstm_cell/kernel'),
+                   get(b + 'lstm_cell/recurrent_kernel'),
+                   get(b + 'lstm_cell/bias')] for b in lstm_b]
+        dense_k = sorted([h for h in hits if '/dense' in h.lower() and h.endswith('/kernel')])
+        db = []
+        for h in dense_k:
+            b = h[:len(h) - len('/kernel')]
+            if b not in db:
+                db.append(b)
+        # ordre : densites intermediaires (sortie decroissante...) puis sortie 1 en dernier
+        db_sorted = sorted(db, key=lambda b: get(b + '/kernel').shape[1])
+        if db_sorted and get(db_sorted[0] + '/kernel').shape[1] == 1:
+            db_sorted = db_sorted[1:] + db_sorted[:1]
+        dense_w = [[get(b + '/kernel'), get(b + '/bias')] for b in db_sorted]
+
+    units = [int(w[0].shape[1] // 4) for w in lstm_w]
+    layers = []
+    for i, u in enumerate(units):
+        kw = {}
+        if i == 0:
+            kw['input_shape'] = (seq, n_feats)
+        if i < len(units) - 1:
+            kw['return_sequences'] = True
+        layers.append(LSTM(u, **kw))
+        layers.append(Dropout(0.3 if i == 0 else 0.2))
+    for j, (k, _b) in enumerate(dense_w):
+        out = int(k.shape[1])
+        if j < len(dense_w) - 1:
+            layers.append(Dense(out, activation='relu'))
+        else:
+            layers.append(Dense(out))
+    m2 = Sequential(layers)
+    m2.build((None, seq, n_feats))
+    li = 0
+    for w in lstm_w:
+        m2.layers[li].set_weights(w)
+        li += 2
+    for w in dense_w:
+        m2.layers[li].set_weights(w)
+        li += 1
+    print('poids transferes OK : LSTM %s / Dense %s'
+          % (units, [int(k.shape[1]) for k, _b in dense_w]))
+    return m2
+
+st.cache_resource
+def _load(config=None):
+    cfg = config or get_config()
+    if _M['m'] is None:
+        _M['meta'] = json.load(open(cfg['META']))
+        _SCALER_N = os.path.join(cfg['DIR'], 'models_lstm', 'scaler_n.pkl')
+        try:
+            _M['scn'] = pickle.load(open(_SCALER_N, 'rb'))
+        except Exception:
+            _M['scn'] = None
+        _M['nprof'] = {int(k): [float(x) for x in v] for k, v in _M['meta'].get('nprof', {}).items()}
+        _M['nmedian'] = float(_M['meta'].get('nmedian', 9.0))
+        try:
+            _M['m'] = load_model(cfg['MODEL'], compile=False)
+        except Exception as e:
+            print('load_model direct KO (%s) -> rebuild+transfert poids' % type(e).__name__)
+            _M['m'] = _rebuild_from_h5(cfg['MODEL'], cfg['SEQ'], len(cfg['FEATS']))
+    return _M['m'], _M['meta']
+
+
+FEATS_EMPTY_COLS = ['y', 'h_sin', 'h_cos', 'dw', 'nn', 'ma']
+
+
+def _hourly(df):
+    v = df.dropna(subset=['tempsAttenteMin', 'Date_Reservation']).copy()
+    v['ts'] = v['Date_Reservation'].dt.floor('h')
+    a = v.groupby(['agenceId', 'ts'], as_index=False).agg(
+        tempsAttenteMin=('tempsAttenteMin', 'mean'), n=('tempsAttenteMin', 'size'))
+    a['hour'] = a['ts'].dt.hour
+    a['dow'] = a['ts'].dt.dayofweek
+    a['h_sin'] = np.sin(2*np.pi*a['hour']/24)
+    a['h_cos'] = np.cos(2*np.pi*a['hour']/24)
+    a['dw'] = a['dow']/6
+    a = a.sort_values(['agenceId', 'ts']).reset_index(drop=True)
+    if len(a) == 0:
+        # df vide (ou aucune reservation valide) : colonnes typées attendues
+        for c in FEATS_EMPTY_COLS:
+            if c not in a.columns:
+                a[c] = pd.Series(dtype='float64')
+        return a
+    a['hour'] = a['ts'].dt.hour
+    a['dow'] = a['ts'].dt.dayofweek
+    a['h_sin'] = np.sin(2*np.pi*a['hour']/24)
+    a['h_cos'] = np.cos(2*np.pi*a['hour']/24)
+    a['dw'] = a['dow']/6
+    # Cible relative : ratio a la moyenne propre de l'agence (features generalistes)
+    amean_map = {int(k): float(v) for k, v in _M['meta'].get('amean', {}).items()}
+    clip_rel = float(_M['meta'].get('clip_rel', 8.0))
+    a['ma'] = a['agenceId'].map(amean_map)
+    a['ma'] = a['ma'].fillna(a['ma'].mean(skipna=True))
+    a['y'] = np.clip(a['tempsAttenteMin']/a['ma'].replace(0, np.nan), 0, clip_rel).fillna(1.0)
+    scn = _M.get('scn')
+    a['nn'] = scn.transform(a[['n']]) if scn is not None else (a['n']/max(1.0, float(a['n'].max())))
+    return a
+def predict(df_passe, df_actuel, steps=48, past_hours=168, agences=None,
+            config=None):
+    # """Donnees vides :
+    # - df_passe vide + df_actuel vide -> ValueError (rien a predire).
+    # - un seul des deux vide -> l'autre est utilise seul.
+    # - agence sans historique -> passe plat a sa moyenne, futur autour de la
+    #   moyenne (fallback documente dans le notebook).
+    # - config : dict de get_config() (plage ouvrable / chemins modifiables).
+    # """
+    if ((df_passe is None or len(df_passe) == 0) and
+            (df_actuel is None or len(df_actuel) == 0)):
+        raise ValueError('df_passe et df_actuel sont vides : rien a predire.')
+    cfg = config or get_config()
+    FMT, SEQ, FEATS = cfg['FMT'], cfg['SEQ'], cfg['FEATS']
+    CLIP_REL, ALPHA = cfg['CLIP_REL'], cfg['ALPHA']
+    m, meta = _load(cfg)
+    ids = [int(a) for a in (agences or meta['ids'])]
+    
+    amean = {int(k): float(v) for k, v in meta.get('amean', {}).items()}
+    glo = float(pd.concat([_norm(df_passe)['tempsAttenteMin'],
+                           _norm(df_actuel)['tempsAttenteMin']]).mean(skipna=True))
+    hp = _hourly(_norm(df_passe))
+    ha = _hourly(_norm(df_actuel))
+    scn, nprof, nmedian = _M.get('scn'), _M.get('nprof', {}), _M.get('nmedian', 9.0)
+    out = {}
+    for a in ids:
+        gp = hp[hp['agenceId'] == a].tail(max(0, past_hours-len(ha[ha['agenceId'] == a])))
+        ga = ha[ha['agenceId'] == a].tail(past_hours)
+        g = pd.concat([gp, ga]).tail(past_hours)
+        ma = float(amean.get(a) or glo)  # denormalisation par agence
+        if len(g) == 0:
+            last = pd.Timestamp.now().floor('h')
+            pts = [last - pd.Timedelta(hours=past_hours-1-i) for i in range(past_hours)]
+            pv = [ma]*past_hours
+            z = np.zeros((SEQ, len(FEATS)))
+            z[:, 4] = _nn_next(a, pts[-1], scn, nprof, nmedian)
+            z[:, 0] = 1.0  # ratio 1.0 = moyenne propre de l'agence
+            cur, ts = z.copy(), None
+        else:
+            pts = g['ts'].tolist()
+            pv = g['tempsAttenteMin'].astype(float).tolist()
+            seed = g.tail(SEQ).copy()
+            v = seed[FEATS].to_numpy(float)  # y deja en ratio (voir _hourly)
+            if len(v) < SEQ:
+                v = np.vstack([np.tile(v[0], (SEQ-len(v), 1)), v])
+            cur, ts = v.copy(), g['ts'].iloc[-1]
+        if ts is None:
+            ts = pts[-1]
+        fl, fv, prev = [], [], float(cur[-1, 0])
+        for k in range(steps):
+            ph = float(m.predict(cur.reshape(1, SEQ, len(FEATS)), verbose=0)[0, 0])
+            ph = float(np.clip(ph, 0.0, CLIP_REL))
+            ph = ALPHA*ph + (1-ALPHA)*prev
+            prev = ph
+            ts = ts + pd.Timedelta(hours=1)
+            fl.append(ts)
+            fv.append(ph)
+            cur = np.vstack([cur[1:], [[ph, np.sin(2*np.pi*ts.hour/24),
+                                        np.cos(2*np.pi*ts.hour/24),
+                                        ts.dayofweek/6, _nn_next(a, ts, scn, nprof, nmedian)]]])
+        fv = np.clip(np.array(fv), 0.0, None)*ma  # ratio -> minutes
+        # Grille horaire continue sur tout le passe : None la nuit + heures sans donnee
+        pgrid = pd.date_range(pd.Timestamp(pts[0]).floor('h'),
+                              pd.Timestamp(pts[-1]).floor('h'), freq='h')
+        vmap = {pd.Timestamp(t).floor('h'): float(v) for t, v in zip(pts, pv)}
+        # Masque heures non ouvrables (19h00 -> 07h00) : None = trou dans la courbe
+        pv_masked = [round(vmap[t], 0) if (t in vmap and _is_open(t, cfg)) else None
+                     for t in pgrid]
+        fv_masked = [round(float(v), 0) if _is_open(t, cfg) else None
+                     for t, v in zip(fl, fv)]
+        out[a] = {'past_labels': [pd.Timestamp(t).strftime(FMT) for t in pgrid],
+                  'past_values': pv_masked,
+                  'future_labels': [pd.Timestamp(t).strftime(FMT) for t in fl],
+                  'future_values': fv_masked}
+    return out
+
+
+
+# def make_echart_option(res):
+#     # 1. Filtrer les données passées pour retirer les None (heures fermées)
+#     past_filtered = [(d, v) for d, v in zip(res['past_labels'], res['past_values']) if v is not None]
+#     dates_p = [item[0] for item in past_filtered]
+#     pv = [item[1] for item in past_filtered]
+    
+#     # 2. Filtrer les données futures pour retirer les None
+#     future_filtered = [(d, v) for d, v in zip(res['future_labels'], list(res['future_values'])) if v is not None]
+#     dates_f = [item[0] for item in future_filtered]
+#     fv = [item[1] for item in future_filtered]
+    
+#     # 3. Fusionner les dates filtrées
+#     dates = dates_p + dates_f
+#     start = dates_f[0] if dates_f else None
+    
+#     # CORRECTION ICI : La série de prédiction commence par un tableau de None de la taille exacte de pv,
+#     # mais grâce à connectNulls, le premier point futur se raccordera proprement au dernier point de pv.
+#     sp_data = [None] * len(pv) + fv if pv else fv
+
+#     # Série de prédiction (Violet #9333EA unifié pour la ligne et ses symboles)
+#     sp = {
+#         'name': 'Attente Predite', 
+#         'type': 'line',
+#         'data': sp_data,
+#         'connectNulls': True,  
+#         'symbol': 'circle',
+#         'symbolSize': 6,
+#         'showSymbol': True,
+#         'lineStyle': {'color': '#9333EA', 'type': 'solid', 'width': 3},
+#         'itemStyle': {'color': '#9333EA'}
+#     }
+    
+#     if start:
+#         sp['markLine'] = {'symbol': 'none', 'data': [{
+#             'xAxis': start,
+#             'lineStyle': {'color': 'green', 'type': 'dashed', 'width': 2},
+#             'label': {'show': True, 'position': 'end',
+#                       'formatter': 'Debut de Prediction', 'color': 'green',
+#                       'fontSize': 12, 'fontWeight': 'bold',
+#                       'backgroundColor': 'white', 'padding': [2, 4],
+#                       'borderRadius': 3}}]}
+                      
+#     return {
+#         'tooltip': {
+#             'trigger': 'axis',
+#             #'formatter': "function(params) { var res = params[0].name; for (var i = 0; i < params.length; i++) { if (params[i].value !== null && params[i].value !== undefined) { res += '<br/>' + params[i].marker + ' ' + params[i].seriesName + ': <b>' + Math.round(params[i].value) + ' min</b>'; } } return res; }"
+#         },
+#         'legend': {'data': ['Attente observee'],
+#                    'left': 'center', 'top': 30},
+#         'xAxis': {'type': 'category', 'data': dates},
+#         'yAxis': {'type': 'value', 'name': 'Minutes'},
+#         'series': [
+#             {
+#                 'name': 'Attente observee', 
+#                 'type': 'line', 
+#                 'data': pv,
+#                 'connectNulls': True,
+#                 'symbol': 'circle',
+#                 'symbolSize': 6,
+#                 'showSymbol': True,
+#                 'lineStyle': {'color': '#2563EB', 'width': 3},  # Bleu #2563EB unifié
+#                 'itemStyle': {'color': '#2563EB'}
+#             }, 
+#             sp
+#         ],
+#         'grid': {'left': '10%', 'right': '5%', 'top': '20%', 'bottom': '20%'}
+#     }
+
+from streamlit_echarts import JsCode
+
+def make_echart_option(res):
+    # 1. Filtrer les données passées pour retirer les None (heures fermées) et arrondir
+    past_filtered = [(d, round(v, 0)) for d, v in zip(res['past_labels'], res['past_values']) if v is not None]
+    dates_p = [item[0] for item in past_filtered]
+    pv = [item[1] for item in past_filtered]
+    
+    # 2. Filtrer les données futures pour retirer les None et arrondir
+    future_filtered = [(d, round(v, 0)) for d, v in zip(res['future_labels'], list(res['future_values'])) if v is not None]
+    dates_f = [item[0] for item in future_filtered]
+    fv = [item[1] for item in future_filtered]
+    
+    # 3. Fusionner les dates filtrées
+    dates = dates_p + dates_f
+    start = dates_f[0] if dates_f else None
+    
+    sp_data = [None] * len(pv) + fv if pv else fv
+
+    sp = {
+        'name': 'Attente Predite', 
+        'type': 'line',
+        'data': sp_data,
+        'connectNulls': True,  
+        'symbol': 'circle',
+        'symbolSize': 6,
+        'showSymbol': True,
+        'lineStyle': {'color': '#9333EA', 'type': 'solid', 'width': 3},
+        'itemStyle': {'color': '#9333EA'}
+    }
+    
+    if start:
+        sp['markLine'] = {'symbol': 'none', 'data': [{
+            'xAxis': start,
+            'lineStyle': {'color': 'green', 'type': 'dashed', 'width': 2},
+            'label': {'show': True, 'position': 'end',
+                      'formatter': 'Debut de Prediction', 'color': 'green',
+                      'fontSize': 12, 'fontWeight': 'bold',
+                      'backgroundColor': 'white', 'padding': [2, 4],
+                      'borderRadius': 3}}]}
+                      
+    return {
+        'tooltip': {
+            'trigger': 'axis',
+            # Utilisation d'un filtre natif pour n'afficher que les lignes qui ont des données non nulles dans le tooltip
+            
+        },
+        'legend': {'data': ['Attente observee'],
+                   'left': 'center', 'top': 30},
+        'xAxis': {'type': 'category', 'data': dates},
+        'yAxis': {'type': 'value', 'name': 'Minutes'},
+        'series': [
+            {
+                'name': 'Attente observee', 
+                'type': 'line', 
+                'data': pv,
+                'connectNulls': True,
+                'symbol': 'circle',
+                'symbolSize': 6,
+                'showSymbol': True,
+                'lineStyle': {'color': '#2563EB', 'width': 3},
+                'itemStyle': {'color': '#2563EB'}
+            }, 
+            sp
+        ],
+        'grid': {'left': '10%', 'right': '5%', 'top': '20%', 'bottom': '20%'}
+    }
+
+def render_section(df_passe, df_actuel, steps=48, past_hours=24,
+                   agences=None, cols=2, title=None, key_prefix='att',
+                   config=None):
+    if title:
+        st.subheader(title)
+    with st.spinner('Prediction en cours...'):
+        grid = predict(df_passe, df_actuel, steps=steps,
+                       past_hours=past_hours, agences=agences, config=config)
+    sel = [a for a in (agences or list(grid.keys())) if a in grid]
+    #st.success(str(len(sel)) + ' agences predites (modele global).')
+    for i in range(0, len(sel), cols):
+        row = st.columns(cols)
+        for j, a in enumerate(sel[i:i+cols]):
+            with row[j]:
+                resultat = df_actuel.loc[df_actuel["agenceId"] == a, "NomAgence"]
+                nom_agence = resultat.iloc[0] if not resultat.empty else "Agence inconnue"
+                st.markdown(f"<h1 style='text-align: center;font-size:1em;'>{nom_agence}</h1>", unsafe_allow_html=True)
+                st_echarts(options=make_echart_option(grid[a]),
+                           height='380px', key='%s_%s' % (key_prefix, a))
+    return grid

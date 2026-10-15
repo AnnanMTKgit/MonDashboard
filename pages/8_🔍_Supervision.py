@@ -1,4 +1,6 @@
 # pages/7_🔍_Supervision.py
+from time import timezone
+
 import streamlit as st
 from shared_code import *
 import pandas as pd
@@ -31,7 +33,8 @@ if df_all_filtered.empty:
     st.error("Donnée disponible seulement pour la prediction De l'affluence.")
     stop=True
     #st.stop()
-
+yesterday = st.session_state.end_date - timedelta(days=1)
+df_past = load_from_api(str(yesterday), str(yesterday),use_cache=True)
 
 
 # --- 1. Configuration des onglets et de l'état de session ---
@@ -39,7 +42,8 @@ SUPERVISION_TABS = [
     "Monitoring de la Congestion",
     "Opérations sur Rendez-vous",
     "Évolution des Temps sur la Période",
-    "Prédiction de l'Affluence future"
+    "Prédiction de l'Affluence future",
+    "Prédiction du Temps d'Attente Moyen Future"
 ]
 
 if 'active_supervision_tab_index' not in st.session_state:
@@ -344,14 +348,14 @@ elif selected_tab == SUPERVISION_TABS[3]:
 
     df_actual=df_queue_filtered[["Date_Reservation","Date_Appel","Date_Fin","NomAgence"]]
     
-    yesterday = st.session_state.end_date - timedelta(days=1)
+    
     
     is_today = (st.session_state.end_date == datetime.now().date())
     
     if is_today:
         
         
-        df_past = load_from_api(str(yesterday), str(yesterday))
+        
 
         df_past = df_past[df_past['NomAgence'].isin(st.session_state.selected_agencies)]
         df_past = df_past[["Date_Reservation","Date_Appel","Date_Fin","NomAgence"]]
@@ -522,4 +526,35 @@ elif selected_tab == SUPERVISION_TABS[3]:
                     }
                         
                     st_echarts(options=options, height="500px")
-                
+
+elif selected_tab == SUPERVISION_TABS[4]:
+    st.markdown("---")
+    
+            
+    is_today = (st.session_state.end_date == datetime.now().date())
+        
+    if is_today:
+        df_actual=df_queue_filtered.copy()
+        ids_cibles = (
+            df_actual[
+                df_actual["NomAgence"].isin(st.session_state.selected_agencies)
+            ]["agenceId"]
+            .unique()
+            .tolist()
+        )
+        s=st.columns([1, 4, 1])  # Espacement pour centrer le titre
+        with s[0]:
+            steps = st.slider('Horizon futur (heures)', 6, 72, 24)
+
+        with s[2]:
+            
+            cols = st.selectbox('Colonnes de la grille', [1, 2, 3], index=1)
+        st.markdown(f"<h1 style='text-align: center;font-size:2em;'>Prévision du Temps d'Attente Moyen par Agence</h1>", unsafe_allow_html=True)
+        gird=render_section(df_past, df_actual, steps=steps, past_hours=24,
+                           agences=ids_cibles, cols=cols, title=None, key_prefix='att',
+                           config=None)
+                        
+            
+    else:
+        st.info("Pas de Prédictions Futures")
+    
