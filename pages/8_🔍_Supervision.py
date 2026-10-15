@@ -31,8 +31,8 @@ df_queue_filtered = df_queue[df_queue['NomAgence'].isin(st.session_state.selecte
 
 if df_all_filtered.empty: 
     st.error("Donnée disponible seulement pour la prediction De l'affluence.")
-    stop=True
-    #st.stop()
+    
+    st.stop()
 yesterday = st.session_state.end_date - timedelta(days=1)
 df_past = load_from_api(str(yesterday), str(yesterday),use_cache=True)
 
