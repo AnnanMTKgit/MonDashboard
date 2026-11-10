@@ -137,7 +137,7 @@ def show_admin_dashboard():
     # Affichage de la page d'accueil pour l'admin
     st.title(f"🏠 Bienvenue, {st.session_state.username}!")
     st.info("Utilisez le menu sur la gauche pour naviguer entre les différentes sections d'analyse.")
-    
+    st.warning("une nouvelle fonctionnalite de prediction du Temps d'attente est disponible dans le menu 'Supervision/Prédiction du Temps d'Attente Moyen Future'.")
 # ==============================================================================
 # FONCTION DE DECONNEXION
 # ==============================================================================
