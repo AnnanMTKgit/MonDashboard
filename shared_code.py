@@ -3742,7 +3742,7 @@ def make_echart_option(res):
     # Style different selon que les donnees sont synthetiques (meta.json) ou observees
     if est_synthetique:
         # Passe reconstruit a partir des moyennes globales meta.json
-        obs_name = 'Historique (Synthetique - meta.json)'
+        obs_name = 'Historique vide (moyennes horaires utilisées))'
         obs_color = '#F59E0B'
         obs_type = 'solid'
         # Futur : predictions du modele LSTM (pas donnees synthetiques)
