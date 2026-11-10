@@ -3402,6 +3402,17 @@ def get_historical_data(_df):
 
 
 ############### PREDICTION  DU TEMPS MOYEN ATTENTE##########################
+import os
+import json
+import pickle
+import numpy as np
+import pandas as pd
+import h5py
+import streamlit as st
+from tensorflow.keras.models import load_model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from streamlit_echarts import JsCode
 
 
 def get_config(base_dir=None, open_start=7, open_end=19):
@@ -3417,13 +3428,9 @@ def get_config(base_dir=None, open_start=7, open_end=19):
     _MODEL = os.path.join(_DIR, 'models_lstm', 'global_lstm_attente.h5')
     _META = os.path.join(_DIR, 'models_lstm', 'meta.json')
     FMT = '%Y-%m-%d %H:%M:%S'
-    # Features GENERALISTES : aucune reference au nom/id/nombre d'agence.
-    # 'y' = ratio tempsAttenteMin / amean[agence] (meta['amean'] pour denormaliser).
     SEQ, FEATS = 24, ['y', 'h_sin', 'h_cos', 'dw', 'nn']
     _SCALER_N = os.path.join(_DIR, 'models_lstm', 'scaler_n.pkl')
     CLIP_REL, ALPHA = 8.0, 0.35
-    # Heures ouvrables : predictions affichees uniquement entre OPEN_START (inclus)
-    # et OPEN_END (exclu). Entre 19h00 et 07h00 -> None (courbe coupee).
     OPEN_START, OPEN_END = open_start, open_end
     return {'DIR': _DIR, 'MODEL': _MODEL, 'META': _META,
             'FMT': FMT, 'SEQ': SEQ, 'FEATS': FEATS,
@@ -3439,24 +3446,53 @@ def _nn_next(a, ts, scn, nprof, nmedian):
     return float(np.clip(scn.transform(np.array([[raw]]))[0, 0], 0.0, 1.0))
 
 
-def _is_open(ts, config=None):
+def _nn_next_global(ts, scn, glo_nprof, nmedian):
+    """Profil horaire global (toutes agences confondues) sans identite agence."""
+    h = pd.Timestamp(ts).hour % 24
+    raw = glo_nprof[h] if (isinstance(glo_nprof, (list, tuple, np.ndarray)) and len(glo_nprof) == 24) else nmedian
+    if scn is None:
+        return float(np.clip(raw / 54.0, 0.0, 1.0))
+    return float(np.clip(scn.transform(np.array([[raw]]))[0, 0], 0.0, 1.0))
+
+
+def _is_open_and_working(ts, config=None):
+    """Vérifie si l'heure est ouvrable (07h-19h), un jour ouvré (hors week-end et jours fériés)."""
     cfg = config or get_config()
-    h = pd.Timestamp(ts).hour
-    return cfg['OPEN_START'] <= h < cfg['OPEN_END']
+    ts_dt = pd.Timestamp(ts)
+    h = ts_dt.hour
+    # Week-end (5 = Samedi, 6 = Dimanche)
+    if ts_dt.dayofweek >= 5:
+        return False
+    # Heures ouvrables
+    if not (cfg['OPEN_START'] <= h < cfg['OPEN_END']):
+        return False
+    # Jours fériés personnalisables
+    is_ferie = False 
+    if is_ferie:
+        return False
+    return True
 
 _M = {'m': None, 'scn': None, 'meta': None, 'nprof': {}, 'nmedian': 9.0}
 
 
+def _ensure_meta(cfg=None):
+    """Garantit que _M['meta'] est toujours chargé correctement."""
+    if _M['meta'] is None:
+        c = cfg or get_config()
+        try:
+            with open(c['META'], 'r', encoding='utf-8') as f:
+                _M['meta'] = json.load(f)
+        except Exception:
+            _M['meta'] = {}
+    return _M['meta']
+
+
 def _norm(df):
     if df is None or len(df) == 0:
-        # Cadre vide mais type : evite les crashs sur .dt / .astype plus bas.
         return pd.DataFrame({'agenceId': pd.Series(dtype='int64'),
-                             'tempsAttenteMin': pd.Series(dtype='float64'),
-                             'Date_Reservation': pd.Series(dtype='datetime64[ns]')})
+                            'tempsAttenteMin': pd.Series(dtype='float64'),
+                            'Date_Reservation': pd.Series(dtype='datetime64[ns]')})
     d = df.copy()
-    # d = d.rename(columns={'TempsAttente': 'tempsAttenteMin',
-    #                       'agenceId_x': 'agenceId', 'agenceId': 'agenceId',
-    #                       'Agence': 'AgenceId'})
     for c in ['Date_Reservation', 'Date_Appel', 'Date_Fin']:
         if c in d.columns:
             d[c] = pd.to_datetime(d[c], errors='coerce', utc=True).dt.tz_convert(None)
@@ -3464,24 +3500,18 @@ def _norm(df):
     d['agenceId'] = pd.to_numeric(d.get('agenceId'), errors='coerce')
     return d.dropna(subset=['agenceId']).assign(
         agenceId=lambda x: x['agenceId'].astype(int))
-def _rebuild_from_h5(path, seq, n_feats):
-    """Rebuild dynamique : archi deduite des shapes lues dans le .h5.
 
-    Robuste aux 2 formats rencontres :
-      - Keras 3 (TF 2.15) : 'lstm/lstm_cell/kernel', 'dense/kernel'...
-      - Jupyter kernel     : 'lstm_3/lstm_3/lstm_cell/kernel:0', 'dense_6/dense_6/kernel:0'...
-    Les couches LSTM sont ordonnees par mangling de noms, les Dense triees
-    par taille de sortie croissante... sauf la derniere (sortie 1) gardee en fin.
-    """
+
+def _rebuild_from_h5(path, seq, n_feats):
     import re
 
-    def _norm(n):
+    def _norm_name(n):
         return re.sub(r':\d+$', '', n)
 
     with h5py.File(path, 'r') as f:
         g = f['model_weights']
         hits = []
-        g.visititems(lambda n, o: hits.append(_norm(n)) if hasattr(o, 'shape') else None)
+        g.visititems(lambda n, o: hits.append(_norm_name(n)) if hasattr(o, 'shape') else None)
         get = lambda n: np.array(g[n if n in g else n + ':0'][()])
 
         def _bases(suffix):
@@ -3502,7 +3532,6 @@ def _rebuild_from_h5(path, seq, n_feats):
             b = h[:len(h) - len('/kernel')]
             if b not in db:
                 db.append(b)
-        # ordre : densites intermediaires (sortie decroissante...) puis sortie 1 en dernier
         db_sorted = sorted(db, key=lambda b: get(b + '/kernel').shape[1])
         if db_sorted and get(db_sorted[0] + '/kernel').shape[1] == 1:
             db_sorted = db_sorted[1:] + db_sorted[:1]
@@ -3533,34 +3562,39 @@ def _rebuild_from_h5(path, seq, n_feats):
     for w in dense_w:
         m2.layers[li].set_weights(w)
         li += 1
-    print('poids transferes OK : LSTM %s / Dense %s'
-          % (units, [int(k.shape[1]) for k, _b in dense_w]))
     return m2
 
-st.cache_resource
+
 def _load(config=None):
     cfg = config or get_config()
-    if _M['m'] is None:
-        _M['meta'] = json.load(open(cfg['META']))
+    meta = _ensure_meta(cfg)
+    
+    if _M['scn'] is None:
         _SCALER_N = os.path.join(cfg['DIR'], 'models_lstm', 'scaler_n.pkl')
         try:
             _M['scn'] = pickle.load(open(_SCALER_N, 'rb'))
         except Exception:
             _M['scn'] = None
-        _M['nprof'] = {int(k): [float(x) for x in v] for k, v in _M['meta'].get('nprof', {}).items()}
-        _M['nmedian'] = float(_M['meta'].get('nmedian', 9.0))
+            
+    _M['nprof'] = {int(k): [float(x) for x in v] for k, v in meta.get('nprof', {}).items()}
+    _M['nmedian'] = float(meta.get('nmedian', 9.0))
+
+    if _M['m'] is None:
         try:
             _M['m'] = load_model(cfg['MODEL'], compile=False)
-        except Exception as e:
-            print('load_model direct KO (%s) -> rebuild+transfert poids' % type(e).__name__)
+        except Exception:
             _M['m'] = _rebuild_from_h5(cfg['MODEL'], cfg['SEQ'], len(cfg['FEATS']))
-    return _M['m'], _M['meta']
+            
+    return _M['m'], meta
 
 
 FEATS_EMPTY_COLS = ['y', 'h_sin', 'h_cos', 'dw', 'nn', 'ma']
 
 
-def _hourly(df):
+def _hourly(df, config=None):
+    cfg = config or get_config()
+    meta = _ensure_meta(cfg)
+
     v = df.dropna(subset=['tempsAttenteMin', 'Date_Reservation']).copy()
     v['ts'] = v['Date_Reservation'].dt.floor('h')
     a = v.groupby(['agenceId', 'ts'], as_index=False).agg(
@@ -3572,238 +3606,229 @@ def _hourly(df):
     a['dw'] = a['dow']/6
     a = a.sort_values(['agenceId', 'ts']).reset_index(drop=True)
     if len(a) == 0:
-        # df vide (ou aucune reservation valide) : colonnes typées attendues
         for c in FEATS_EMPTY_COLS:
             if c not in a.columns:
                 a[c] = pd.Series(dtype='float64')
         return a
-    a['hour'] = a['ts'].dt.hour
-    a['dow'] = a['ts'].dt.dayofweek
-    a['h_sin'] = np.sin(2*np.pi*a['hour']/24)
-    a['h_cos'] = np.cos(2*np.pi*a['hour']/24)
-    a['dw'] = a['dow']/6
-    # Cible relative : ratio a la moyenne propre de l'agence (features generalistes)
-    amean_map = {int(k): float(v) for k, v in _M['meta'].get('amean', {}).items()}
-    clip_rel = float(_M['meta'].get('clip_rel', 8.0))
+        
+    amean_map = {int(k): float(val) for k, val in meta.get('amean', {}).items()}
+    clip_rel = float(meta.get('clip_rel', 8.0))
     a['ma'] = a['agenceId'].map(amean_map)
     a['ma'] = a['ma'].fillna(a['ma'].mean(skipna=True))
     a['y'] = np.clip(a['tempsAttenteMin']/a['ma'].replace(0, np.nan), 0, clip_rel).fillna(1.0)
     scn = _M.get('scn')
     a['nn'] = scn.transform(a[['n']]) if scn is not None else (a['n']/max(1.0, float(a['n'].max())))
     return a
-def predict(df_passe, df_actuel, steps=48, past_hours=168, agences=None,
-            config=None):
-    # """Donnees vides :
-    # - df_passe vide + df_actuel vide -> ValueError (rien a predire).
-    # - un seul des deux vide -> l'autre est utilise seul.
-    # - agence sans historique -> passe plat a sa moyenne, futur autour de la
-    #   moyenne (fallback documente dans le notebook).
-    # - config : dict de get_config() (plage ouvrable / chemins modifiables).
-    # """
+
+
+def predict(df_passe, df_actuel, steps=48, past_hours=168, agences=None, config=None):
     if ((df_passe is None or len(df_passe) == 0) and
             (df_actuel is None or len(df_actuel) == 0)):
         raise ValueError('df_passe et df_actuel sont vides : rien a predire.')
+    
     cfg = config or get_config()
     FMT, SEQ, FEATS = cfg['FMT'], cfg['SEQ'], cfg['FEATS']
     CLIP_REL, ALPHA = cfg['CLIP_REL'], cfg['ALPHA']
     m, meta = _load(cfg)
-    ids = [int(a) for a in (agences or meta['ids'])]
+    ids = [int(a) for a in (agences or meta.get('ids', []))]
     
     amean = {int(k): float(v) for k, v in meta.get('amean', {}).items()}
-    glo = float(pd.concat([_norm(df_passe)['tempsAttenteMin'],
-                           _norm(df_actuel)['tempsAttenteMin']]).mean(skipna=True))
-    hp = _hourly(_norm(df_passe))
-    ha = _hourly(_norm(df_actuel))
+    norm_p = _norm(df_passe)
+    norm_a = _norm(df_actuel)
+    
+    glo_series = pd.concat([norm_p['tempsAttenteMin'], norm_a['tempsAttenteMin']])
+    glo = float(glo_series.mean(skipna=True)) if len(glo_series.dropna()) > 0 else 9.0
+    
+    hp = _hourly(norm_p, cfg)
+    ha = _hourly(norm_a, cfg)
     scn, nprof, nmedian = _M.get('scn'), _M.get('nprof', {}), _M.get('nmedian', 9.0)
+    # Profils horaires GLOBAUX (toutes agences, sans ID agence) pour les agences sans donnees
+    tprof_global = [float(x) for x in meta.get('tprof_global', [glo] * 24)]
+    glo_mean_meta = float(meta.get('gmean', glo))
+    all_h = pd.concat([hp, ha])
+    if len(all_h) > 0:
+        glo_nprof = all_h.groupby(all_h['ts'].dt.hour)['n'].mean().reindex(range(24)).fillna(float(all_h['n'].mean())).tolist()
+        glo_mean = float(all_h['tempsAttenteMin'].mean(skipna=True)) if len(all_h.dropna()) > 0 else glo_mean_meta
+    else:
+        glo_nprof = [float(nmedian)] * 24
+        glo_mean = glo_mean_meta
     out = {}
+
     for a in ids:
-        gp = hp[hp['agenceId'] == a].tail(max(0, past_hours-len(ha[ha['agenceId'] == a])))
+        gp = hp[hp['agenceId'] == a].tail(max(0, past_hours - len(ha[ha['agenceId'] == a])))
         ga = ha[ha['agenceId'] == a].tail(past_hours)
         g = pd.concat([gp, ga]).tail(past_hours)
-        ma = float(amean.get(a) or glo)  # denormalisation par agence
-        if len(g) == 0:
+        sans_donnees = (len(g) == 0)
+        ma = glo_mean if sans_donnees else float(amean.get(a) or glo)
+
+        if sans_donnees:
             last = pd.Timestamp.now().floor('h')
-            pts = [last - pd.Timedelta(hours=past_hours-1-i) for i in range(past_hours)]
-            pv = [ma]*past_hours
+            pts = [last - pd.Timedelta(hours=SEQ-1-i) for i in range(SEQ)]
+            # Temps moyen horaire GLOBAL (sans ID agence) pour le passe
+            pv = [float(tprof_global[pd.Timestamp(t).hour % 24]) for t in pts]
             z = np.zeros((SEQ, len(FEATS)))
-            z[:, 4] = _nn_next(a, pts[-1], scn, nprof, nmedian)
-            z[:, 0] = 1.0  # ratio 1.0 = moyenne propre de l'agence
+            z[:, 0] = [float(np.clip(tprof_global[pd.Timestamp(t).hour % 24] / max(glo_mean, 1e-9), 0.0, CLIP_REL)) for t in pts]
+            z[:, 4] = [_nn_next_global(t, scn, glo_nprof, nmedian) for t in pts]
             cur, ts = z.copy(), None
         else:
             pts = g['ts'].tolist()
             pv = g['tempsAttenteMin'].astype(float).tolist()
             seed = g.tail(SEQ).copy()
-            v = seed[FEATS].to_numpy(float)  # y deja en ratio (voir _hourly)
+            v = seed[FEATS].to_numpy(float)
             if len(v) < SEQ:
                 v = np.vstack([np.tile(v[0], (SEQ-len(v), 1)), v])
             cur, ts = v.copy(), g['ts'].iloc[-1]
+
         if ts is None:
             ts = pts[-1]
-        fl, fv, prev = [], [], float(cur[-1, 0])
-        for k in range(steps):
+
+        # Génération des prédictions futures en ne gardant que les heures ouvrables
+        fl, fv = [], []
+        prev = float(cur[-1, 0])
+        future_count = 0
+        while future_count < steps:
+            ts = ts + pd.Timedelta(hours=1)
             ph = float(m.predict(cur.reshape(1, SEQ, len(FEATS)), verbose=0)[0, 0])
             ph = float(np.clip(ph, 0.0, CLIP_REL))
-            ph = ALPHA*ph + (1-ALPHA)*prev
+            ph = ALPHA * ph + (1 - ALPHA) * prev
             prev = ph
-            ts = ts + pd.Timedelta(hours=1)
-            fl.append(ts)
-            fv.append(ph)
             cur = np.vstack([cur[1:], [[ph, np.sin(2*np.pi*ts.hour/24),
                                         np.cos(2*np.pi*ts.hour/24),
-                                        ts.dayofweek/6, _nn_next(a, ts, scn, nprof, nmedian)]]])
-        fv = np.clip(np.array(fv), 0.0, None)*ma  # ratio -> minutes
-        # Grille horaire continue sur tout le passe : None la nuit + heures sans donnee
+                                        ts.dayofweek/6,
+                                        _nn_next_global(ts, scn, glo_nprof, nmedian) if sans_donnees else _nn_next(a, ts, scn, nprof, nmedian)]]])
+            if _is_open_and_working(ts, cfg):
+                fl.append(ts)
+                fv.append(ph)
+                future_count += 1
+        
+        fv = np.clip(np.array(fv), 0.0, None) * ma
+        future_values = [round(float(val), 0) for val in fv]
+
+        # Grille du passé filtrée pour exclure les heures non ouvrables de l'axe des abscisses
         pgrid = pd.date_range(pd.Timestamp(pts[0]).floor('h'),
                               pd.Timestamp(pts[-1]).floor('h'), freq='h')
-        vmap = {pd.Timestamp(t).floor('h'): float(v) for t, v in zip(pts, pv)}
-        # Masque heures non ouvrables (19h00 -> 07h00) : None = trou dans la courbe
-        pv_masked = [round(vmap[t], 0) if (t in vmap and _is_open(t, cfg)) else None
-                     for t in pgrid]
-        fv_masked = [round(float(v), 0) if _is_open(t, cfg) else None
-                     for t, v in zip(fl, fv)]
-        out[a] = {'past_labels': [pd.Timestamp(t).strftime(FMT) for t in pgrid],
-                  'past_values': pv_masked,
-                  'future_labels': [pd.Timestamp(t).strftime(FMT) for t in fl],
-                  'future_values': fv_masked}
+        vmap = {pd.Timestamp(t).floor('h'): float(val) for t, val in zip(pts, pv)}
+
+        past_labels = []
+        past_values = []
+        for t in pgrid:
+            if _is_open_and_working(t, cfg):
+                past_labels.append(pd.Timestamp(t).strftime(FMT))
+                past_values.append(round(vmap[t], 0) if t in vmap else None)
+
+        out[a] = {
+            'past_labels': past_labels,
+            'past_values': past_values,
+            'future_labels': [pd.Timestamp(t).strftime(FMT) for t in fl],
+            'future_values': future_values,
+            'synthétique': bool(sans_donnees),
+            'source': 'meta.json' if sans_donnees else 'observé'
+        }
     return out
 
 
-
-# def make_echart_option(res):
-#     # 1. Filtrer les données passées pour retirer les None (heures fermées)
-#     past_filtered = [(d, v) for d, v in zip(res['past_labels'], res['past_values']) if v is not None]
-#     dates_p = [item[0] for item in past_filtered]
-#     pv = [item[1] for item in past_filtered]
-    
-#     # 2. Filtrer les données futures pour retirer les None
-#     future_filtered = [(d, v) for d, v in zip(res['future_labels'], list(res['future_values'])) if v is not None]
-#     dates_f = [item[0] for item in future_filtered]
-#     fv = [item[1] for item in future_filtered]
-    
-#     # 3. Fusionner les dates filtrées
-#     dates = dates_p + dates_f
-#     start = dates_f[0] if dates_f else None
-    
-#     # CORRECTION ICI : La série de prédiction commence par un tableau de None de la taille exacte de pv,
-#     # mais grâce à connectNulls, le premier point futur se raccordera proprement au dernier point de pv.
-#     sp_data = [None] * len(pv) + fv if pv else fv
-
-#     # Série de prédiction (Violet #9333EA unifié pour la ligne et ses symboles)
-#     sp = {
-#         'name': 'Attente Predite', 
-#         'type': 'line',
-#         'data': sp_data,
-#         'connectNulls': True,  
-#         'symbol': 'circle',
-#         'symbolSize': 6,
-#         'showSymbol': True,
-#         'lineStyle': {'color': '#9333EA', 'type': 'solid', 'width': 3},
-#         'itemStyle': {'color': '#9333EA'}
-#     }
-    
-#     if start:
-#         sp['markLine'] = {'symbol': 'none', 'data': [{
-#             'xAxis': start,
-#             'lineStyle': {'color': 'green', 'type': 'dashed', 'width': 2},
-#             'label': {'show': True, 'position': 'end',
-#                       'formatter': 'Debut de Prediction', 'color': 'green',
-#                       'fontSize': 12, 'fontWeight': 'bold',
-#                       'backgroundColor': 'white', 'padding': [2, 4],
-#                       'borderRadius': 3}}]}
-                      
-#     return {
-#         'tooltip': {
-#             'trigger': 'axis',
-#             #'formatter': "function(params) { var res = params[0].name; for (var i = 0; i < params.length; i++) { if (params[i].value !== null && params[i].value !== undefined) { res += '<br/>' + params[i].marker + ' ' + params[i].seriesName + ': <b>' + Math.round(params[i].value) + ' min</b>'; } } return res; }"
-#         },
-#         'legend': {'data': ['Attente observee'],
-#                    'left': 'center', 'top': 30},
-#         'xAxis': {'type': 'category', 'data': dates},
-#         'yAxis': {'type': 'value', 'name': 'Minutes'},
-#         'series': [
-#             {
-#                 'name': 'Attente observee', 
-#                 'type': 'line', 
-#                 'data': pv,
-#                 'connectNulls': True,
-#                 'symbol': 'circle',
-#                 'symbolSize': 6,
-#                 'showSymbol': True,
-#                 'lineStyle': {'color': '#2563EB', 'width': 3},  # Bleu #2563EB unifié
-#                 'itemStyle': {'color': '#2563EB'}
-#             }, 
-#             sp
-#         ],
-#         'grid': {'left': '10%', 'right': '5%', 'top': '20%', 'bottom': '20%'}
-#     }
-
-from streamlit_echarts import JsCode
-
 def make_echart_option(res):
-    # 1. Filtrer les données passées pour retirer les None (heures fermées) et arrondir
-    past_filtered = [(d, round(v, 0)) for d, v in zip(res['past_labels'], res['past_values']) if v is not None]
-    dates_p = [item[0] for item in past_filtered]
-    pv = [item[1] for item in past_filtered]
-    
-    # 2. Filtrer les données futures pour retirer les None et arrondir
-    future_filtered = [(d, round(v, 0)) for d, v in zip(res['future_labels'], list(res['future_values'])) if v is not None]
-    dates_f = [item[0] for item in future_filtered]
-    fv = [item[1] for item in future_filtered]
-    
-    # 3. Fusionner les dates filtrées
+    dates_p = res['past_labels']
+    pv = res['past_values']
+    dates_f = res['future_labels']
+    fv = res['future_values']
+    est_synthetique = bool(res.get('synthétique', False))
+
     dates = dates_p + dates_f
     start = dates_f[0] if dates_f else None
-    
+
     sp_data = [None] * len(pv) + fv if pv else fv
 
+    # Style different selon que les donnees sont synthetiques (meta.json) ou observees
+    if est_synthetique:
+        # Passe reconstruit a partir des moyennes globales meta.json
+        obs_name = 'Historique (Synthetique - meta.json)'
+        obs_color = '#F59E0B'
+        obs_type = 'solid'
+        # Futur : predictions du modele LSTM (pas donnees synthetiques)
+        sp_name = 'Prediction LSTM'
+        sp_color = '#9333EA'
+        sp_type = 'dashed'
+    else:
+        obs_name = 'Historique observe'
+        obs_color = '#2563EB'
+        obs_type = 'solid'
+        sp_name = 'Prediction LSTM'
+        sp_color = '#9333EA'
+        sp_type = 'solid'
+
     sp = {
-        'name': 'Attente Predite', 
+        'name': sp_name,
         'type': 'line',
         'data': sp_data,
-        'connectNulls': True,  
+        'connectNulls': False,
         'symbol': 'circle',
         'symbolSize': 6,
         'showSymbol': True,
-        'lineStyle': {'color': '#9333EA', 'type': 'solid', 'width': 3},
-        'itemStyle': {'color': '#9333EA'}
+        'lineStyle': {'color': sp_color, 'type': sp_type, 'width': 3},
+        'itemStyle': {'color': sp_color}
     }
-    
+
+    mark_lines = []
     if start:
-        sp['markLine'] = {'symbol': 'none', 'data': [{
+        mark_lines.append({
             'xAxis': start,
             'lineStyle': {'color': 'green', 'type': 'dashed', 'width': 2},
             'label': {'show': True, 'position': 'end',
                       'formatter': 'Debut de Prediction', 'color': 'green',
                       'fontSize': 12, 'fontWeight': 'bold',
                       'backgroundColor': 'white', 'padding': [2, 4],
-                      'borderRadius': 3}}]}
-                      
-    return {
+                      'borderRadius': 3}
+        })
+    if mark_lines:
+        sp['markLine'] = {'symbol': 'none', 'data': mark_lines}
+
+    # Zone visuelle : separation nette entre Passe et Futur
+    mark_area_data = []
+    if dates_p and start:
+        mark_area_data.append([
+            {'xAxis': dates_p[0], 'label': {'show': True, 'position': 'insideStartTop',
+                      'formatter': 'Historique / Passe', 'color': '#666', 'fontSize': 12}},
+            {'xAxis': start, 'label': {'show': True, 'position': 'insideEndTop',
+                      'formatter': 'Debut de Prediction', 'color': 'green', 'fontSize': 12}}
+        ])
+    if start and dates_f:
+        mark_area_data.append([
+            {'xAxis': start, 'label': {'show': True, 'position': 'insideStartTop',
+                      'formatter': 'Debut de Prediction', 'color': 'green', 'fontSize': 12}},
+            {'xAxis': dates[-1], 'label': {'show': True, 'position': 'insideEndTop',
+                      'formatter': 'Prediction / Futur', 'color': sp_color, 'fontSize': 12}}
+        ])
+    mark_area = {'silent': True, 'itemStyle': {'opacity': 0.08}, 'data': mark_area_data} if mark_area_data else None
+
+    option = {
         'tooltip': {
             'trigger': 'axis',
-            # Utilisation d'un filtre natif pour n'afficher que les lignes qui ont des données non nulles dans le tooltip
-            
+            'formatter': JsCode("function(params) { var res = params[0].name; for (var i = 0; i < params.length; i++) { if (params[i].value !== null && params[i].value !== undefined) { res += '<br/>' + params[i].marker + ' ' + params[i].seriesName + ': <b>' + Math.round(params[i].value) + ' min</b>'; } } return res; }").js_code
         },
-        'legend': {'data': ['Attente observee'],
-                   'left': 'center', 'top': 30},
+        'legend': {'data': [obs_name, sp_name], 'left': 'center', 'top': 30},
         'xAxis': {'type': 'category', 'data': dates},
         'yAxis': {'type': 'value', 'name': 'Minutes'},
         'series': [
             {
-                'name': 'Attente observee', 
-                'type': 'line', 
+                'name': obs_name,
+                'type': 'line',
                 'data': pv,
-                'connectNulls': True,
+                'connectNulls': False,
                 'symbol': 'circle',
                 'symbolSize': 6,
                 'showSymbol': True,
-                'lineStyle': {'color': '#2563EB', 'width': 3},
-                'itemStyle': {'color': '#2563EB'}
-            }, 
+                'lineStyle': {'color': obs_color, 'type': obs_type, 'width': 3},
+                'itemStyle': {'color': obs_color}
+            },
             sp
         ],
         'grid': {'left': '10%', 'right': '5%', 'top': '20%', 'bottom': '20%'}
     }
+    if mark_area:
+        option['markArea'] = mark_area
+    return option
+
 
 def render_section(df_passe, df_actuel, steps=48, past_hours=24,
                    agences=None, cols=2, title=None, key_prefix='att',
@@ -3814,14 +3839,23 @@ def render_section(df_passe, df_actuel, steps=48, past_hours=24,
         grid = predict(df_passe, df_actuel, steps=steps,
                        past_hours=past_hours, agences=agences, config=config)
     sel = [a for a in (agences or list(grid.keys())) if a in grid]
-    #st.success(str(len(sel)) + ' agences predites (modele global).')
     for i in range(0, len(sel), cols):
         row = st.columns(cols)
         for j, a in enumerate(sel[i:i+cols]):
             with row[j]:
-                resultat = df_actuel.loc[df_actuel["agenceId"] == a, "NomAgence"]
-                nom_agence = resultat.iloc[0] if not resultat.empty else "Agence inconnue"
+                resultat = df_actuel.loc[df_actuel["agenceId"] == a, "NomAgence"] if df_actuel is not None and not df_actuel.empty else pd.Series()
+                nom_agence = resultat.iloc[0] if not resultat.empty else f"Agence {a}"
+                est_synthetique = bool(grid[a].get('synthétique', False))
+                source = grid[a].get('source', 'observé')
+                badge_color = '#F59E0B' if est_synthetique else '#10B981'
+                if est_synthetique:
+                    badge_texte = 'BASE DE DONNEES : SYNTHETIQUE'
+                    badge_sous_texte = 'meta.json (moyennes globales) - Prediction LSTM'
+                else:
+                    badge_texte = 'BASE DE DONNEES : OBSERVEE'
+                    badge_sous_texte = f'Historique agence {a} - Prediction LSTM'
                 st.markdown(f"<h1 style='text-align: center;font-size:1em;'>{nom_agence}</h1>", unsafe_allow_html=True)
+                #st.markdown(f"<div style='text-align:center; margin-bottom:8px;'><span style='background-color:{badge_color};color:white;padding:2px 8px;border-radius:10px;font-size:0.75em;font-weight:bold;'>{badge_texte}</span> <span style='font-size:0.7em;color:#666;'>{badge_sous_texte}</span></div>", unsafe_allow_html=True)
                 st_echarts(options=make_echart_option(grid[a]),
                            height='380px', key='%s_%s' % (key_prefix, a))
     return grid

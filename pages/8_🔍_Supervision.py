@@ -532,7 +532,7 @@ elif selected_tab == SUPERVISION_TABS[4]:
     st.markdown("---")
     
             
-    is_today = (st.session_state.end_date == datetime.now().date())
+    is_today = True#(st.session_state.end_date == datetime.now().date())
         
     if is_today:
         df_actual=df_queue_filtered.copy()
