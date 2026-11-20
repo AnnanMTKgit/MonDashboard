@@ -1181,7 +1181,7 @@ def load_main_data(start_date, end_date):
         end_date.strftime("%Y-%m-%d"),use_cache=False
     )
     else:
-        st.write("2")
+        
         return load_from_api(
         start_date.strftime("%Y-%m-%d"),
         end_date.strftime("%Y-%m-%d"),use_cache=True
