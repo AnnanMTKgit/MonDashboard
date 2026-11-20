@@ -33,9 +33,9 @@ _, agg_global,_,_= AgenceTable2(df_all_filtered, df_queue_filtered)
 agg_global = agg_global[agg_global["Nom d'Agence"].isin(st.session_state.selected_agencies)]
 
 df_operation = df_all_filtered[df_all_filtered['Nom'].isin(['Traitée', 'Rejetée'])]
-Temps_Moyen_Operation=df_operation[['TempOperation']].apply(lambda x: np.mean(x) / 60).values[0]
+Temps_Moyen_Operation=df_operation[(df_operation['TempOperation'] > 60) & (df_operation['TempOperation'] <= 3600)][['TempOperation']].apply(lambda x: np.mean(x) / 60).values[0]
 
-Temps_Moyen_Attente=df_queue_filtered[['TempsAttenteReel']].apply(lambda x: np.mean(x) / 60).values[0]
+Temps_Moyen_Attente=df_queue_filtered[(df_queue_filtered['TempsAttenteReel'] < 7200)][['TempsAttenteReel']].apply(lambda x: np.mean(x) / 60).values[0]
 
 
 

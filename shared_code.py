@@ -427,21 +427,41 @@ def AgenceTable2(df_all, df_queue):
         }
     
         # ==================== 1. VUE PAR AGENCE ====================
-        agg1_ope_mensuel = df1_operation.groupby(['Mois', 'NomAgence', 'Region'], dropna=False).agg(
-            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
-        ).reset_index()
+        agg1_ope_mensuel = (
+            df1_operation[(df1_operation['TempOperation'] > 60) & (df1_operation['TempOperation'] <= 3600)]
+            .groupby(['Mois', 'NomAgence', 'Region'], dropna=False)
+            .agg(
+                Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
+            )
+            .reset_index()
+        )
         
-        agg1_ope_global = df1_operation.groupby(['NomAgence', 'Region'], dropna=False).agg(
-            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
-        ).reset_index()
+        agg1_ope_global = (
+            df1_operation[(df1_operation['TempOperation'] > 60) & (df1_operation['TempOperation'] <= 3600)]
+            .groupby(['NomAgence', 'Region'], dropna=False)
+            .agg(
+                Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
+            )
+            .reset_index()
+        )
 
-        agg1_att_mensuel = df1.groupby(['Mois', 'NomAgence', 'Region'], dropna=False).agg(
-            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
-        ).reset_index()
-        
-        agg1_att_global = df1.groupby(['NomAgence', 'Region'], dropna=False).agg(
-            Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
-        ).reset_index()
+        agg1_att_mensuel = (
+            df1[ (df1['TempsAttenteReel'] < 7200)]
+            .groupby(['Mois', 'NomAgence', 'Region'], dropna=False)
+            .agg(
+                Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
+            )
+            .reset_index()
+        )
+
+        agg1_att_global = (
+            df1[ (df1['TempsAttenteReel'] < 7200)]
+            .groupby(['NomAgence', 'Region'], dropna=False)
+            .agg(
+                Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
+            )
+            .reset_index()
+        )
 
         agg1_mensuel = pd.merge(agg1_ope_mensuel, agg1_att_mensuel, on=['Mois', 'NomAgence', 'Region'], how='outer')
         agg1_global = pd.merge(agg1_ope_global, agg1_att_global, on=['NomAgence', 'Region'], how='outer')
@@ -472,19 +492,29 @@ def AgenceTable2(df_all, df_queue):
 
 
         # ==================== 2. VUE POUR LE RÉSEAU ====================
-        agg1_ope_reseau_mensuel = df1_operation.groupby(['Mois', 'Region'], dropna=False).agg(
-            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
-        ).reset_index()
-        
-        agg1_ope_reseau_global = df1_operation.groupby(['Region'], dropna=False).agg(
-            Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
-        ).reset_index()
+        agg1_ope_reseau_mensuel = (
+            df1_operation[(df1_operation['TempOperation'] > 60) & (df1_operation['TempOperation'] <= 3600)]
+            .groupby(['Mois', 'Region'], dropna=False)
+            .agg(
+                Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
+            )
+            .reset_index()
+        )
 
-        agg1_att_reseau_mensuel = df1.groupby(['Mois', 'Region'], dropna=False).agg(
+        agg1_ope_reseau_global = (
+            df1_operation[(df1_operation['TempOperation'] > 60) & (df1_operation['TempOperation'] <= 3600)]
+            .groupby(['Region'], dropna=False)
+            .agg(
+                Temps_Moyen_Operation=('TempOperation', lambda x: np.mean(x) / 60)
+            )
+            .reset_index()
+        )
+
+        agg1_att_reseau_mensuel = df1[ (df1['TempsAttenteReel'] < 7200)].groupby(['Mois', 'Region'], dropna=False).agg(
             Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
         ).reset_index()
         
-        agg1_att_reseau_global = df1.groupby(['Region'], dropna=False).agg(
+        agg1_att_reseau_global = df1[ (df1['TempsAttenteReel'] < 7200)].groupby(['Region'], dropna=False).agg(
             Temps_Moyen_Attente=('TempsAttenteReel', lambda x: np.mean(x) / 60)
         ).reset_index()
 
@@ -1914,8 +1944,22 @@ def area_graph2(data,concern='UserName',time='TempOperation',date_to_bin='Date_F
 
     # Group by Nom_Agence and Time_Bin, and calculate the average TempAttente
     #grouped_data = df.groupby([concern, 'Time_Bin'])[[time]].agg(( lambda x: np.round(np.mean(x)/60).astype(int))).reset_index()
+    if time == "TempOperation":
+        condition = (df['TempOperation'] > 60) & (df['TempOperation'] > 3600)
+    elif time == "TempsAttenteReel":
+        condition = df['TempsAttenteReel'] < 7200
+    else:
+        condition = pd.Series(True, index=df.index) # Aucun filtre par défaut
 
-    grouped_data = df.groupby([concern, 'Time_Bin'])[[time]].agg(lambda x: np.round(np.nanmean(x) / 60).astype(int)).reset_index()
+
+
+
+    grouped_data = (
+    df[condition]
+    .groupby([concern, 'Time_Bin'])[[time]]
+    .agg(lambda x: np.round(np.nanmean(x) / 60).astype(int))
+    .reset_index()
+)
     
 #     seuil = st.number_input(
 #     "Définir la valeur du seuil",
@@ -2135,7 +2179,7 @@ def GraphsGlob2(df_all,titre="",color=blue_color):
 
     df=df_all.copy()
     df['TempOperation']=df['TempOperation'].fillna(0)
-    df = df.groupby(by=['NomService']).agg(
+    df = df[(df['TempOperation'] > 60) & (df['TempOperation'] <= 3600)].groupby(by=['NomService']).agg(
     TempOperation=('TempOperation', lambda x: np.round(np.mean(x)/60).astype(int))).reset_index()
 
  
@@ -2593,7 +2637,7 @@ def create_bar_chart2(df, status,color=blue_color):
     if df_filtered.empty:
         return {"title": {"text": f"(Pas de données)", "left": 'center'}}
 
-    top = df_filtered.groupby(by=['UserName']).agg(
+    top = df_filtered[(df_filtered['TempOperation'] > 60) & (df_filtered['TempOperation'] <= 3600)].groupby(by=['UserName']).agg(
         TempOperation=('TempOperation', lambda x: float(np.round(np.nanmean(x) / 60)))
     ).reset_index()
     top['TempOperation'] = top['TempOperation'].fillna(0)  # nanmean sur groupe 100% NaN → 0
